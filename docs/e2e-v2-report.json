@@ -1,0 +1,72 @@
+{
+  "version": 2,
+  "generatedAt": "2026-08-11T21:54:37.126Z",
+  "mode": "full",
+  "identity": {
+    "idScheme": "e2e:0..999999",
+    "uniqueByConstruction": true,
+    "e2e": 1000000,
+    "visualMutations": 100000,
+    "connectionMutations": 100000,
+    "sessionMutations": 100000,
+    "total": 1300000
+  },
+  "archetype": {
+    "partCount": 28,
+    "geometryKinds": 3,
+    "bilateralPairs": 6,
+    "faceProjectsForward": true,
+    "hasCatchlights": true,
+    "hasPawPads": true,
+    "hasInnerEars": true,
+    "headToTorsoRatio": 1.0120481927710843
+  },
+  "e2e": {
+    "unsafe": 0,
+    "reasons": {},
+    "outcomes": {
+      "connected": 224005,
+      "onboarding": 250081,
+      "mediaBlocked": 187690,
+      "rateLimited": 46856,
+      "quotaBlocked": 46899,
+      "accessBlocked": 93970,
+      "upstreamBlocked": 140302,
+      "webrtcBlocked": 10197
+    },
+    "render": {
+      "webgl2": 725261,
+      "canvas2d": 274739
+    }
+  },
+  "mutation": {
+    "visual": {
+      "total": 100000,
+      "critical": 79885,
+      "killed": 79885,
+      "survivors": 0,
+      "benign": 20115
+    },
+    "connection": {
+      "total": 100000,
+      "critical": 79990,
+      "killed": 79990,
+      "survivors": 0,
+      "benign": 20010
+    },
+    "session": {
+      "total": 100000,
+      "critical": 79781,
+      "killed": 79781,
+      "survivors": 0,
+      "benign": 20219
+    }
+  },
+  "criticalMutationSurvivors": 0,
+  "digest": "918ed6f16c4a2988349cb3daf00a31c7ac71e1060083df2405e7edb94c6aa284",
+  "definition": {
+    "synthetic": true,
+    "physicalBrowserSessions": false,
+    "physicalOpenAISessions": false
+  }
+}
