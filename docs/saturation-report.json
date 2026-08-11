@@ -1,0 +1,51 @@
+{
+  "version": 3,
+  "method": "deterministic abstraction-level fault-space saturation; synthetic, not physical browser/API load",
+  "seedScheme": "mix32(layer,index)",
+  "full": true,
+  "generatedAt": "2026-08-11T21:32:19.611Z",
+  "layers": [
+    {"name":"bootstrap-runtime","scenarios":1000000,"identity":"bootstrap-runtime:0..999999","uniqueByConstruction":true,"healthy":832928,"degraded":167072,"blocked":0,"unsafe":0,"meanStress":0.499939,"maxStress":0.941681,"gracefulRate":1,"failureModes":{"unsupported_platform":55472,"port_collision":55841,"runtime_missing":55759}},
+    {"name":"supply-chain-bootstrap","scenarios":1000000,"identity":"supply-chain-bootstrap:0..999999","uniqueByConstruction":true,"healthy":916460,"degraded":68428,"blocked":15112,"unsafe":0,"meanStress":0.500086,"maxStress":0.958111,"gracefulRate":1,"failureModes":{"checksum_mismatch":27827,"tls_failure":27857,"partial_download":27856}},
+    {"name":"secrets-cryptography","scenarios":1000000,"identity":"secrets-cryptography:0..999999","uniqueByConstruction":true,"healthy":936518,"degraded":48458,"blocked":15024,"unsafe":0,"meanStress":0.500109,"maxStress":0.964439,"gracefulRate":1,"failureModes":{"corrupt_ciphertext":21378,"permission_drift":20997,"atomic_write_failure":21107}},
+    {"name":"persistence-local","scenarios":1000000,"identity":"persistence-local:0..999999","uniqueByConstruction":true,"healthy":928613,"degraded":71387,"blocked":0,"unsafe":0,"meanStress":0.500104,"maxStress":0.965364,"gracefulRate":1,"failureModes":{"disk_full":23892,"wal_recovery":23844,"foreign_key_violation":23651}},
+    {"name":"persistence-scale-boundary","scenarios":1000000,"identity":"persistence-scale-boundary:0..999999","uniqueByConstruction":true,"healthy":789080,"degraded":210920,"blocked":0,"unsafe":0,"meanStress":0.500073,"maxStress":0.954293,"gracefulRate":1,"failureModes":{"multi_writer":70242,"replica_lag":70572,"migration_boundary":70106}},
+    {"name":"http-security","scenarios":1000000,"identity":"http-security:0..999999","uniqueByConstruction":true,"healthy":936112,"degraded":48950,"blocked":14938,"unsafe":0,"meanStress":0.500091,"maxStress":0.961115,"gracefulRate":1,"failureModes":{"dns_rebinding":21601,"csrf_origin":21191,"oversized_body":21096}},
+    {"name":"runtime-config","scenarios":1000000,"identity":"runtime-config:0..999999","uniqueByConstruction":true,"healthy":926341,"degraded":58656,"blocked":15003,"unsafe":0,"meanStress":0.500164,"maxStress":0.959464,"gracefulRate":1,"failureModes":{"invalid_voice":24578,"numeric_overflow":24439,"schema_drift":24642}},
+    {"name":"realtime-bootstrap","scenarios":1000000,"identity":"realtime-bootstrap:0..999999","uniqueByConstruction":true,"healthy":902313,"degraded":97687,"blocked":0,"unsafe":0,"meanStress":0.500126,"maxStress":0.94836,"gracefulRate":1,"failureModes":{"upstream_timeout":32609,"bad_sdp":32595,"upstream_5xx":32483}},
+    {"name":"webrtc-media","scenarios":1000000,"identity":"webrtc-media:0..999999","uniqueByConstruction":true,"healthy":870310,"degraded":129690,"blocked":0,"unsafe":0,"meanStress":0.500023,"maxStress":0.952444,"gracefulRate":1,"failureModes":{"ice_failure":43444,"packet_loss":43047,"device_switch":43199}},
+    {"name":"audio-capture-dsp","scenarios":1000000,"identity":"audio-capture-dsp:0..999999","uniqueByConstruction":true,"healthy":887982,"degraded":112018,"blocked":0,"unsafe":0,"meanStress":0.49991,"maxStress":0.956894,"gracefulRate":1,"failureModes":{"mic_denied":37328,"clipping":37306,"echo_path":37384}},
+    {"name":"turn-taking-vad","scenarios":1000000,"identity":"turn-taking-vad:0..999999","uniqueByConstruction":true,"healthy":870621,"degraded":129379,"blocked":0,"unsafe":0,"meanStress":0.499853,"maxStress":0.954891,"gracefulRate":1,"failureModes":{"barge_in":43031,"long_pause":43439,"false_end_turn":42909}},
+    {"name":"voice-prosody","scenarios":1000000,"identity":"voice-prosody:0..999999","uniqueByConstruction":true,"healthy":902688,"degraded":97312,"blocked":0,"unsafe":0,"meanStress":0.499894,"maxStress":0.959608,"gracefulRate":1,"failureModes":{"speed_extreme":32590,"voice_restart":32257,"prosody_mismatch":32465}},
+    {"name":"identity-persona","scenarios":1000000,"identity":"identity-persona:0..999999","uniqueByConstruction":true,"healthy":928971,"degraded":71029,"blocked":0,"unsafe":0,"meanStress":0.499768,"maxStress":0.959053,"gracefulRate":1,"failureModes":{"verbosity_drift":23713,"tone_overshoot":23750,"instruction_conflict":23566}},
+    {"name":"memory-context","scenarios":1000000,"identity":"memory-context:0..999999","uniqueByConstruction":true,"healthy":902967,"degraded":97033,"blocked":0,"unsafe":0,"meanStress":0.499951,"maxStress":0.955938,"gracefulRate":1,"failureModes":{"irrelevant_memory":32489,"oversized_memory":32226,"stale_memory":32318}},
+    {"name":"ui-session-state","scenarios":1000000,"identity":"ui-session-state:0..999999","uniqueByConstruction":true,"healthy":915720,"degraded":84280,"blocked":0,"unsafe":0,"meanStress":0.500246,"maxStress":0.945075,"gracefulRate":1,"failureModes":{"double_click":27923,"refresh_mid_call":28231,"stale_drawer":28126}},
+    {"name":"render-webgl2","scenarios":1000000,"identity":"render-webgl2:0..999999","uniqueByConstruction":true,"healthy":870448,"degraded":129552,"blocked":0,"unsafe":0,"meanStress":0.500001,"maxStress":0.945501,"gracefulRate":1,"failureModes":{"gpu_pressure":43342,"context_loss":43133,"high_dpr":43077}},
+    {"name":"render-canvas2d-fallback","scenarios":1000000,"identity":"render-canvas2d-fallback:0..999999","uniqueByConstruction":true,"healthy":949283,"degraded":50717,"blocked":0,"unsafe":0,"meanStress":0.50005,"maxStress":0.947909,"gracefulRate":1,"failureModes":{"webgl_absent":17021,"context_lost":16900,"low_gpu":16796}},
+    {"name":"avatar-expression","scenarios":1000000,"identity":"avatar-expression:0..999999","uniqueByConstruction":true,"healthy":902397,"degraded":97603,"blocked":0,"unsafe":0,"meanStress":0.500042,"maxStress":0.945009,"gracefulRate":1,"failureModes":{"blink_collision":32701,"speech_energy_spike":32378,"gaze_extreme":32524}},
+    {"name":"appearance-lighting","scenarios":1000000,"identity":"appearance-lighting:0..999999","uniqueByConstruction":true,"healthy":928694,"degraded":71306,"blocked":0,"unsafe":0,"meanStress":0.500037,"maxStress":0.952133,"gracefulRate":1,"failureModes":{"invalid_color":23781,"exposure_extreme":23962,"small_viewport":23563}},
+    {"name":"operations-ci-container","scenarios":1000000,"identity":"operations-ci-container:0..999999","uniqueByConstruction":true,"healthy":916096,"degraded":83904,"blocked":0,"unsafe":0,"meanStress":0.500292,"maxStress":0.958125,"gracefulRate":1,"failureModes":{"readonly_volume":28172,"slow_start":28103,"signal_shutdown":27629}}
+  ],
+  "mutations": [
+    {"kind":"edge","n":100000,"killed":75001,"equivalent":24999,"criticalSurvivors":0,"necessaryKillRate":1},
+    {"kind":"negative","n":100000,"killed":100000,"equivalent":0,"criticalSurvivors":0,"necessaryKillRate":1},
+    {"kind":"chat-session","n":100000,"killed":58333,"equivalent":41667,"criticalSurvivors":0,"necessaryKillRate":1}
+  ],
+  "totalScenarios": 20300000,
+  "criticalUnsafe": 0,
+  "criticalMutationSurvivors": 0,
+  "invariants": [
+    "standard OpenAI key is never returned to browser",
+    "loopback Host and mutating Origin are guarded",
+    "downloaded Node runtime is SHA-256 verified",
+    "server is control plane, never PCM relay",
+    "local state survives restart using SQLite WAL",
+    "persisted explicit memories enter new realtime sessions",
+    "voice/config mutation restarts active realtime session",
+    "semantic VAD supports natural interruption",
+    "WebGL2 loss degrades to Canvas2D instead of killing Home",
+    "container uses writable non-root data path",
+    "runtime config is validated, clamped and persisted"
+  ],
+  "digest": "e5d00f2eca25b5a32c6db31697b81d19898fb3bf73c99d8b3e9b5386462c8cf4"
+}
