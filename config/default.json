@@ -1,0 +1,33 @@
+{
+  "model": "gpt-realtime-2.1",
+  "language": "it-IT",
+  "voice": "marin",
+  "persona": {
+    "irritability": 0.55,
+    "warmth": 0.48,
+    "wit": 0.74,
+    "verbosity": 0.22
+  },
+  "appearance": {
+    "fur": "#7b4f35",
+    "muzzle": "#bd8b62",
+    "eyes": "#17120f",
+    "background": "#111218",
+    "exposure": 1.0
+  },
+  "audio": {
+    "inputGain": 1.0,
+    "outputGain": 1.0,
+    "outputSpeed": 1.0,
+    "vadEagerness": "auto",
+    "noiseReduction": "near_field",
+    "echoCancellation": true,
+    "noiseSuppression": true,
+    "autoGainControl": true
+  },
+  "render": {
+    "quality": "auto",
+    "maxPixelRatio": 1.75,
+    "targetFps": 60
+  }
+}

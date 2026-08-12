@@ -1,0 +1,11 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { mergeConfig } from '../server/lib/config.mjs';
+import { buildRealtimeSession, relayRealtime, safetyIdentifier } from '../server/lib/realtime.mjs';
+const ROOT=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
+const base=JSON.parse(fs.readFileSync(path.join(ROOT,'config/default.json'),'utf8'));
+test('realtime session includes Italian transcription, semantic VAD, memories and voice controls',()=>{const config=mergeConfig(base,{voice:'cedar',audio:{outputSpeed:1.2,vadEagerness:'high',noiseReduction:'near_field'}});const s=buildRealtimeSession(config,[{text:'Preferisce il caffe senza zucchero.'}]);assert.equal(s.model,'gpt-realtime-2.1');assert.deepEqual(s.output_modalities,['audio']);assert.equal(s.audio.input.transcription.language,'it');assert.equal(s.audio.input.transcription.model,'gpt-4o-transcribe');assert.equal(s.audio.input.turn_detection.type,'semantic_vad');assert.equal(s.audio.input.turn_detection.interrupt_response,true);assert.equal(s.audio.output.voice,'cedar');assert.equal(s.audio.output.speed,1.2);assert.match(s.instructions,/caffe senza zucchero/)});
+test('realtime relay keeps standard key server-side and sends multipart session',async()=>{let seen;const fetchImpl=async(url,opts)=>{seen={url,opts,session:JSON.parse(opts.body.get('session')),sdp:opts.body.get('sdp')};return new Response('v=0\r\no=answer',{status:201,headers:{'content-type':'application/sdp'}})};const session=buildRealtimeSession(base,[]);const out=await relayRealtime({apiKey:'sk-test-abcdefghijklmnopqrstuvwxyz',sdp:'v=0\r\no=offer',session,installId:'install-x',url:'http://mock/realtime',fetchImpl});assert.equal(out.ok,true);assert.equal(seen.opts.headers.Authorization,'Bearer sk-test-abcdefghijklmnopqrstuvwxyz');assert.equal(seen.sdp,'v=0\r\no=offer');assert.equal(seen.session.audio.output.voice,'marin');assert.equal(safetyIdentifier('install-x').length,64)});
