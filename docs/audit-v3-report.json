@@ -1,0 +1,54 @@
+{
+  "version": 3,
+  "mode": "full",
+  "identity": {
+    "perType": 1000000,
+    "types": [
+      "hardening",
+      "enhancement",
+      "simplification",
+      "cleanup"
+    ],
+    "scenarioTotal": 4000000,
+    "mutationsPerType": 100000,
+    "mutationTotal": 400000,
+    "total": 4400000
+  },
+  "capabilities": {
+    "auth": true,
+    "failClosedHost": true,
+    "exactOrigin": true,
+    "contentType": true,
+    "boundedBody": true,
+    "boundedUpstream": true,
+    "safeEgress": true,
+    "externalMaster": true,
+    "dbHardening": true,
+    "timeouts": true,
+    "networkBackoff": true,
+    "doctor": true,
+    "atomicBootstrap": true,
+    "node24Only": true,
+    "readonlyImage": true,
+    "safeCache": true,
+    "zeroRuntimeDeps": true,
+    "v02Integrated": true,
+    "v03Aligned": true,
+    "pinnedActions": true
+  },
+  "families": {
+    "hardening": {"scenarios": 1000000,"unsafe": 0,"reasons": {}},
+    "enhancement": {"scenarios": 1000000,"unsafe": 0,"reasons": {}},
+    "simplification": {"scenarios": 1000000,"unsafe": 0,"reasons": {}},
+    "cleanup": {"scenarios": 1000000,"unsafe": 0,"reasons": {}}
+  },
+  "mutation": {
+    "hardening": {"total": 100000,"critical": 100000,"killed": 100000,"survivors": 0},
+    "enhancement": {"total": 100000,"critical": 100000,"killed": 100000,"survivors": 0},
+    "simplification": {"total": 100000,"critical": 100000,"killed": 100000,"survivors": 0},
+    "cleanup": {"total": 100000,"critical": 100000,"killed": 100000,"survivors": 0}
+  },
+  "criticalUnsafe": 0,
+  "criticalMutationSurvivors": 0,
+  "digest": "249b8b80cd115d5782fa2d021f7a4a97c3477d0d77e6d774eca3b50961aa3682"
+}
