@@ -9,11 +9,11 @@
     "verbosity": 0.22
   },
   "appearance": {
-    "fur": "#7b4f35",
-    "muzzle": "#bd8b62",
-    "eyes": "#17120f",
-    "background": "#111218",
-    "exposure": 1.0
+    "fur": "#8a5a3b",
+    "muzzle": "#d1a173",
+    "eyes": "#17100d",
+    "background": "#0b0c10",
+    "exposure": 1.18
   },
   "audio": {
     "inputGain": 1.0,

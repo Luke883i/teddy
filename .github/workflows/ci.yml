@@ -29,10 +29,16 @@ jobs:
           npm run doctor
       - name: tests
         run: npm test
-      - name: full saturation
+      - name: realtime 429 classification and cooldown smoke
+        run: node tests/realtime-http-smoke.mjs
+      - name: architecture saturation v0.1
         run: |
           npm run simulate:full
           node -e "const r=require('./docs/saturation-report.json'); if(r.layers.length!==20||r.criticalUnsafe!==0||r.criticalMutationSurvivors!==0||r.totalScenarios!==20300000) process.exit(1)"
+      - name: holistic E2E saturation v0.2
+        run: |
+          npm run simulate:e2e:full
+          node -e "const r=require('./docs/e2e-v2-report.json'); if(r.identity.e2e!==1000000||r.identity.total!==1300000||r.e2e.unsafe!==0||r.criticalMutationSurvivors!==0) process.exit(1)"
       - name: HTTP and persistence smoke
         shell: bash
         run: |
