@@ -1,0 +1,40 @@
+name: local-v7
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: teddy-local-v7-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  local-runtime:
+    name: local-v7 / runtime
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.19.0
+      - name: install and syntax
+        run: |
+          set -euo pipefail
+          npm ci --ignore-scripts
+          node --check server/main.mjs
+          node --check web/local.js
+          node --check web/audio.js
+          node --check tools/mutate-local-v7.mjs
+      - name: physical local runtime tests
+        run: node --test tests/local-v7.test.mjs
+      - name: local HTTP round trip
+        run: node tests/local-http-v7.mjs
+      - name: exact one-million mutation gate
+        run: |
+          set -euo pipefail
+          npm run mutate:local
+          node -e "const r=require('./docs/local-v7-mutation-report.json'); if(r.totalMutations!==1000000||r.killed!==1000000||r.survived!==0||r.criticalUnsafe!==0||r.criticalMutationSurvivors!==0) process.exit(1)"
+          git diff --exit-code -- docs/local-v7-mutation-report.json
