@@ -1,1 +1,1 @@
-export {TeddyRenderer} from './render-v5/renderer.js';
+export {RealisticTeddyRenderer as TeddyRenderer} from './render-v5/tuning.js';
