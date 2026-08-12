@@ -27,27 +27,41 @@ export function analyzeAudioFrame(timeData,freqData,previous={},sampleRate=48000
 function emitVoice(frame){
   if(typeof window!=='undefined'&&typeof window.dispatchEvent==='function'&&typeof CustomEvent==='function')window.dispatchEvent(new CustomEvent('teddy:voice',{detail:frame}));
 }
+function abortError(){return Object.assign(new Error('audio_aborted'),{name:'AbortError'});}
+function decodeBase64(value){const raw=atob(String(value||'')),out=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)out[i]=raw.charCodeAt(i);return out;}
 
 export class AudioPresence{
   constructor(audioEl,onLevel){this.audioEl=audioEl;this.onLevel=onLevel;this.ctx=null;this.an=null;this.time=null;this.freq=null;this.src=null;this.gain=null;this.comp=null;this.raf=0;this.fallback=false;this.voice={level:0,noiseFloor:.012,active:false};this.lastTick=0;}
+  async context(){if(!this.ctx||this.ctx.state==='closed')this.ctx=new AudioContext();await this.ctx.resume();return this.ctx;}
+  connectAnalyser(source,outputGain=1){
+    this.src=source;this.gain=this.ctx.createGain();this.gain.gain.value=normalizeOutputGain(outputGain,2);
+    this.comp=this.ctx.createDynamicsCompressor();this.comp.threshold.value=-10;this.comp.knee.value=14;this.comp.ratio.value=4;this.comp.attack.value=.003;this.comp.release.value=.18;
+    this.an=this.ctx.createAnalyser();this.an.fftSize=512;this.an.smoothingTimeConstant=.28;
+    this.src.connect(this.gain).connect(this.comp).connect(this.an).connect(this.ctx.destination);
+    this.time=new Uint8Array(this.an.fftSize);this.freq=new Uint8Array(this.an.frequencyBinCount);this.lastTick=performance.now();this.tick(this.lastTick);
+  }
   async attach(stream,outputGain=1){
     this.stop(false);this.fallback=false;
-    try{
-      if(!this.ctx||this.ctx.state==='closed')this.ctx=new AudioContext();await this.ctx.resume();
-      this.src=this.ctx.createMediaStreamSource(stream);this.gain=this.ctx.createGain();this.gain.gain.value=normalizeOutputGain(outputGain,2);
-      this.comp=this.ctx.createDynamicsCompressor();this.comp.threshold.value=-10;this.comp.knee.value=14;this.comp.ratio.value=4;this.comp.attack.value=.003;this.comp.release.value=.18;
-      this.an=this.ctx.createAnalyser();this.an.fftSize=512;this.an.smoothingTimeConstant=.28;
-      this.src.connect(this.gain).connect(this.comp).connect(this.an).connect(this.ctx.destination);
-      this.time=new Uint8Array(this.an.fftSize);this.freq=new Uint8Array(this.an.frequencyBinCount);this.lastTick=performance.now();this.tick(this.lastTick);
-    }catch{
+    try{await this.context();this.connectAnalyser(this.ctx.createMediaStreamSource(stream),outputGain)}catch{
       this.fallback=true;this.audioEl.srcObject=stream;this.audioEl.volume=normalizeOutputGain(outputGain,1);emitVoice({level:0,active:false,fallback:true,at:performance.now()});await this.audioEl.play().catch(()=>{});
     }
+  }
+  async playBase64Wav(data,outputGain=1,signal){
+    if(signal?.aborted)throw abortError();this.stop(false);this.fallback=false;
+    const bytes=decodeBase64(data);if(bytes.length<44)throw new Error('audio_wav_invalid');
+    const ctx=await this.context();const raw=bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength);const buffer=await ctx.decodeAudioData(raw);if(signal?.aborted)throw abortError();
+    const source=ctx.createBufferSource();source.buffer=buffer;this.connectAnalyser(source,outputGain);
+    return await new Promise((resolve,reject)=>{
+      let settled=false;const finish=(fn,v)=>{if(settled)return;settled=true;signal?.removeEventListener('abort',onAbort);fn(v)};
+      const onAbort=()=>{try{source.stop()}catch{};finish(reject,abortError())};signal?.addEventListener('abort',onAbort,{once:true});
+      source.onended=()=>finish(resolve);source.start();
+    });
   }
   tick(now=performance.now()){
     if(!this.an)return;this.an.getByteTimeDomainData(this.time);this.an.getByteFrequencyData(this.freq);const dt=Math.max(.008,Math.min(.12,(now-this.lastTick)/1000||1/60));this.lastTick=now;
     this.voice=analyzeAudioFrame(this.time,this.freq,this.voice,this.ctx?.sampleRate||48000,this.an.fftSize,dt,now/1000);this.onLevel?.(this.voice.level,this.voice);emitVoice(this.voice);this.raf=requestAnimationFrame(t=>this.tick(t));
   }
   stop(suspend=true){
-    cancelAnimationFrame(this.raf);try{this.src?.disconnect()}catch{};try{this.gain?.disconnect()}catch{};try{this.comp?.disconnect()}catch{};try{this.an?.disconnect()}catch{};this.src=null;this.gain=null;this.comp=null;this.an=null;this.time=null;this.freq=null;this.audioEl.srcObject=null;this.voice={level:0,noiseFloor:this.voice?.noiseFloor||.012,active:false};this.onLevel?.(0,this.voice);emitVoice({...this.voice,at:typeof performance!=='undefined'?performance.now()/1000:0});if(suspend&&this.ctx?.state==='running')this.ctx.suspend().catch(()=>{});
+    cancelAnimationFrame(this.raf);try{this.src?.stop?.()}catch{};try{this.src?.disconnect()}catch{};try{this.gain?.disconnect()}catch{};try{this.comp?.disconnect()}catch{};try{this.an?.disconnect()}catch{};this.src=null;this.gain=null;this.comp=null;this.an=null;this.time=null;this.freq=null;if(this.audioEl)this.audioEl.srcObject=null;this.voice={level:0,noiseFloor:this.voice?.noiseFloor||.012,active:false};this.onLevel?.(0,this.voice);emitVoice({...this.voice,at:typeof performance!=='undefined'?performance.now()/1000:0});if(suspend&&this.ctx?.state==='running')this.ctx.suspend().catch(()=>{});
   }
 }
