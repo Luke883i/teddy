@@ -17,8 +17,16 @@ Home asks for the OpenAI API key on first use. In loopback mode the encrypted ke
 ./teddy.sh --port=9000
 ./teddy.sh --doctor
 npm test
-npm run simulate:audit:full
+npm run simulate:presence:full
 ```
+
+## v0.4 realtime presence
+
+Teddy now uses a plush semantic model with 46 visible parts and nine articulated groups. The face includes cheeks, dual muzzle volumes, inset ears, brows, glossy eyes/catchlights and a layered jaw with lips, cavity and tongue. Shoulder/forearm/hand groups carry restrained speech gestures, while the camera independently fits horizontal and vertical bounds so extreme portrait and ultrawide viewports do not crop the character.
+
+Speech animation is driven by the actual remote audio stream rather than a fixed-frequency-bin average. Time-domain energy, adaptive noise floor, spectral balance and onset proxies feed a bounded expression rig for jaw opening, rounded/wide mouth shape, brows, ears, head motion and gestures. Decorative movement respects reduced-motion; articulation remains active. A configured output gain of zero remains truly muted.
+
+WebGL fur variation is evaluated in object coordinates, keeping the material attached to the moving plush surface. Canvas2D remains the degradation path and consumes the same expression pose for the important identity and speech cues.
 
 ## v0.3 security modes
 
@@ -40,20 +48,21 @@ Terminate TLS in a trusted reverse proxy. Non-loopback Teddy uses HTTP Basic aut
 
 - zero npm runtime dependencies and no frontend build step
 - Node 24.x + `node:sqlite` WAL persistence
-- AES-256-GCM secret vault; v0.3 uses authenticated AAD and supports an external master key
+- AES-256-GCM secret vault with authenticated AAD and optional external master key
 - exact Host/Origin/Fetch-Site policy and bounded HTTP request bodies
 - bounded, allowlisted Realtime egress semantics; HTTP test endpoints are loopback-only
 - typed Realtime failures, Retry-After and local transient backoff
-- semantic 3D teddy-bear scene graph with WebGL2 + Canvas2D degradation
+- semantic WebGL2 plush model + shared expression rig + Canvas2D degradation
+- adaptive remote-audio analysis for speech-correlated articulation
 - container image runs as `node`; `/app` is read-only and only `/data` is writable
 - GitHub Actions are pinned to immutable commit SHAs
 
 ## Persistence and scale
 
-The one-command local profile is intentionally a single SQLite writer. WebRTC media already bypasses the Teddy server. Horizontal multi-instance deployment should replace the persistence and secret-store seams with shared production services; v0.3 does not pretend local SQLite is distributed.
+The one-command local profile is intentionally a single SQLite writer. WebRTC media already bypasses the Teddy server. Horizontal multi-instance deployment should replace the persistence and secret-store seams with shared production services; Teddy does not pretend local SQLite is distributed.
 
 ## Verification
 
 CI executes unit/security tests, an authenticated remote-mode HTTP process smoke, the Realtime 429/cooldown smoke, persistence/restart tests and the non-root container path. Synthetic design/fault campaigns remain clearly separated from physical runtime tests.
 
-The v0.3 audit and residual risks are documented in [`docs/hardening-audit.md`](docs/hardening-audit.md). Generated four-way saturation evidence is in [`docs/audit-v3.md`](docs/audit-v3.md) and [`docs/audit-v3-report.json`](docs/audit-v3-report.json).
+The v0.4 realtime-presence DoD is in [`docs/v0.4-presence.md`](docs/v0.4-presence.md); generated v0.4 evidence is in [`docs/presence-v4-report.json`](docs/presence-v4-report.json). The v0.3 security audit remains in [`docs/hardening-audit.md`](docs/hardening-audit.md).

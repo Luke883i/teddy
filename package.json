@@ -1,6 +1,6 @@
 {
   "name":"teddy",
-  "version":"0.3.0",
+  "version":"0.4.0",
   "private":true,
   "type":"module",
   "engines":{"node":">=24.0.0 <25"},
@@ -13,6 +13,8 @@
     "simulate:e2e:full":"node tools/simulate-e2e-v2.mjs --full",
     "simulate:audit":"node tools/simulate-audit-v3.mjs",
     "simulate:audit:full":"node tools/simulate-audit-v3.mjs --full",
+    "simulate:presence":"node tools/simulate-presence-v4.mjs",
+    "simulate:presence:full":"node tools/simulate-presence-v4.mjs --full",
     "doctor":"node server/doctor.mjs"
   }
 }

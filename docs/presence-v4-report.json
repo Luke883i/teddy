@@ -12,11 +12,26 @@
     "uniqueByConstruction": true
   },
   "families": {
-    "viewport": {"total": 1000000,"unsafe": 0},
-    "voice": {"total": 1000000,"unsafe": 0},
-    "temporal": {"total": 1000000,"unsafe": 0},
-    "lifecycle": {"total": 1000000,"unsafe": 0},
-    "dynamicFraming": {"total": 1000000,"unsafe": 0}
+    "viewport": {
+      "total": 1000000,
+      "unsafe": 0
+    },
+    "voice": {
+      "total": 1000000,
+      "unsafe": 0
+    },
+    "temporal": {
+      "total": 1000000,
+      "unsafe": 0
+    },
+    "lifecycle": {
+      "total": 1000000,
+      "unsafe": 0
+    },
+    "dynamicFraming": {
+      "total": 1000000,
+      "unsafe": 0
+    }
   },
   "reasons": {},
   "archetype": {
@@ -49,5 +64,9 @@
   "criticalMutationSurvivors": 0,
   "sourceDigest": "72e070149ab85423390d933ea9fc1b4549fcb6790a2363a64dd084c4ff69a997",
   "digest": "56be3d3fbf3761f41ebded969db663d63ecf83f4e41e249a4c197a244993dff8",
-  "definition": {"synthetic": true,"physicalBrowserSessions": false,"physicalOpenAISessions": false}
+  "definition": {
+    "synthetic": true,
+    "physicalBrowserSessions": false,
+    "physicalOpenAISessions": false
+  }
 }
