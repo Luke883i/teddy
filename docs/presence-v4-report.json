@@ -35,17 +35,21 @@
   },
   "reasons": {},
   "archetype": {
-    "partCount": 46,
+    "partCount": 45,
+    "groupCount": 13,
     "geometryKinds": 3,
-    "groupCount": 9,
     "bilateralPairs": 6,
-    "extendedPairs": 6,
     "faceProjectsForward": true,
+    "hasBearTriangle": true,
     "hasCatchlights": true,
     "hasPawPads": true,
     "hasInnerEars": true,
-    "mouthLayers": 5,
-    "headToTorsoRatio": 1.064102564102564
+    "mouthLayers": 6,
+    "layeredMouth": true,
+    "extendedPairs": 6,
+    "headToTorsoRatio": 1.0875,
+    "earSkullOverlap": 0.51,
+    "morphologySearchIterations": 1000000
   },
   "capabilities": {
     "plushAnatomy": true,
@@ -62,8 +66,8 @@
   "missingCapabilities": [],
   "criticalUnsafe": 0,
   "criticalMutationSurvivors": 0,
-  "sourceDigest": "72e070149ab85423390d933ea9fc1b4549fcb6790a2363a64dd084c4ff69a997",
-  "digest": "56be3d3fbf3761f41ebded969db663d63ecf83f4e41e249a4c197a244993dff8",
+  "sourceDigest": "8e56019c08659c0369e41f766bfed8e45966e8c07426e5b8f8b3af48593baac1",
+  "digest": "b69fdb55a22bdc6b6503b0a07f4da010f27a537b25d373fff5f16490fdd46f7c",
   "definition": {
     "synthetic": true,
     "physicalBrowserSessions": false,
