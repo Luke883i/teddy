@@ -110,7 +110,7 @@ export function buildTeddyArchetype(){
     part('toeL1','sphere','ankleL',[-.095,.020,.665],[.036,.030,.010],'pawDark',.99),
     part('toeL2','sphere','ankleL',[0,.032,.672],[.036,.030,.010],'pawDark',.99),
     part('toeL3','sphere','ankleL',[.095,.020,.665],[.036,.030,.010],'pawDark',.99),
-    part('toeR1','spher','ankleR',[-.095,.020,.665],[.036,.030,.010],'pawDark',.99),
+    part('toeR1','sphere','ankleR',[-.095,.020,.665],[.036,.030,.010],'pawDark',.99),
     part('toeR2','sphere','ankleR',[0,.032,.672],[.036,.030,.010],'pawDark',.99),
     part('toeR3','sphere','ankleR',[.095,.020,.665],[.036,.030,.010],'pawDark',.99)
   ];
@@ -131,4 +131,21 @@ export function cameraPlan(width,height){
 
 export function archetypeMetrics(model=buildTeddyArchetype()){
   const byId=new Map(model.parts.map(p=>[p.id,p]));
-  const pair=(a,b)=>{const A=byId.get(a),B=byId.get(b);return !!A&&!!B&&dF‚æ'2„ç÷5³Ò´"ç÷5³Ò“ÃRÓRbdÖF‚æ'2„ç66ÆU³ÒÔ"ç66ÆU³Ò“ÃRÓWÓ°¢6öç7B†VCÖ'”–BævWB‚v†VE6†VÆÂr’ÇF÷'6óÖ'”–BævWB‚wF÷'6òr’ÆV#Ö'”–BævWB‚vV%"r“°¢6öç7BV$÷fW&ÆÒ††VCòç66ÆU³×ÇÃ’Ò‚†ÖöFVÂæw&÷W2æV%#òç÷5³×ÇÃ’Ò†V#òç66ÆU³×ÇÃ’“°¢6öç7B¦ö–çDw&÷W3Õ²væV6²rÂv†VBrÂv¦rrÂw6†÷VÆFW$ÂrÂw6†÷VÆFW%"rÂvVÆ&÷tÂrÂvVÆ&÷u"rÂww&—7DÂrÂww&—7E"rÂv†—ÂrÂv†—"rÂv¶æVTÂrÂv¶æVU"rÂvæ¶ÆTÂrÂvæ¶ÆU"uÓ°¢&WGW&â°¢'D6÷VçC¦ÖöFVÂç'G2æÆVæwF‚Æw&÷W6÷VçC¤ö&¦V7Bæ¶W—2†ÖöFVÂæw&÷W2’æÆVæwF‚ÆvVöÖWG'”¶–æG3¦æWr6WB†ÖöFVÂç'G2æÖ‡ÓçævVöÖWG'’’’ç6—¦RÀ¢&–ÆFW&Å—'3¥µ²vV$ÂrÂvV%"uÒÅ²v–ææW$V$ÂrÂv–ææW$V%"uÒÅ²vW–TÂrÂvW–U"uÒÅ²vf÷&V&ÔÂrÂvf÷&V&Õ"uÒÅ²wF†–v„ÂrÂwF†–v…"uÒÅ²vfö÷DÂrÂvfö÷E"uÕÒæf–ÇFW"‚…¶Æ%Ò“Óç—"†Æ"’’æÆVæwF‚À¢W‡FVæFVE—'3¥µ²v6†VV´ÂrÂv6†VVµ"uÒÅ²v×W§¦ÆTÂrÂv×W§¦ÆU"uÒÅ²v'&÷uDÂrÂv'&÷uE"uÒÅ²w6†÷VÆFW%6ö6¶WDÂrÂw6†÷VÆFW%6ö6¶WE"uÒÅ²vVÆ&÷uDÂrÂvVÆ&÷uE"uÒÅ²v†—6ö6¶WDÂrÂv†—6ö6¶WE"uÒÅ²v¶æVUDÂrÂv¶æVUE"uÒÅ²w6†–äÂrÂw6†–å"uÕÒæf–ÇFW"‚…¶Æ%Ò“Óç—"†Æ"’’æÆVæwF‚À¢f6U&ö¦V7G4f÷'v&C¦'”–BævWB‚væ÷6Rr’ç÷5³%Óæ'”–BævWB‚v×W§¦ÆUBr’ç÷5³%Òbf'”–BævWB‚v×W§¦ÆUBr’ç÷5³%Óæ†VBç÷5³%ÒÀ¢†4&V%G&–ævÆS¦'”–Bæ†2‚vW–TÂr’bf'”–Bæ†2‚vW–U"r’bf'”–Bæ†2‚væ÷6Rr’Æ†46F6†Æ–v‡G3¦'”–Bæ†2‚v6F6„Âr’bf'”–Bæ†2‚v6F6…"r’Æ†5uG3¦'”–Bæ†2‚vfö÷EDÂr’bf'”–Bæ†2‚vfö÷EE"r’Æ†4–ææW$V'3¦'”–Bæ†2‚v–ææW$V$Âr’bf'”–Bæ†2‚v–ææW$V%"r’À¢Ö÷WF„Æ–W'3¥²væ÷6U7FVÒrÂwWW$Æ—ÂrÂwWW$Æ—"rÂvÖ÷WF„6f—G’rÂvÆ÷vW$Æ—rÂwFöæwVRuÒæf–ÇFW"†–CÓæ'”–Bæ†2†–B’’æÆVæwF‚ÆÆ–W&VDÖ÷WFƒ¥²wWW$Æ—ÂrÂwWW$Æ—"rÂvÖ÷WF„6f—G’rÂvÆ÷vW$Æ—rÂwFöæwVRuÒæWfW'’†–CÓæ'”–Bæ†2†–B’’À¢†VEFõF÷'6õ&F–ó¢††VCòç66ÆU³×ÇÃ’ò‡F÷'6óòç66ÆU³×ÇÃ’ÆV%6·VÆÄ÷fW&Æ¦V$÷fW&ÆÆÖ÷'†öÆöw•6V&6„—FW&F–öç3¤Ôõ%„ôÄôu•õcRç6V&6„—FW&F–öç2À¢æFö×•6V&6„—FW&F–öç3¤äDôÕ•õcbç6V&6„—FW&F–öç2Æ¦ö–çD6÷VçC¦¦ö–çDw&÷W2æf–ÇFW"†–CÓæÖöFVÂæw&÷W5¶–EÒ’æÆVæwF‚À¢gVÆÄ&Ô6†–ã¥²w6†÷VÆFW$ÂrÂvVÆ&÷tÂrÂww&—7DÂrÂw6†÷VÆFW%"rÂvVÆ&÷u"rÂww&—7E"uÒæWfW'’†–CÓæÖöFVÂæw&÷W5¶–EÒ’À¢gVÆÄÆVt6†–ã¥²v†—ÂrÂv¶æVTÂrÂvæ¶ÆTÂrÂv†—"rÂv¶æVU"rÂvæ¶ÆU"uÒæWfW'’†–CÓæÖöFVÂæw&÷W5¶–EÒ’À¢†4æV6³¢ÖöFVÂæw&÷W2ææV6²bb'”–BævWB‚væV6µ&öÆÂr’Æw&÷VæFVC¤ÖF‚æ'2†ÖöFVÂæfÆö÷%’ÔdÄôõ%õ’“ÃRÓ¢Ó°§Ð
+  const pair=(a,b)=>{const A=byId.get(a),B=byId.get(b);return !!A&&!!B&&Math.abs(A.pos[0]+B.pos[0])<1e-5&&Math.abs(A.scale[0]-B.scale[0])<1e-5};
+  const head=byId.get('headShell'),torso=byId.get('torso'),ear=byId.get('earR');
+  const earOverlap=(head?.scale[0]||0)-((model.groups.earR?.pos[0]||0)-(ear?.scale[0]||0));
+  const jointGroups=['neck','head','jaw','shoulderL','shoulderR','elbowL','elbowR','wristL','wristR','hipL','hipR','kneeL','kneeR','ankleL','ankleR'];
+  return {
+    partCount:model.parts.length,groupCount:Object.keys(model.groups).length,geometryKinds:new Set(model.parts.map(p=>p.geometry)).size,
+    bilateralPairs:[['earL','earR'],['innerEarL','innerEarR'],['eyeL','eyeR'],['forearmL','forearmR'],['thighL','thighR'],['footL','footR']].filter(([a,b])=>pair(a,b)).length,
+    extendedPairs:[['cheekL','cheekR'],['muzzleL','muzzleR'],['browPadL','browPadR'],['shoulderSocketL','shoulderSocketR'],['elbowPadL','elbowPadR'],['hipSocketL','hipSocketR'],['kneePadL','kneePadR'],['shinL','shinR']].filter(([a,b])=>pair(a,b)).length,
+    faceProjectsForward:byId.get('nose').pos[2]>byId.get('muzzlePad').pos[2]&&byId.get('muzzlePad').pos[2]>head.pos[2],
+    hasBearTriangle:byId.has('eyeL')&&byId.has('eyeR')&&byId.has('nose'),hasCatchlights:byId.has('catchL')&&byId.has('catchR'),hasPawPads:byId.has('footPadL')&&byId.has('footPadR'),hasInnerEars:byId.has('innerEarL')&&byId.has('innerEarR'),
+    mouthLayers:['noseStem','upperLipL','upperLipR','mouthCavity','lowerLip','tongue'].filter(id=>byId.has(id)).length,layeredMouth:['upperLipL','upperLipR','mouthCavity','lowerLip','tongue'].every(id=>byId.has(id)),
+    headToTorsoRatio:(head?.scale[0]||0)/(torso?.scale[0]||1),earSkullOverlap:earOverlap,morphologySearchIterations:MORPHOLOGY_V5.searchIterations,
+    anatomySearchIterations:ANATOMY_V6.searchIterations,jointCount:jointGroups.filter(id=>model.groups[id]).length,
+    fullArmChain:['shoulderL','elbowL','wristL','shoulderR','elbowR','wristR'].every(id=>model.groups[id]),
+    fullLegChain:['hipL','kneeL','ankleL','hipR','kneeR','ankleR'].every(id=>model.groups[id]),
+    hasNeck:!!model.groups.neck&&!!byId.get('neckRoll'),grounded:Math.abs(model.floorY-FLOOR_Y)<1e-9
+  };
+}
