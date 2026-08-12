@@ -1,16 +1,18 @@
 {
-  "name": "teddy",
-  "version": "0.2.0",
-  "private": true,
-  "type": "module",
-  "engines": { "node": ">=24.0.0" },
-  "scripts": {
-    "start": "node server/main.mjs",
-    "test": "node --test tests/*.test.mjs",
-    "simulate": "node tools/simulate.mjs",
-    "simulate:full": "node tools/simulate.mjs --full",
-    "simulate:e2e": "node tools/simulate-e2e-v2.mjs",
-    "simulate:e2e:full": "node tools/simulate-e2e-v2.mjs --full",
-    "doctor": "node server/doctor.mjs"
+  "name":"teddy",
+  "version":"0.3.0",
+  "private":true,
+  "type":"module",
+  "engines":{"node":">=24.0.0 <25"},
+  "scripts":{
+    "start":"node server/main.mjs",
+    "test":"node --test tests/*.test.mjs",
+    "simulate":"node tools/simulate.mjs",
+    "simulate:full":"node tools/simulate.mjs --full",
+    "simulate:e2e":"node tools/simulate-e2e-v2.mjs",
+    "simulate:e2e:full":"node tools/simulate-e2e-v2.mjs --full",
+    "simulate:audit":"node tools/simulate-audit-v3.mjs",
+    "simulate:audit:full":"node tools/simulate-audit-v3.mjs --full",
+    "doctor":"node server/doctor.mjs"
   }
 }
