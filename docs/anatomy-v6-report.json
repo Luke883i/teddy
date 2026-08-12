@@ -1,0 +1,103 @@
+{
+  "version": 6,
+  "mode": "full",
+  "identity": {
+    "searchIterations": 10000000,
+    "falsificationIterations": 100,
+    "total": 10000100,
+    "uniqueByConstruction": true
+  },
+  "rejected": 8816230,
+  "accepted": 1183770,
+  "best": {
+    "index": 4462674,
+    "score": 0.03245021972639815,
+    "params": {
+      "headW": 0.7820621251878473,
+      "torsoW": 0.7226533459738487,
+      "headH": 0.748986595964289,
+      "torsoH": 0.817654469962617,
+      "muzzleW": 0.36805441981834697,
+      "earX": 0.5504627499148396,
+      "earR": 0.24920226038415036,
+      "eyeX": 0.2153589754121748,
+      "shoulderX": 0.6172898324526124,
+      "upperArm": 0.4897740042465213,
+      "forearm": 0.3287321968140854,
+      "hipX": 0.3180462510064352,
+      "thigh": 0.3327616758488029,
+      "shin": 0.3689820680532097,
+      "footZ": 0.3720235304702128,
+      "footW": 0.33736862072659857
+    },
+    "derived": {
+      "headBody": 1.0822092356521775,
+      "muzzleRatio": 0.4706204378967236,
+      "eyeSpread": 0.27537323247874546,
+      "earOverlap": 0.48080163565715817,
+      "shoulderRatio": 0.8541990926794253,
+      "armReach": 0.8185062010606067,
+      "legReach": 0.7017437439020127,
+      "footRatio": 0.4668471025647299
+    }
+  },
+  "current": {
+    "metrics": {
+      "partCount": 64,
+      "groupCount": 21,
+      "geometryKinds": 3,
+      "bilateralPairs": 6,
+      "extendedPairs": 8,
+      "faceProjectsForward": true,
+      "hasBearTriangle": true,
+      "hasCatchlights": true,
+      "hasPawPads": true,
+      "hasInnerEars": true,
+      "mouthLayers": 6,
+      "layeredMouth": true,
+      "headToTorsoRatio": 1.0857142857142859,
+      "earSkullOverlap": 0.44500000000000006,
+      "morphologySearchIterations": 1000000,
+      "anatomySearchIterations": 10000000,
+      "jointCount": 15,
+      "fullArmChain": true,
+      "fullLegChain": true,
+      "hasNeck": true,
+      "grounded": true
+    },
+    "floorY": -1.37,
+    "grounded": true,
+    "opaqueBody": true,
+    "fullArmChain": true,
+    "fullLegChain": true,
+    "hasNeck": true
+  },
+  "kinematics": {
+    "samples": 200000,
+    "unsafe": 0,
+    "maxPlantError": 0
+  },
+  "saturation": {
+    "failureClasses": [
+      "arm_chain",
+      "ear_overlap",
+      "eye_spread",
+      "foot_projection",
+      "foot_width",
+      "head_body",
+      "hip_shoulder_taper",
+      "leg_chain",
+      "muzzle_head",
+      "shoulder_width"
+    ],
+    "noveltyWindow": 100,
+    "noveltyAfterM": []
+  },
+  "sourceDigest": "577f6cc8e00620ee77e67b3be70fea19265c8a3c131b0d94ae094ff851aec1b3",
+  "digest": "2983fafca612437de7caeac36bf3b45c3c2b457b9d65211c2e0d90106ab8f6c8",
+  "definition": {
+    "syntheticAnatomySearch": true,
+    "physicalBrowserSessions": false,
+    "objective": "bounded plush anatomy + articulated grounded kinematics; browser raster validation is a separate gate"
+  }
+}
