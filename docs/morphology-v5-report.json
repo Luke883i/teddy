@@ -1,0 +1,71 @@
+{
+  "version": 5,
+  "mode": "full",
+  "identity": {
+    "scheme": "morphology-v5:0..999999",
+    "iterations": 1000000,
+    "uniqueByConstruction": true
+  },
+  "rejected": 674550,
+  "accepted": 325450,
+  "best": {
+    "index": 792652,
+    "score": 0.22234537090864193,
+    "params": {
+      "headW": 0.8471510785764901,
+      "headH": 0.7748831156582765,
+      "bodyW": 0.7809235531559502,
+      "bodyH": 1.088164598100857,
+      "muzzleW": 0.4013658780607781,
+      "muzzleH": 0.28025067773653445,
+      "muzzleZ": 0.7252551969013306,
+      "eyeX": 0.23622993201162432,
+      "eyeY": 0.1693579244402605,
+      "earX": 0.648775219998503,
+      "earY": 0.4864498036625911,
+      "earR": 0.2880034359493301,
+      "armX": 0.6415296834524558,
+      "hipX": 0.432509541565671,
+      "footZ": 0.4568598570248251
+    },
+    "derived": {
+      "headBody": 1.084806669171258,
+      "muzzleRatio": 0.47378311638959736,
+      "eyeSpread": 0.27885218821721053,
+      "earExposure": 0.08962757737134297,
+      "armClearance": 0.1885940226220047
+    }
+  },
+  "target": {
+    "headW": 0.87,
+    "headH": 0.8,
+    "bodyW": 0.8,
+    "bodyH": 1.05,
+    "muzzleW": 0.41,
+    "muzzleH": 0.285,
+    "muzzleZ": 0.735,
+    "eyeX": 0.235,
+    "eyeY": 0.145,
+    "earX": 0.66,
+    "earY": 0.5,
+    "earR": 0.3,
+    "armX": 0.66,
+    "hipX": 0.43,
+    "footZ": 0.5
+  },
+  "manualVisualConvergence": {
+    "rendererScale": "sphere-radius-1.0",
+    "views": [
+      "front",
+      "three-quarter",
+      "outer-silhouette"
+    ],
+    "finalModel": "web/teddy/model.js"
+  },
+  "digest": "fad399379f2c7cfdc6599b72f5473d5aa64cd8b835b6100601299559e4423049",
+  "definition": {
+    "syntheticMorphologySearch": true,
+    "physicalBrowserSessions": false,
+    "visualRasterValidation": "VTK offscreen 1:1 geometry"
+  }
+}

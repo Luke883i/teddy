@@ -12,7 +12,7 @@ jobs:
   runtime:
     name: runtime / node-24
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 18
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -51,6 +51,11 @@ jobs:
           npm run simulate:presence:full
           node -e "const r=require('./docs/presence-v4-report.json'); if(r.identity.perFamily!==1000000||r.identity.scenarioTotal!==5000000||r.identity.total!==6000000||r.criticalUnsafe!==0||r.criticalMutationSurvivors!==0||r.missingCapabilities.length!==0) process.exit(1)"
           git diff --exit-code -- docs/presence-v4-report.json
+      - name: teddy morphology saturation v0.5
+        run: |
+          npm run simulate:morphology:full
+          node -e "const r=require('./docs/morphology-v5-report.json'); if(r.identity.iterations!==1000000||r.accepted<1000||!r.best||r.best.index!==792652||r.manualVisualConvergence.rendererScale!=='sphere-radius-1.0'||r.definition.visualRasterValidation!=='VTK offscreen 1:1 geometry') process.exit(1)"
+          git diff --exit-code -- docs/morphology-v5-report.json
       - name: HTTP and persistence smoke
         shell: bash
         run: |
@@ -64,6 +69,8 @@ jobs:
           for i in {1..60}; do curl -fsS http://127.0.0.1:8787/api/health >/dev/null && break; sleep .1; done
           curl -fsS http://127.0.0.1:8787/api/bootstrap | grep '"transport":"webrtc"'
           curl -fsS http://127.0.0.1:8787/api/bootstrap | grep '"presenceRig":"v4"'
+          curl -fsS http://127.0.0.1:8787/api/bootstrap | grep '"morphology":"v5"'
+          curl -fsS http://127.0.0.1:8787/api/bootstrap | grep '"correctedDepth":true'
           test "$(curl -s -o /tmp/host -w '%{http_code}' -H 'Host: hostile.invalid:8787' http://127.0.0.1:8787/api/health)" = 421
           test "$(curl -s -o /tmp/origin -w '%{http_code}' -X POST -H 'Origin: https://hostile.invalid' -H 'Content-Type: application/json' --data '{}' http://127.0.0.1:8787/api/secrets/openai)" = 403
           test "$(curl -s -o /tmp/type -w '%{http_code}' -X POST -H 'Content-Type: text/plain' --data '{}' http://127.0.0.1:8787/api/memories)" = 415

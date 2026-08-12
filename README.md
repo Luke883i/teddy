@@ -17,16 +17,20 @@ Home asks for the OpenAI API key on first use. In loopback mode the encrypted ke
 ./teddy.sh --port=9000
 ./teddy.sh --doctor
 npm test
-npm run simulate:presence:full
+npm run simulate:morphology:full
 ```
+
+## v0.5 teddy morphology
+
+v0.5 reconstructs Teddy's body from the silhouette outward. It fixes a malformed 3D translation matrix that previously corrupted Z/depth, then replaces the disconnected-looking body with a continuous seated teddy-bear anatomy: dominant round skull, exposed inset ears, compact eye/nose triangle, broad projecting muzzle, pear torso, overlapping plush arms, seated haunches and large forward feet with pads.
+
+A deterministic morphology search evaluates 1,000,000 unique parameter identities and rejects non-bear proportions before scoring survivors. The final candidate is separately raster-checked at the WebGL renderer's 1:1 primitive scale in front, speaking, three-quarter and silhouette views. See [`docs/v0.5-modeling.md`](docs/v0.5-modeling.md) and [`docs/morphology-v5-report.json`](docs/morphology-v5-report.json).
+
+The mouth remains nearly invisible at rest but expands forward with the existing audio-reactive expression rig; speech continues to use RMS, spectral balance, adaptive noise floor and onset proxies rather than a single FFT level.
 
 ## v0.4 realtime presence
 
-Teddy now uses a plush semantic model with 46 visible parts and nine articulated groups. The face includes cheeks, dual muzzle volumes, inset ears, brows, glossy eyes/catchlights and a layered jaw with lips, cavity and tongue. Shoulder/forearm/hand groups carry restrained speech gestures, while the camera independently fits horizontal and vertical bounds so extreme portrait and ultrawide viewports do not crop the character.
-
-Speech animation is driven by the actual remote audio stream rather than a fixed-frequency-bin average. Time-domain energy, adaptive noise floor, spectral balance and onset proxies feed a bounded expression rig for jaw opening, rounded/wide mouth shape, brows, ears, head motion and gestures. Decorative movement respects reduced-motion; articulation remains active. A configured output gain of zero remains truly muted.
-
-WebGL fur variation is evaluated in object coordinates, keeping the material attached to the moving plush surface. Canvas2D remains the degradation path and consumes the same expression pose for the important identity and speech cues.
+The expression plane remains a bounded, frame-rate-stable rig for jaw, lip shape, brows, eyes, ears, head motion and restrained gestures. WebGL fur variation stays in object coordinates so it moves with the plush surface; Canvas2D remains the degradation path and consumes the same important expression state.
 
 ## v0.3 security modes
 
@@ -52,7 +56,8 @@ Terminate TLS in a trusted reverse proxy. Non-loopback Teddy uses HTTP Basic aut
 - exact Host/Origin/Fetch-Site policy and bounded HTTP request bodies
 - bounded, allowlisted Realtime egress semantics; HTTP test endpoints are loopback-only
 - typed Realtime failures, Retry-After and local transient backoff
-- semantic WebGL2 plush model + shared expression rig + Canvas2D degradation
+- corrected 3D homogeneous transforms + semantic WebGL2 plush morphology v5
+- shared realtime expression rig + Canvas2D degradation
 - adaptive remote-audio analysis for speech-correlated articulation
 - container image runs as `node`; `/app` is read-only and only `/data` is writable
 - GitHub Actions are pinned to immutable commit SHAs
@@ -63,6 +68,6 @@ The one-command local profile is intentionally a single SQLite writer. WebRTC me
 
 ## Verification
 
-CI executes unit/security tests, an authenticated remote-mode HTTP process smoke, the Realtime 429/cooldown smoke, persistence/restart tests and the non-root container path. Synthetic design/fault campaigns remain clearly separated from physical runtime tests.
+CI executes unit/security tests, authenticated remote-mode HTTP process smoke, Realtime 429/cooldown smoke, persistence/restart, non-root container gates and every historical saturation family. v0.5 adds deterministic one-million morphology convergence and requires the generated report to be byte-current with the committed search code.
 
-The v0.4 realtime-presence DoD is in [`docs/v0.4-presence.md`](docs/v0.4-presence.md); generated v0.4 evidence is in [`docs/presence-v4-report.json`](docs/presence-v4-report.json). The v0.3 security audit remains in [`docs/hardening-audit.md`](docs/hardening-audit.md).
+Graphical evidence and its limitations are documented in [`docs/v0.5-modeling.md`](docs/v0.5-modeling.md). The v0.4 presence evidence remains in [`docs/presence-v4-report.json`](docs/presence-v4-report.json); the v0.3 security audit remains in [`docs/hardening-audit.md`](docs/hardening-audit.md).
