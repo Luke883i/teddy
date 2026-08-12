@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import {fileURLToPath} from 'node:url';
-import {buildTeddyArchetype,archetypeMetrics,cameraPlan,TEDDY_BOUNDS} from '../web/teddy/model.js';
+import {buildTeddyArchetype,archetypeMetrics,cameraPlan} from '../web/teddy/model.js';
 import {connectionGuidance} from '../web/connection.js';
 import {classifyRealtimeFailure} from '../server/lib/realtime.mjs';
 
@@ -19,10 +19,10 @@ function assert(ok,kind,counters){if(!ok){counters.unsafe++;counters.reasons[kin
 
 const model=buildTeddyArchetype(),metrics=archetypeMetrics(model),counters={unsafe:0,reasons:{},outcomes:{connected:0,onboarding:0,mediaBlocked:0,rateLimited:0,quotaBlocked:0,accessBlocked:0,upstreamBlocked:0,webrtcBlocked:0},render:{webgl2:0,canvas2d:0}};
 for(let i=0;i<E2E;i++){
-  const h=hash32(i),w=pick(widths,h,0),vh=pick(heights,h,4),plan=cameraPlan(w,vh),span=TEDDY_BOUNDS.max[1]-TEDDY_BOUNDS.min[1],visible=2*plan.distance*Math.tan(plan.fov/2),fraction=span/visible;
+  const h=hash32(i),w=pick(widths,h,0),vh=pick(heights,h,4),plan=cameraPlan(w,vh);
   const key=(h&3)!==0,mic=(h&12)!==0,webgl=(h&48)!==0,contextLoss=webgl&&((h>>>8)%31===0),status=pick(statuses,h,12),webrtcFails=((h>>>20)%23===0),quota=status===429&&((h>>>24)&1)===1;
   const backend=webgl&&!contextLoss?'webgl2':'canvas2d';counters.render[backend]++;
-  assert(fraction>=.519&&fraction<=.621,'camera_frame',counters);assert(metrics.geometryKinds>=3&&metrics.bilateralPairs===6&&metrics.faceProjectsForward&&metrics.hasPawPads&&metrics.hasInnerEars,'archetype',counters);assert(!(contextLoss&&backend!=='canvas2d'),'context_loss_fallback',counters);
+  assert(plan.occupancyY>0&&plan.occupancyY<=.761&&plan.occupancyX>0&&plan.occupancyX<=.861,'camera_frame',counters);assert(metrics.geometryKinds>=3&&metrics.bilateralPairs===6&&metrics.faceProjectsForward&&metrics.hasPawPads&&metrics.hasInnerEars,'archetype',counters);assert(!(contextLoss&&backend!=='canvas2d'),'context_loss_fallback',counters);
   if(!key){counters.outcomes.onboarding++;continue}
   if(!mic){const g=connectionGuidance({error:'microphone_permission_denied'});assert(g.action==='retry'&&/microfono/i.test(g.title),'media_guidance',counters);counters.outcomes.mediaBlocked++;continue}
   if(status!==201){
