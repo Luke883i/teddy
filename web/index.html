@@ -6,7 +6,7 @@
   <section id="connectionNotice" class="connection-notice hidden" role="status" aria-live="polite"><strong id="connectionTitle"></strong><p id="connectionBody"></p><div class="notice-actions"><button id="connectionDiagnostics">Diagnostica</button><button id="connectionPrimary" class="primary">Riprova</button></div></section>
   <nav><button data-view="talk" class="active">Parla</button><button data-view="history">Cronologia</button><button data-view="memory">Memoria</button><button data-view="studio">Studio</button><button data-view="diagnostics">Diagnostica</button></nav>
   <section id="drawer" class="drawer hidden"></section>
-  <section id="onboarding" class="modal hidden"><div class="card"><h1>Ciao. Sono Teddy.</h1><p>Per parlare mi serve la tua OpenAI API key. Rimane cifrata su questo computer e non viene restituita al browser.</p><input id="apiKey" type="password" autocomplete="off" placeholder="sk-…"><div class="actions"><button id="saveKey">Salva e continua</button></div><small id="keyError"></small></div></section>
+  <section id="onboarding" class="modal hidden"><div class="card"><h1>OpenAI opzionale</h1><p>Teddy parte in modalità locale senza account. Inserisci una OpenAI API key soltanto se avvii esplicitamente <code>TEDDY_PROVIDER=openai</code>. La key rimane cifrata sul server locale e non viene restituita al browser.</p><input id="apiKey" type="password" autocomplete="off" placeholder="sk-…"><div class="actions"><button id="saveKey">Salva</button></div><small id="keyError"></small></div></section>
   <button id="talkBtn" class="talk">Parla con Teddy</button>
   <audio id="remoteAudio" autoplay></audio>
 </main><script type="module" src="/app.js"></script></body></html>

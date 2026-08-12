@@ -1,6 +1,6 @@
 {
   "name":"teddy",
-  "version":"0.5.0",
+  "version":"0.7.0",
   "private":true,
   "type":"module",
   "engines":{"node":">=24.0.0 <25"},
@@ -17,6 +17,7 @@
     "simulate:presence:full":"node tools/simulate-presence-v4.mjs --full",
     "simulate:morphology":"node tools/search-morphology-v5.mjs",
     "simulate:morphology:full":"node tools/search-morphology-v5.mjs --full",
+    "mutate:local":"node tools/mutate-local-v7.mjs",
     "doctor":"node server/doctor.mjs"
   }
 }
