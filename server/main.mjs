@@ -18,12 +18,12 @@ if(!policy.ok)throw new Error(`unsafe_deployment:${policy.error}`);
 const REALTIME_URL=validateRealtimeEndpoint(process.env.TEDDY_OPENAI_REALTIME_URL||'https://api.openai.com/v1/realtime/calls');
 const secrets=new SecretStore(HOME,{externalMasterKey:MASTER_KEY}),state=new StateStore(HOME),defaults=readDefaultConfig(ROOT);let config=mergeConfig(defaults,state.getSetting('config')||{});
 const realtimeGate=new RealtimeBackoff();
-const bootstrap=()=>({secret:secrets.status(),config,persistence:{engine:'sqlite',durable:true,wal:true},security:{mode:policy.mode,authenticated:!!AUTH_PASSWORD,publicOrigin:policy.publicOrigin},realtime:{transport:'webrtc',model:config.model,cooldownSeconds:realtimeGate.remaining()},render:{backend:'client-negotiated',webgl2:true,canvas2dFallback:true,webgpuOptional:true,presenceRig:'v4',audioReactive:true,adaptiveNoise:true},install:{id:String(state.getSetting('install_id')).slice(0,8)}});
+const bootstrap=()=>({secret:secrets.status(),config,persistence:{engine:'sqlite',durable:true,wal:true},security:{mode:policy.mode,authenticated:!!AUTH_PASSWORD,publicOrigin:policy.publicOrigin},realtime:{transport:'webrtc',model:config.model,cooldownSeconds:realtimeGate.remaining()},render:{backend:'client-negotiated',webgl2:true,canvas2dFallback:true,webgpuOptional:true,presenceRig:'v4',morphology:'v5',correctedDepth:true,audioReactive:true,adaptiveNoise:true},install:{id:String(state.getSetting('install_id')).slice(0,8)}});
 
 async function route(req,res){
   const guard=guardRequest(req,{listenHost:HOST,publicOrigin:PUBLIC_ORIGIN,authPassword:AUTH_PASSWORD});if(!guard.ok)return json(res,guard.status,{error:guard.error},guard.headers||{});
   const u=new URL(req.url,'http://localhost');
-  if(req.method==='GET'&&u.pathname==='/api/health')return json(res,200,{ok:true,service:'teddy',version:'0.4.0',security:policy.mode});
+  if(req.method==='GET'&&u.pathname==='/api/health')return json(res,200,{ok:true,service:'teddy',version:'0.5.0',security:policy.mode});
   if(req.method==='GET'&&u.pathname==='/api/bootstrap')return json(res,200,bootstrap());
   if(req.method==='PUT'&&u.pathname==='/api/config'){const patch=await readJson(req,64_000);config=mergeConfig(defaults,patch);state.setSetting('config',config);return json(res,200,{config})}
   if(req.method==='POST'&&u.pathname==='/api/secrets/openai'){const body=await readJson(req,4_000);try{const secret=secrets.saveOpenAI(body.key);realtimeGate.clear();return json(res,200,{secret})}catch{return json(res,400,{error:'invalid_api_key'})}}
