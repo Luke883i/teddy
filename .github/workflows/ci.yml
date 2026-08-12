@@ -12,14 +12,15 @@ jobs:
   runtime:
     name: runtime / node-24
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 12
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          node-version: 24.x
-          cache: npm
-      - name: install
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.19.0
+      - name: lockfile validation
         run: npm ci --ignore-scripts
       - name: static validation
         run: |
@@ -29,6 +30,8 @@ jobs:
           npm run doctor
       - name: tests
         run: npm test
+      - name: authenticated deployment smoke
+        run: node tests/security-http-smoke.mjs
       - name: realtime 429 classification and cooldown smoke
         run: node tests/realtime-http-smoke.mjs
       - name: architecture saturation v0.1
@@ -39,6 +42,10 @@ jobs:
         run: |
           npm run simulate:e2e:full
           node -e "const r=require('./docs/e2e-v2-report.json'); if(r.identity.e2e!==1000000||r.identity.total!==1300000||r.e2e.unsafe!==0||r.criticalMutationSurvivors!==0) process.exit(1)"
+      - name: four-way audit saturation v0.3
+        run: |
+          npm run simulate:audit:full
+          node -e "const r=require('./docs/audit-v3-report.json'); if(r.identity.perType!==1000000||r.identity.scenarioTotal!==4000000||r.identity.total!==4400000||r.criticalUnsafe!==0||r.criticalMutationSurvivors!==0) process.exit(1)"
       - name: HTTP and persistence smoke
         shell: bash
         run: |
@@ -53,33 +60,47 @@ jobs:
           curl -fsS http://127.0.0.1:8787/api/bootstrap | grep '"transport":"webrtc"'
           test "$(curl -s -o /tmp/host -w '%{http_code}' -H 'Host: hostile.invalid:8787' http://127.0.0.1:8787/api/health)" = 421
           test "$(curl -s -o /tmp/origin -w '%{http_code}' -X POST -H 'Origin: https://hostile.invalid' -H 'Content-Type: application/json' --data '{}' http://127.0.0.1:8787/api/secrets/openai)" = 403
-          test "$(curl -s -o /tmp/json -w '%{http_code}' -X PUT -H 'Content-Type: application/json' --data '{bad' http://127.0.0.1:8787/api/config)" = 400
+          test "$(curl -s -o /tmp/type -w '%{http_code}' -X POST -H 'Content-Type: text/plain' --data '{}' http://127.0.0.1:8787/api/memories)" = 415
           curl -fsS -X POST -H 'Content-Type: application/json' --data '{"text":"CI durable memory","salience":0.8}' http://127.0.0.1:8787/api/memories
           kill "$pid"; wait "$pid" || true; trap - EXIT
           node server/main.mjs >"$RUNNER_TEMP/teddy-restart.log" 2>&1 & pid=$!; trap cleanup EXIT
           for i in {1..60}; do curl -fsS http://127.0.0.1:8787/api/health >/dev/null && break; sleep .1; done
           curl -fsS http://127.0.0.1:8787/api/memories | grep 'CI durable memory'
   container:
-    name: container / persistence
+    name: container / authenticated persistence
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      TEDDY_PUBLIC_ORIGIN: https://teddy.example.invalid
+      TEDDY_AUTH_PASSWORD: ci-teddy-password-strong
+      TEDDY_SECRET_MASTER_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: build
         run: docker build -t teddy:ci .
-      - name: run, persist, restart
+      - name: run, harden, persist, restart
         shell: bash
         run: |
           set -euo pipefail
           docker volume create teddy-ci-data >/dev/null
           cleanup(){ docker rm -f teddy >/dev/null 2>&1 || true; docker volume rm teddy-ci-data >/dev/null 2>&1 || true; }
           trap cleanup EXIT
-          docker run -d --name teddy -p 8788:8787 -v teddy-ci-data:/data teddy:ci >/dev/null
-          for i in {1..80}; do curl -fsS http://127.0.0.1:8788/api/health >/dev/null && break; sleep .15; done
+          run_teddy(){ docker run -d --name teddy -p 8788:8787 -v teddy-ci-data:/data -e TEDDY_HOST=0.0.0.0 -e TEDDY_PUBLIC_ORIGIN -e TEDDY_AUTH_PASSWORD -e TEDDY_SECRET_MASTER_KEY teddy:ci >/dev/null; }
+          run_teddy
+          H='Host: teddy.example.invalid'; O='Origin: https://teddy.example.invalid'
+          for i in {1..80}; do curl -fsS -H "$H" http://127.0.0.1:8788/api/health >/dev/null && break; sleep .15; done
+          test "$(curl -s -o /tmp/unauth -w '%{http_code}' -H "$H" http://127.0.0.1:8788/api/bootstrap)" = 401
+          curl -fsS -u "teddy:$TEDDY_AUTH_PASSWORD" -H "$H" http://127.0.0.1:8788/api/bootstrap | grep 'authenticated-proxy'
           test "$(docker inspect -f '{{.Config.User}}' teddy)" = node
-          curl -fsS -X POST -H 'Content-Type: application/json' --data '{"text":"container durable memory"}' http://127.0.0.1:8788/api/memories >/dev/null
+          docker exec teddy sh -lc 'test ! -w /app && test -w /data'
+          curl -fsS -u "teddy:$TEDDY_AUTH_PASSWORD" -H "$H" -H "$O" -H 'Content-Type: application/json' -X POST --data '{"key":"sk-container-test-abcdefghijklmnopqrstuvwxyz"}' http://127.0.0.1:8788/api/secrets/openai >/dev/null
+          ! docker exec teddy grep -R -F 'sk-container-test-abcdefghijklmnopqrstuvwxyz' /data >/dev/null 2>&1
+          curl -fsS -u "teddy:$TEDDY_AUTH_PASSWORD" -H "$H" -H "$O" -H 'Content-Type: application/json' -X POST --data '{"text":"container durable memory"}' http://127.0.0.1:8788/api/memories >/dev/null
           docker rm -f teddy >/dev/null
-          docker run -d --name teddy -p 8788:8787 -v teddy-ci-data:/data teddy:ci >/dev/null
-          for i in {1..80}; do curl -fsS http://127.0.0.1:8788/api/health >/dev/null && break; sleep .15; done
-          curl -fsS http://127.0.0.1:8788/api/memories | grep 'container durable memory'
-          curl -fsS -D - -o /dev/null http://127.0.0.1:8788/api/health | grep -i 'x-frame-options: DENY'
+          run_teddy
+          for i in {1..80}; do curl -fsS -H "$H" http://127.0.0.1:8788/api/health >/dev/null && break; sleep .15; done
+          curl -fsS -u "teddy:$TEDDY_AUTH_PASSWORD" -H "$H" http://127.0.0.1:8788/api/memories | grep 'container durable memory'
+          curl -fsS -u "teddy:$TEDDY_AUTH_PASSWORD" -H "$H" http://127.0.0.1:8788/api/bootstrap | grep '"configured":true'
+          curl -fsS -D - -o /dev/null -H "$H" http://127.0.0.1:8788/api/health | grep -i 'x-frame-options: DENY'
