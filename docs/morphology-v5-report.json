@@ -35,8 +35,8 @@
       "hasInnerEars": true,
       "pawDetail": true,
       "mouthLayers": 5,
-      "headToTorsoRatio": 1.0456796917996696,
-      "headToTorsoWidth": 0.9620253164556962
+      "headToTorsoRatio": 1.0326086956521738,
+      "headToTorsoWidth": 0.95
     },
     "framing": [
       {
@@ -99,11 +99,11 @@
     }
   },
   "missingGates": [],
-  "modelSourceDigest": "3dbe4a5d254eefa548a6840705864dbc588fe5f39e36d96da9b9397a4fec5aca",
+  "modelSourceDigest": "0e8788164128145d7b11341dcd7056296c83f0a730f2997eaca88fbc8e2f4560",
   "claims": {
     "physicalBearScans": false,
     "humanAestheticRatings": false,
     "physicalBrowserFrames": false
   },
-  "digest": "c58a13cd306c3ded53e5c2a111f7332c8dd8bbf7bab0fb3610fd75b7be5f07f6"
+  "digest": "4a38deefbf70a80d5607c58ac1f67f9a31b337c2a418000d3d6eee32ef30b7a4"
 }

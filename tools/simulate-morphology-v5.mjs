@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import crypto from 'node:crypto';
 import {buildTeddyArchetype,archetypeMetrics,cameraPlan} from '../web/teddy/model.js';
+import {tuneTeddyModel} from '../web/teddy/render-v5/tuning.js';
 
 const full=process.argv.includes('--full');
 const N=full?1_000_000:50_000;
@@ -14,7 +15,7 @@ function score(p){let s=0;for(const k in target)s+=sq((p[k]-target[k])/(Math.abs
 function safe(p){return p.muzzleW<p.headW*.72&&p.eyeX<p.headW*.48&&p.earW<p.headW*.48&&p.armX>p.torsoW*.78&&p.legX<p.bellyW*.70&&p.footD>.38}
 for(let i=0;i<N;i++){const p=cand(i);if(!safe(p)){unsafe++;continue}const s=score(p);if(s<best.score)best={score:s,index:i,p}}
 
-const model=buildTeddyArchetype(),metrics=archetypeMetrics(model);
+const model=tuneTeddyModel(buildTeddyArchetype()),metrics=archetypeMetrics(model);
 const viewports=[[1195,864],[390,844],[320,1024],[2560,720],[844,390],[240,1080],[3440,500]];
 const framing=viewports.map(([w,h])=>{const p=cameraPlan(w,h);return{w,h,occupancyX:+p.occupancyX.toFixed(6),occupancyY:+p.occupancyY.toFixed(6),limiter:p.limiter}});
 const converged={
@@ -30,8 +31,8 @@ const converged={
   }
 };
 const missing=Object.entries(converged.gates).filter(([,v])=>!v).map(([k])=>k);
-const modelSource=fs.readFileSync(new URL('../web/teddy/model.js',import.meta.url),'utf8');
-const report={version:5,kind:'synthetic_morphology_search',iterations:N,unsafe,bestIndex:best.index,bestScore:+best.score.toFixed(8),best:best.p,converged,missingGates:missing,modelSourceDigest:crypto.createHash('sha256').update(modelSource).digest('hex'),claims:{physicalBearScans:false,humanAestheticRatings:false,physicalBrowserFrames:false}};
+const modelSource=fs.readFileSync(new URL('../web/teddy/model.js',import.meta.url),'utf8');const tuningSource=fs.readFileSync(new URL('../web/teddy/render-v5/tuning.js',import.meta.url),'utf8');
+const report={version:5,kind:'synthetic_morphology_search',iterations:N,unsafe,bestIndex:best.index,bestScore:+best.score.toFixed(8),best:best.p,converged,missingGates:missing,modelSourceDigest:crypto.createHash('sha256').update(modelSource+'\0'+tuningSource).digest('hex'),claims:{physicalBearScans:false,humanAestheticRatings:false,physicalBrowserFrames:false}};
 report.digest=crypto.createHash('sha256').update(JSON.stringify(report)).digest('hex');
 if(full)fs.writeFileSync(new URL('../docs/morphology-v5-report.json',import.meta.url),JSON.stringify(report,null,2)+'\n');
 console.log(JSON.stringify(report,null,2));

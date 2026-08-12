@@ -3,6 +3,7 @@ import crypto from 'node:crypto';
 import {cameraPlan,archetypeMetrics,buildTeddyArchetype,TEDDY_BOUNDS} from '../web/teddy/model.js';
 import {ExpressionRig,poseIsSafe,sanitizeVoiceFrame} from '../web/teddy/rig.js';
 import {normalizeOutputGain} from '../web/audio.js';
+import {tuneTeddyModel} from '../web/teddy/render-v5/tuning.js';
 
 const full=process.argv.includes('--full'),N=full?1_000_000:100_000,M=full?100_000:10_000;
 let seed=0x54454434;const u32=()=>{seed^=seed<<13;seed^=seed>>>17;seed^=seed<<5;return seed>>>0};const unit=()=>u32()/4294967296;
@@ -34,9 +35,9 @@ for(let i=0;i<N;i++){
   const w=120+(u32()%5000),h=160+(u32()%3500),p=cameraPlan(w,h),gesture=unit(),jaw=unit(),ear=unit(),yaw=unit();const visibleY=2*p.distance*Math.tan(p.fov/2),visibleX=visibleY*p.aspect,dynamicX=spanX+2*(.035+.07*gesture+.035*yaw),dynamicY=spanY+.08*jaw+.05*ear;if(dynamicX>visibleX+.0001)fail('dynamicFraming','horizontal_envelope');if(dynamicY>visibleY+.0001)fail('dynamicFraming','vertical_envelope');
 }
 
-const metrics=archetypeMetrics(buildTeddyArchetype());const sources={};
+const metrics=archetypeMetrics(tuneTeddyModel(buildTeddyArchetype()));const sources={};
 for(const file of ['web/teddy/model.js','web/teddy/rig.js','web/audio.js'])sources[file]=fs.readFileSync(new URL(`../${file}`,import.meta.url),'utf8');
-const renderFiles=['web/teddy/render.js','web/teddy/render-v5/renderer.js','web/teddy/render-v5/geometry.js','web/teddy/render-v5/shaders.js','web/teddy/render-v5/canvas.js'];
+const renderFiles=['web/teddy/render.js','web/teddy/render-v5/renderer.js','web/teddy/render-v5/tuning.js','web/teddy/render-v5/geometry.js','web/teddy/render-v5/shaders.js','web/teddy/render-v5/canvas.js'];
 sources['web/teddy/render.js']=renderFiles.map(file=>fs.readFileSync(new URL(`../${file}`,import.meta.url),'utf8')).join('\n');
 const renderSource=sources['web/teddy/render.js'];
 const capabilities={plushAnatomy:metrics.partCount>=45,articulatedGroups:metrics.groupCount>=9,layeredMouth:metrics.mouthLayers>=5,dualAxisCamera:/occupancyX/.test(sources['web/teddy/model.js'])&&/dX=/.test(sources['web/teddy/model.js']),stableFur:/noise3\(vLocal/.test(renderSource)&&!/noise3\(vP/.test(renderSource),richVoice:/getByteTimeDomainData/.test(sources['web/audio.js'])&&/brightness/.test(sources['web/audio.js']),adaptiveNoise:/noiseFloor/.test(sources['web/audio.js']),expressionRig:/ExpressionRig/.test(renderSource),reducedMotion:/reducedMotion/.test(sources['web/teddy/rig.js']),mutePreserved:/normalizeOutputGain/.test(sources['web/audio.js'])};
