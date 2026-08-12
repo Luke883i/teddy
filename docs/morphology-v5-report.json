@@ -1,0 +1,109 @@
+{
+  "version": 5,
+  "kind": "synthetic_morphology_search",
+  "iterations": 1000000,
+  "unsafe": 113282,
+  "bestIndex": 444503,
+  "bestScore": 2.86412657,
+  "best": {
+    "headW": 0.7598336312593504,
+    "headH": 0.7055609993440008,
+    "muzzleW": 0.42376110416458945,
+    "muzzleH": 0.26171422258757854,
+    "muzzleD": 0.27653725343442925,
+    "earW": 0.25689865899432884,
+    "earY": 0.4376117606990998,
+    "eyeX": 0.26383046295350193,
+    "torsoW": 0.7630216991559187,
+    "bellyW": 0.7138984615830468,
+    "armX": 0.6650095837691354,
+    "legX": 0.3596917044091252,
+    "footD": 0.482294781408807
+  },
+  "converged": {
+    "metrics": {
+      "partCount": 65,
+      "groupCount": 11,
+      "geometryKinds": 3,
+      "bilateralPairs": 6,
+      "extendedPairs": 9,
+      "faceProjectsForward": true,
+      "earEmergence": true,
+      "eyeNoseTriangle": true,
+      "hasCatchlights": true,
+      "hasPawPads": true,
+      "hasInnerEars": true,
+      "pawDetail": true,
+      "mouthLayers": 5,
+      "headToTorsoRatio": 1.0456796917996696,
+      "headToTorsoWidth": 0.9620253164556962
+    },
+    "framing": [
+      {
+        "w": 1195,
+        "h": 864,
+        "occupancyX": 0.389259,
+        "occupancyY": 0.755,
+        "limiter": "vertical"
+      },
+      {
+        "w": 390,
+        "h": 844,
+        "occupancyX": 0.8,
+        "occupancyY": 0.518402,
+        "limiter": "horizontal"
+      },
+      {
+        "w": 320,
+        "h": 1024,
+        "occupancyX": 0.8,
+        "occupancyY": 0.350586,
+        "limiter": "horizontal"
+      },
+      {
+        "w": 2560,
+        "h": 720,
+        "occupancyX": 0.151421,
+        "occupancyY": 0.755,
+        "limiter": "vertical"
+      },
+      {
+        "w": 844,
+        "h": 390,
+        "occupancyX": 0.24878,
+        "occupancyY": 0.755,
+        "limiter": "vertical"
+      },
+      {
+        "w": 240,
+        "h": 1080,
+        "occupancyX": 0.8,
+        "occupancyY": 0.249306,
+        "limiter": "horizontal"
+      },
+      {
+        "w": 3440,
+        "h": 500,
+        "occupancyX": 0.078254,
+        "occupancyY": 0.755,
+        "limiter": "vertical"
+      }
+    ],
+    "gates": {
+      "granularAnatomy": true,
+      "bearFace": true,
+      "plushPaws": true,
+      "layeredMouth": true,
+      "legacyPresenceCompatibility": true,
+      "cameraContained": true
+    }
+  },
+  "missingGates": [],
+  "modelSourceDigest": "3dbe4a5d254eefa548a6840705864dbc588fe5f39e36d96da9b9397a4fec5aca",
+  "claims": {
+    "physicalBearScans": false,
+    "humanAestheticRatings": false,
+    "physicalBrowserFrames": false
+  },
+  "digest": "c58a13cd306c3ded53e5c2a111f7332c8dd8bbf7bab0fb3610fd75b7be5f07f6"
+}

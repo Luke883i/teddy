@@ -17,8 +17,11 @@ export function buildTeddyArchetype(){
     hipL:{parent:'root',pos:[-.360,-.73,.02],rot:[.03,0,-.06]},hipR:{parent:'root',pos:[.360,-.73,.02],rot:[.03,0,.06]}
   };
   const parts=[
+    // Core plush mass: a single pear mesh avoids intersection seams across the torso.
     part('torsoShell','pear','root',[0,-.18,-.02],[.79,1.08,.64],'fur',.95),
     part('tail','sphere','root',[0,-.57,-.59],[.21,.23,.18],'fur',.96),
+
+    // Head and face.
     part('headShell','sphere','head',[0,0,0],[.760,.706,.68],'fur',.93),
     part('templeL','sphere','head',[-.42,.05,.20],[.36,.43,.42],'fur',.95),part('templeR','sphere','head',[.42,.05,.20],[.36,.43,.42],'fur',.95),
     part('cheekL','sphere','head',[-.33,-.20,.42],[.38,.31,.34],'fur',.96),part('cheekR','sphere','head',[.33,-.20,.42],[.38,.31,.34],'fur',.96),
@@ -39,6 +42,8 @@ export function buildTeddyArchetype(){
     part('upperLipL','capsule','head',[-.075,-.398,.865],[.105,.018,.018],'mouth',.50,[0,0,-.38],{mouth:true}),part('upperLipR','capsule','head',[.075,-.398,.865],[.105,.018,.018],'mouth',.50,[0,0,.38],{mouth:true}),
     part('lowerLip','capsule','jaw',[0,-.005,.165],[.17,.016,.016],'mouth',.52,[0,0,0],{jaw:true}),
     part('tongue','sphere','jaw',[0,-.006,.105],[.105,.020,.016],'tongue',.78,[0,0,0],{jaw:true}),
+
+    // Arms: shoulder -> forearm -> paw, deliberately forward of torso.
     part('upperArmL','capsule','shoulderL',[0,-.25,.03],[.285,.47,.285],'fur',.95),part('upperArmR','capsule','shoulderR',[0,-.25,.03],[.285,.47,.285],'fur',.95),
     part('forearmL','capsule','forearmL',[.03,-.22,.09],[.29,.39,.29],'fur',.95),part('forearmR','capsule','forearmR',[-.03,-.22,.09],[.29,.39,.29],'fur',.95),
     part('handL','sphere','forearmL',[.08,-.49,.29],[.315,.29,.26],'fur',.96),part('handR','sphere','forearmR',[-.08,-.49,.29],[.315,.29,.26],'fur',.96),
@@ -46,6 +51,8 @@ export function buildTeddyArchetype(){
     part('thumbPadL','sphere','forearmL',[-.035,-.525,.535],[.040,.033,.013],'pawDark',.99),part('thumbPadR','sphere','forearmR',[.035,-.525,.535],[.040,.033,.013],'pawDark',.99),
     part('fingerPadL1','sphere','forearmL',[-.04,-.42,.535],[.040,.035,.014],'pawDark',.99),part('fingerPadL2','sphere','forearmL',[.08,-.405,.545],[.040,.035,.014],'pawDark',.99),part('fingerPadL3','sphere','forearmL',[.20,-.43,.53],[.040,.035,.014],'pawDark',.99),
     part('fingerPadR1','sphere','forearmR',[-.20,-.43,.53],[.040,.035,.014],'pawDark',.99),part('fingerPadR2','sphere','forearmR',[-.08,-.405,.545],[.040,.035,.014],'pawDark',.99),part('fingerPadR3','sphere','forearmR',[.04,-.42,.535],[.040,.035,.014],'pawDark',.99),
+
+    // Legs and forward-facing feet.
     part('thighL','sphere','hipL',[0,-.23,-.07],[.39,.44,.40],'fur',.96),part('thighR','sphere','hipR',[0,-.23,-.07],[.39,.44,.40],'fur',.96),
     part('shinL','capsule','hipL',[0,-.45,.02],[.34,.36,.35],'fur',.96,[.10,0,0]),part('shinR','capsule','hipR',[0,-.45,.02],[.34,.36,.35],'fur',.96,[.10,0,0]),
     part('footL','sphere','hipL',[0,-.59,.43],[.43,.29,.482],'fur',.96,[.12,0,-.02]),part('footR','sphere','hipR',[0,-.59,.43],[.43,.29,.482],'fur',.96,[.12,0,.02]),
