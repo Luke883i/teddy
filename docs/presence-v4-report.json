@@ -1,0 +1,72 @@
+{
+  "version": 4,
+  "mode": "full",
+  "identity": {
+    "perFamily": 1000000,
+    "families": 5,
+    "scenarioTotal": 5000000,
+    "mutationPerCapability": 100000,
+    "mutationCapabilities": 10,
+    "mutationTotal": 1000000,
+    "total": 6000000,
+    "uniqueByConstruction": true
+  },
+  "families": {
+    "viewport": {
+      "total": 1000000,
+      "unsafe": 0
+    },
+    "voice": {
+      "total": 1000000,
+      "unsafe": 0
+    },
+    "temporal": {
+      "total": 1000000,
+      "unsafe": 0
+    },
+    "lifecycle": {
+      "total": 1000000,
+      "unsafe": 0
+    },
+    "dynamicFraming": {
+      "total": 1000000,
+      "unsafe": 0
+    }
+  },
+  "reasons": {},
+  "archetype": {
+    "partCount": 46,
+    "geometryKinds": 3,
+    "groupCount": 9,
+    "bilateralPairs": 6,
+    "extendedPairs": 6,
+    "faceProjectsForward": true,
+    "hasCatchlights": true,
+    "hasPawPads": true,
+    "hasInnerEars": true,
+    "mouthLayers": 5,
+    "headToTorsoRatio": 1.064102564102564
+  },
+  "capabilities": {
+    "plushAnatomy": true,
+    "articulatedGroups": true,
+    "layeredMouth": true,
+    "dualAxisCamera": true,
+    "stableFur": true,
+    "richVoice": true,
+    "adaptiveNoise": true,
+    "expressionRig": true,
+    "reducedMotion": true,
+    "mutePreserved": true
+  },
+  "missingCapabilities": [],
+  "criticalUnsafe": 0,
+  "criticalMutationSurvivors": 0,
+  "sourceDigest": "72e070149ab85423390d933ea9fc1b4549fcb6790a2363a64dd084c4ff69a997",
+  "digest": "56be3d3fbf3761f41ebded969db663d63ecf83f4e41e249a4c197a244993dff8",
+  "definition": {
+    "synthetic": true,
+    "physicalBrowserSessions": false,
+    "physicalOpenAISessions": false
+  }
+}

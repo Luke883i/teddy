@@ -5,6 +5,8 @@ import { fileURLToPath } from 'node:url';
 const ROOT=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..'),full=process.argv.includes('--full');
 const read=p=>{try{return fs.readFileSync(path.join(ROOT,p),'utf8')}catch{return ''}},exists=p=>fs.existsSync(path.join(ROOT,p));
 const source={security:read('server/lib/security.mjs'),http:read('server/lib/http.mjs'),realtime:read('server/lib/realtime.mjs'),secrets:read('server/lib/secrets.mjs'),state:read('server/lib/state.mjs'),main:read('server/main.mjs'),doctor:read('server/doctor.mjs'),shell:read('teddy.sh'),docker:read('Dockerfile'),pkg:read('package.json'),workflow:read('.github/workflows/ci.yml')};
+const pkgVersion=(()=>{try{return String(JSON.parse(source.pkg).version||'')}catch{return ''}})(),serverVersion=source.main.match(/version:'([^']+)'/)?.[1]||'';
+const semverAtLeast=(value,major,minor)=>{const m=String(value).match(/^(\d+)\.(\d+)\.(\d+)/);if(!m)return false;const M=Number(m[1]),mnr=Number(m[2]);return M>major||(M===major&&mnr>=minor)};
 const cap={
   auth:/authentication_required/.test(source.security)&&/TEDDY_AUTH_PASSWORD/.test(source.main),
   failClosedHost:/allowed_hosts_required/.test(source.security),
@@ -24,7 +26,7 @@ const cap={
   safeCache:/no-cache, max-age=0, must-revalidate/.test(source.http)&&!/immutable/.test(source.http),
   zeroRuntimeDeps:!/("dependencies"|"devDependencies")\s*:/.test(source.pkg),
   v02Integrated:exists('web/teddy/model.js')&&exists('docs/v0.2-recovery.md'),
-  v03Aligned:/"version"\s*:\s*"0\.3\.0"/.test(source.pkg)&&/version:'0\.3\.0'/.test(source.main),
+  v03Aligned:pkgVersion===serverVersion&&semverAtLeast(pkgVersion,0,3),
   pinnedActions:/uses: actions\/checkout@[0-9a-f]{40}/.test(source.workflow)&&/uses: actions\/setup-node@[0-9a-f]{40}/.test(source.workflow)
 };
 const families={
