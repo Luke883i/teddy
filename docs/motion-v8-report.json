@@ -1,0 +1,73 @@
+{
+  "version": 8,
+  "kind": "deterministic motion/articulation scenario saturation",
+  "mode": "full",
+  "identity": {
+    "scenarios": 1000000,
+    "uniqueByConstruction": true
+  },
+  "families": {
+    "stand": 76924,
+    "walkForward": 76923,
+    "walkBack": 76923,
+    "turnLeft": 76923,
+    "turnRight": 76923,
+    "raiseLeftArm": 76923,
+    "raiseRightArm": 76923,
+    "waveLeft": 76923,
+    "waveRight": 76923,
+    "liftLeftLeg": 76923,
+    "liftRightLeg": 76923,
+    "jump": 76923,
+    "nod": 76923
+  },
+  "invariants": [
+    "finite-state",
+    "bounded-stage-x",
+    "bounded-stage-y",
+    "bounded-stage-z",
+    "bounded-yaw",
+    "bounded-gait-speed",
+    "signed-gait-direction",
+    "bounded-duration",
+    "bounded-phase",
+    "bounded-queue",
+    "known-action",
+    "bounded-action",
+    "exclusive-support-state",
+    "ground-height-consistency",
+    "bounded-foot-penetration",
+    "bounded-foot-slip",
+    "single-leg-support",
+    "jump-airborne-consistency"
+  ],
+  "unsafe": 0,
+  "failures": {},
+  "runtime": {
+    "sequences": 10000,
+    "frames": 1500000,
+    "unsafe": 0
+  },
+  "stage": {
+    "floorY": -1.37,
+    "x": [
+      -0.62,
+      0.62
+    ],
+    "z": [
+      -0.42,
+      0.34
+    ],
+    "jumpY": [
+      0,
+      0.38
+    ]
+  },
+  "sourceDigest": "8519b48eb8922538c179eb80d562c6fbaa6260ef3fda57b3ac6e683d085f49ff",
+  "digest": "5af1324c0599036fc5627da608d7bbb364f8de0cb55957feb39f59d807846f8e",
+  "definition": {
+    "syntheticScenarioSpace": true,
+    "physicalBrowserRenders": false,
+    "objective": "bounded composable motion on grounded stage with semantic intent routing"
+  }
+}

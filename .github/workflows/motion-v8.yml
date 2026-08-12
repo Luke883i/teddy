@@ -1,0 +1,42 @@
+name: motion-v8
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: teddy-motion-v8-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  motion:
+    name: motion / 1m-scenarios-1m-mutations
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.19.0
+      - name: validate runtime source
+        run: |
+          set -euo pipefail
+          npm ci --ignore-scripts
+          node --check web/teddy/motion-contract.js
+          node --check web/teddy/motion-engine.js
+          node --check web/teddy/movement-v8.js
+          node --check web/teddy/motion-wire-v8.js
+          node --check web/teddy/world-v8.js
+          node --check web/local.js
+          node --test tests/motion-contract-v8.test.mjs tests/motion-world-v8.test.mjs tests/motion-routing-v8.test.mjs
+      - name: saturate 1m movement scenarios
+        run: node tools/simulate-motion-v8.mjs --full
+      - name: kill 1m motion mutations
+        run: node tools/mutate-motion-v8.mjs --full
+      - name: verify converged evidence
+        run: |
+          node -e "const r=require('./docs/motion-v8-report.json');if(r.identity.scenarios!==1000000||r.unsafe!==0||r.runtime.unsafe!==0||r.runtime.frames<1000000||r.invariants.length<18)process.exit(1)"
+          node -e "const r=require('./docs/motion-v8-mutation-report.json');if(r.identity.mutations!==1000000||r.identity.critical!==1000000||r.killed!==1000000||r.survivors!==0||r.unsafeBase!==0)process.exit(1)"
+          git diff --exit-code -- docs/motion-v8-report.json docs/motion-v8-mutation-report.json
