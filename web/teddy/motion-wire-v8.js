@@ -19,5 +19,6 @@ export function installMotionTelemetryBridge(){
   if(TeddyRealtime.prototype.__motionBridgeV8)return;TeddyRealtime.prototype.__motionBridgeV8=true;
   const original=TeddyRealtime.prototype.emit;
   TeddyRealtime.prototype.emit=function(type,detail){if(type==='event')consumeRuntimeEvent(detail);return original.call(this,type,detail)};
-  globalThis.window?.addEventListener?.('teddy:local-event',e=>consumeLocalEvent(e.detail));
+  const seen=new WeakSet();
+  globalThis.window?.addEventListener?.('teddy:local-event',e=>{const d=e?.detail;if(d&&typeof d==='object'){if(seen.has(d))return;seen.add(d);queueMicrotask(()=>seen.delete(d));}consumeLocalEvent(d)});
 }
