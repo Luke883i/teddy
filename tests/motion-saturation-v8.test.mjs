@@ -1,0 +1,2 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {spawnSync} from 'node:child_process';
+test('quick movement and mutation campaigns execute deterministically',()=>{for(const [script,count] of [['tools/simulate-motion-v8.mjs','100000'],['tools/mutate-motion-v8.mjs','100000']]){const run=spawnSync(process.execPath,[script,count],{cwd:new URL('..',import.meta.url),encoding:'utf8',timeout:30000});assert.equal(run.status,0,run.stderr||run.stdout.slice(-2000));}});

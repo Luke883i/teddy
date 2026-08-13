@@ -1,0 +1,122 @@
+{
+  "version": 8,
+  "kind": "deterministic motion invariant mutation kill campaign",
+  "mode": "full",
+  "identity": {
+    "mutations": 1000000,
+    "operators": 25,
+    "critical": 1000000
+  },
+  "killed": 1000000,
+  "survivors": 0,
+  "unsafeBase": 0,
+  "operatorCounts": {
+    "nonfinite_x": {
+      "total": 40000,
+      "killed": 40000
+    },
+    "nonfinite_action": {
+      "total": 40000,
+      "killed": 40000
+    },
+    "x_overflow": {
+      "total": 40000,
+      "killed": 40000
+    },
+    "z_overflow": {
+      "total": 40000,
+      "killed": 40000
+    },
+    "negative_y": {
+      "total": 40000,
+      "killed": 40000
+    },
+    "jump_height": {
+      "total": 40000,
+      "killed": 40000
+    },
+    "yaw_overflow": {
+      "total": 40000,
+      "killed": 40000
+    },
+    "speed_over": {
+      "total": 40000,
+      "killed": 40000
+    },
+    "speed_negative": {
+      "total": 40000,
+      "killed": 40000
+    },
+    "direction_zero": {
+      "total": 40000,
+      "killed": 40000
+    },
+    "duration_zero": {
+      "total": 40000,
+      "killed": 40000
+    },
+    "duration_long": {
+      "total": 40000,
+      "killed": 40000
+    },
+    "phase_negative": {
+      "total": 40000,
+      "killed": 40000
+    },
+    "phase_over": {
+      "total": 40000,
+      "killed": 40000
+    },
+    "queue_overflow": {
+      "total": 40000,
+      "killed": 40000
+    },
+    "invalid_action": {
+      "total": 40000,
+      "killed": 40000
+    },
+    "action_over": {
+      "total": 40000,
+      "killed": 40000
+    },
+    "support_both": {
+      "total": 40000,
+      "killed": 40000
+    },
+    "support_neither": {
+      "total": 40000,
+      "killed": 40000
+    },
+    "grounded_height": {
+      "total": 40000,
+      "killed": 40000
+    },
+    "airborne_low": {
+      "total": 40000,
+      "killed": 40000
+    },
+    "ground_penetration": {
+      "total": 40000,
+      "killed": 40000
+    },
+    "ground_slip": {
+      "total": 40000,
+      "killed": 40000
+    },
+    "leg_lift_walk": {
+      "total": 40000,
+      "killed": 40000
+    },
+    "jump_not_airborne": {
+      "total": 40000,
+      "killed": 40000
+    }
+  },
+  "sourceDigest": "567d63adfe2a16422416c1e448d7b2b4f3f0e3769a08c3053818224625f1560b",
+  "digest": "142f1f2d60f918fb4f98adc9301349a44bfe49015abd35b7d3d34896c38748c1",
+  "definition": {
+    "syntheticMutationSpace": true,
+    "physicalFaultInjection": false,
+    "target": "all malformed motion/world/support states are rejected"
+  }
+}
