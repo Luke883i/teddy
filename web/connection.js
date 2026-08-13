@@ -1,5 +1,6 @@
 export function connectionGuidance(problem={}){
   const error=problem.error||'',kind=problem.kind||'',retryAfter=Math.max(0,Number(problem.retryAfterSeconds)||0);
+  if(error==='local_no_speech')return {state:'non ti ho sentito',title:'Non ho sentito una frase',message:'Parla un po piu vicino al microfono e riprova. Nessun audio vuoto e stato inviato alla trascrizione.',action:'retry',retryAfter:0};
   if(error==='openai_auth_failed'||error==='openai_key_corrupt'||error==='openai_key_missing')return {state:'chiave OpenAI da controllare',title:'Chiave OpenAI rifiutata',message:'Teddy non inviera altro audio finche la chiave non viene sostituita o corretta.',action:'replace-key',retryAfter:0};
   if(error==='openai_access_denied')return {state:'accesso Realtime negato',title:'Realtime non disponibile per questo progetto',message:'OpenAI ha rifiutato l accesso alla sessione Realtime. Verifica accesso al modello, progetto e limiti API.',action:'diagnostics',retryAfter:0};
   if(error==='openai_quota_exhausted'||kind==='quota')return {state:'quota OpenAI esaurita',title:'Quota API non disponibile',message:'La rete e il microfono possono essere perfettamente sani: OpenAI sta rifiutando nuove sessioni per quota o credito. Verifica il progetto API oppure usa una chiave con quota Realtime.',action:'replace-key',retryAfter};
