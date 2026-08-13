@@ -35,5 +35,7 @@ jobs:
         run: node tests/local-http-v7.mjs
       - name: startup recovery scenarios
         run: node tools/mutate-startup-v8.mjs --full
-      - name: deterministic reports
-        run: git diff --exit-code -- docs/startup-v8-report.json docs/presence-v8-seeded-report.json
+      - name: verify deterministic contracts
+        run: |
+          node -e "const r=require('./docs/startup-v8-report.json');if(r.identity.total!==1000000||r.criticalSurvivors!==0||r.unsafe!==0)process.exit(1)"
+          node -e "const r=require('./docs/presence-v8-seeded-report.json');if(r.scenarios!==100000||r.seed!==736281922||r.unsafe!==0||r.criticalMutationSurvivors!==0)process.exit(1)"
