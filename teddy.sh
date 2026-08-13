@@ -5,12 +5,14 @@ TEDDY_HOME="${TEDDY_HOME:-$HOME/.teddy}"
 PORT="${TEDDY_PORT:-8787}"
 OPEN_BROWSER=1
 DOCTOR=0
+AUTOINSTALL="${TEDDY_RUNTIME_AUTOINSTALL:-1}"
 for arg in "$@"; do
   case "$arg" in
     --no-open) OPEN_BROWSER=0 ;;
+    --no-install) AUTOINSTALL=0 ;;
     --doctor) DOCTOR=1 ;;
     --port=*) PORT="${arg#*=}" ;;
-    --help|-h) echo "Usage: ./teddy.sh [--no-open] [--doctor] [--port=8787]"; exit 0 ;;
+    --help|-h) echo "Usage: ./teddy.sh [--no-open] [--no-install] [--doctor] [--port=8787]"; exit 0 ;;
     *) echo "Unknown option: $arg" >&2; exit 2 ;;
   esac
 done
@@ -52,19 +54,32 @@ if [[ "$need_bootstrap" -eq 1 ]]; then
   fi
 fi
 cleanup_bootstrap; bootstrap_tmp=""; trap - EXIT
-export TEDDY_HOME TEDDY_PORT="$PORT"
+export TEDDY_HOME TEDDY_PORT="$PORT" TEDDY_RUNTIME_AUTOINSTALL="$AUTOINSTALL"
 if [[ "$DOCTOR" -eq 1 ]]; then exec "$NODE_BIN" "$ROOT/server/doctor.mjs"; fi
 "$NODE_BIN" "$ROOT/server/main.mjs" & PID=$!
 cleanup(){ if kill -0 "$PID" 2>/dev/null; then kill "$PID" 2>/dev/null || true; wait "$PID" 2>/dev/null || true; fi; }
 trap cleanup EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
-url="http://127.0.0.1:$PORT"; ready=0
+url="http://127.0.0.1:$PORT"; live=0
 for ((i=0;i<100;i++)); do
-  if "$NODE_BIN" -e 'fetch(process.argv[1]).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))' "$url/api/health" >/dev/null 2>&1; then ready=1; break; fi
+  if "$NODE_BIN" -e 'fetch(process.argv[1]).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))' "$url/api/health" >/dev/null 2>&1; then live=1; break; fi
   if ! kill -0 "$PID" 2>/dev/null; then break; fi
   sleep 0.1
 done
-[[ "$ready" -eq 1 ]] || { echo "Teddy failed to become healthy." >&2; exit 1; }
+[[ "$live" -eq 1 ]] || { echo "Teddy failed to become live." >&2; exit 1; }
 if [[ "$OPEN_BROWSER" -eq 1 ]]; then if command -v xdg-open >/dev/null; then xdg-open "$url" >/dev/null 2>&1 || true; elif command -v open >/dev/null; then open "$url" >/dev/null 2>&1 || true; fi; fi
-echo "Teddy: $url"; wait "$PID"; trap - EXIT
+echo "Teddy server: $url"
+if [[ "$AUTOINSTALL" == "1" && "${TEDDY_PROVIDER:-local}" == "local" ]]; then
+  echo "Teddy prepara ASR + LLM + TTS locali; avanzamento e provenienza sono visibili nel browser."
+  (
+    last=""
+    while kill -0 "$PID" 2>/dev/null; do
+      line="$($NODE_BIN -e 'fetch(process.argv[1]).then(async r=>{const x=await r.json();console.log(`${x.availability}|${x.installPhase}|${x.ready}`)}).catch(()=>{})' "$url/api/availability" 2>/dev/null || true)"
+      if [[ -n "$line" && "$line" != "$last" ]]; then echo "runtime: $line"; last="$line"; fi
+      [[ "$line" == pronto\|ready\|true ]] && break
+      sleep 1
+    done
+  ) & STATUS_PID=$!
+fi
+wait "$PID"; [[ -z "${STATUS_PID:-}" ]] || wait "$STATUS_PID" 2>/dev/null || true; trap - EXIT

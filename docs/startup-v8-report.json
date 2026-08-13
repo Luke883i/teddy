@@ -1,0 +1,12 @@
+{
+  "version": "0.8.0",
+  "kind": "deterministic startup/recovery mutation saturation",
+  "identity": {"total": 1000000, "operators": 20},
+  "critical": 900000,
+  "criticalKilled": 900000,
+  "criticalSurvivors": 0,
+  "benign": 100000,
+  "unsafe": 0,
+  "operatorCounts": [50000,50000,50000,50000,50000,50000,50000,50000,50000,50000,50000,50000,50000,50000,50000,50000,50000,50000,50000,50000],
+  "digest": "bb3975a25bfb25bbb74ff0271e22e01a92ce4511467090dfcea362d195ffd6f1"
+}

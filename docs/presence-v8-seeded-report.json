@@ -1,0 +1,33 @@
+{
+  "version": "0.8.0",
+  "kind": "seeded articulated presence scenarios",
+  "seed": 736281922,
+  "scenarios": 100000,
+  "families": {
+    "strong_speech_walk": 6250,
+    "quiet_speech_head": 6250,
+    "blink_jaw_max": 6250,
+    "gesture_arm_stride": 6250,
+    "attention_180": 6250,
+    "fps_30": 6250,
+    "fps_60": 6250,
+    "fps_144": 6250,
+    "portrait_extreme": 6250,
+    "ultrawide": 6250,
+    "nonfinite_inputs": 6250,
+    "time_jump": 6250,
+    "stall_500ms": 6250,
+    "barge_in_phoneme": 6250,
+    "reduced_motion": 6250,
+    "audio_restart": 6250
+  },
+  "unsafe": 0,
+  "criticalMutationSurvivors": 0,
+  "repro": "TEDDY_SEED=736281922 node tools/scenario-presence-v8.mjs --full",
+  "definition": {
+    "serializableSeed": true,
+    "browserGpuRenders": false,
+    "composition": ["speech", "pose", "locomotion", "camera", "timing", "barge-in", "audio-restart"]
+  },
+  "failures": []
+}

@@ -9,9 +9,10 @@ import { json, readBody, readJson, requireContentType, serveStatic } from './lib
 import { deploymentPolicy, guardRequest, SECURITY_HEADERS } from './lib/security.mjs';
 import { normalizeProvider, providerCapabilities } from './lib/provider.mjs';
 import { createLocalService } from './lib/local-service.mjs';
+import { createRuntimeManager } from './lib/runtime-manager.mjs';
 
 process.umask(0o077);
-const VERSION='0.7.0';
+const VERSION='0.8.0';
 const ROOT=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const HOME=process.env.TEDDY_HOME||path.join(process.env.HOME||process.cwd(),'.teddy');
 const PORT=Number(process.env.TEDDY_PORT||8787),HOST=process.env.TEDDY_HOST||'127.0.0.1';
@@ -21,10 +22,13 @@ const policy=deploymentPolicy({listenHost:HOST,publicOrigin:PUBLIC_ORIGIN,authPa
 if(!policy.ok)throw new Error(`unsafe_deployment:${policy.error}`);
 const REALTIME_URL=validateRealtimeEndpoint(process.env.TEDDY_OPENAI_REALTIME_URL||'https://api.openai.com/v1/realtime/calls');
 const secrets=new SecretStore(HOME,{externalMasterKey:MASTER_KEY}),state=new StateStore(HOME),defaults=readDefaultConfig(ROOT);let config=mergeConfig(defaults,state.getSetting('config')||{});
-const realtimeGate=new RealtimeBackoff(),localService=createLocalService();
+const realtimeGate=new RealtimeBackoff(),runtime=createRuntimeManager({home:HOME}),localService=createLocalService({runtime});
+if(PROVIDER==='local')runtime.start().catch(e=>console.error('local runtime:',e?.code||e?.message||e));
+const localAvailability=()=>runtime.status();
 const bootstrap=()=>({
   version:VERSION,
   ai:{provider:PROVIDER,...providerCapabilities(PROVIDER),...(PROVIDER==='local'?localService.status():{})},
+  availability:PROVIDER==='local'?localAvailability():{availability:secrets.status().configured?'pronto':'degradato',ready:secrets.status().configured,installPhase:'not_applicable',engines:{}},
   secret:secrets.status(),config,
   persistence:{engine:'sqlite',durable:true,wal:true},
   security:{mode:policy.mode,authenticated:!!AUTH_PASSWORD,publicOrigin:policy.publicOrigin},
@@ -36,12 +40,14 @@ const bootstrap=()=>({
 async function route(req,res){
   const guard=guardRequest(req,{listenHost:HOST,publicOrigin:PUBLIC_ORIGIN,authPassword:AUTH_PASSWORD});if(!guard.ok)return json(res,guard.status,{error:guard.error},guard.headers||{});
   const u=new URL(req.url,'http://localhost');
-  if(req.method==='GET'&&u.pathname==='/api/health')return json(res,200,{ok:true,service:'teddy',version:VERSION,provider:PROVIDER,security:policy.mode});
+  if(req.method==='GET'&&u.pathname==='/api/health')return json(res,200,{ok:true,service:'teddy',version:VERSION,provider:PROVIDER,security:policy.mode,liveness:'up'});
+  if(req.method==='GET'&&u.pathname==='/api/availability'){const a=PROVIDER==='local'?localAvailability():bootstrap().availability;return json(res,200,a)}
+  if(req.method==='GET'&&u.pathname==='/api/ready'){const a=PROVIDER==='local'?localAvailability():bootstrap().availability;return json(res,a.ready?200:503,a)}
   if(req.method==='GET'&&u.pathname==='/api/bootstrap')return json(res,200,bootstrap());
   if(req.method==='GET'&&u.pathname==='/api/local/status')return json(res,200,localService.status());
   if(req.method==='POST'&&u.pathname==='/api/local/turn'){
     if(PROVIDER!=='local')return json(res,409,{error:'local_provider_disabled'});
-    const localStatus=localService.status();if(!localStatus.configured)return json(res,503,{error:'local_engines_not_configured',status:localStatus});
+    const localStatus=localService.status();if(!localStatus.ready)return json(res,503,{error:'local_runtime_not_ready',status:localStatus});
     requireContentType(req,'audio/wav');
     const controller=new AbortController(),abort=()=>controller.abort(Object.assign(new Error('client_aborted'),{name:'AbortError',code:'client_aborted'}));
     req.once('aborted',abort);res.once('close',()=>{if(!res.writableEnded)abort()});
@@ -76,5 +82,5 @@ const server=http.createServer((req,res)=>{Promise.resolve(route(req,res)).catch
 server.requestTimeout=30_000;server.headersTimeout=10_000;server.keepAliveTimeout=5_000;server.maxHeadersCount=100;server.maxRequestsPerSocket=1000;
 server.on('clientError',(_err,socket)=>{if(socket.writable)socket.end('HTTP/1.1 400 Bad Request\r\nConnection: close\r\n\r\n')});
 server.listen(PORT,HOST,()=>console.log(`Teddy ${VERSION} listening on http://${HOST}:${PORT} (${policy.mode}, ${PROVIDER})`));
-let closing=false;function shutdown(){if(closing)return;closing=true;server.close(()=>{state.close();process.exit(0)});setTimeout(()=>process.exit(1),3000).unref()}
+let closing=false;function shutdown(){if(closing)return;closing=true;runtime.stop();server.close(()=>{state.close();process.exit(0)});setTimeout(()=>process.exit(1),3000).unref()}
 process.on('SIGINT',shutdown);process.on('SIGTERM',shutdown);
