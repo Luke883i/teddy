@@ -4,9 +4,10 @@ const child=spawn(process.execPath,['server/main.mjs'],{cwd:process.cwd(),env:{.
 const base=`http://127.0.0.1:${port}`;const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 try{
  let ready=false;for(let i=0;i<80;i++){try{const r=await fetch(`${base}/api/health`);if(r.ok){ready=true;break}}catch{}await sleep(50)}assert.equal(ready,true,'server ready');
- const boot=await (await fetch(`${base}/api/bootstrap`)).json();assert.equal(boot.version,'0.7.0');assert.equal(boot.ai.provider,'local');assert.equal(boot.ai.accountRequired,false);assert.equal(boot.ai.configured,true);
+ const boot=await (await fetch(`${base}/api/bootstrap`)).json();assert.match(boot.version,/^0\.[7-9]\.|^[1-9]\d*\./);assert.equal(boot.ai.provider,'local');assert.equal(boot.ai.accountRequired,false);assert.equal(boot.ai.configured,true);assert.equal(boot.ai.ready,true);
+ const availability=await (await fetch(`${base}/api/availability`)).json();assert.equal(availability.ready,false,'managed availability stays separate from mock service compatibility');
  const wav=Buffer.alloc(44);wav.write('RIFF');wav.write('WAVE',8);wav.write('data',36);
  const turn=await fetch(`${base}/api/local/turn`,{method:'POST',headers:{'content-type':'audio/wav'},body:wav});assert.equal(turn.status,200);const text=await turn.text();for(const type of ['transcript','text.delta','audio','done'])assert.match(text,new RegExp(`"type":"${type.replace('.','\\.')}"`));
  const cloud=await fetch(`${base}/api/realtime/session`,{method:'POST',headers:{'content-type':'application/sdp'},body:'v=0\r\n'});assert.equal(cloud.status,409);assert.equal((await cloud.json()).error,'cloud_provider_not_selected');
- console.log('local v0.7 HTTP smoke ok');
+ console.log('local HTTP backward-compatibility smoke ok');
 }finally{child.kill('SIGTERM');await Promise.race([new Promise(r=>child.once('exit',r)),sleep(1500)]);fs.rmSync(home,{recursive:true,force:true})}
