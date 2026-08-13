@@ -1,0 +1,39 @@
+name: local-v8
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: teddy-local-v8-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  readiness-presence:
+    name: local-v8 / readiness-presence
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 24.19.0
+      - name: install and syntax
+        run: |
+          set -euo pipefail
+          npm ci --ignore-scripts
+          node --check server/lib/runtime-manager.mjs
+          node --check server/lib/local-runtime.mjs
+          node --check web/app.js
+          node --check web/local.js
+          node --check tools/scenario-presence-v8.mjs
+      - name: readiness contracts
+        run: node --test tests/runtime-state.test.mjs tests/presence-v8-seeded.test.mjs
+      - name: local HTTP compatibility
+        run: node tests/local-http-v7.mjs
+      - name: startup recovery scenarios
+        run: node tools/mutate-startup-v8.mjs --full
+      - name: deterministic reports
+        run: git diff --exit-code -- docs/startup-v8-report.json docs/presence-v8-seeded-report.json

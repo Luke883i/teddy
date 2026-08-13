@@ -17,6 +17,7 @@
     "simulate:presence:full":"node tools/simulate-presence-v4.mjs --full",
     "simulate:morphology":"node tools/search-morphology-v5.mjs",
     "simulate:morphology:full":"node tools/search-morphology-v5.mjs --full",
+    "fuzz:presence":"node tools/scenario-presence-v8.mjs --full",
     "mutate:local":"node tools/mutate-local-v7.mjs",
     "mutate:startup":"node tools/mutate-startup-v8.mjs --full",
     "doctor":"node server/doctor.mjs"

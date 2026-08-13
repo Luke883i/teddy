@@ -3,19 +3,20 @@ const safeSpeed=v=>Math.max(0,Math.min(1,Number(v)||0));
 
 export function kinematicTargets({time=0,pose={},locomotion={}}={}){
   const speed=safeSpeed(locomotion.speed),direction=clamp(locomotion.direction??1,-1,1)||1;
-  const phase=(Number(time)||0)*(2.6+speed*4.6),stride=Math.sin(phase)*speed*direction,opposite=Math.sin(phase+Math.PI)*speed*direction;
+  const phase=(Number.isFinite(Number(time))?Number(time):0)*(2.6+speed*4.6),stride=Math.sin(phase)*speed*direction,opposite=Math.sin(phase+Math.PI)*speed*direction;
   const plant=Math.max(0,Math.cos(phase))*speed,plantOpp=Math.max(0,Math.cos(phase+Math.PI))*speed;
-  const voice=clamp(pose.gesture??0,0,1),shoulder=clamp(pose.shoulder??0,0,1);
+  const voice=clamp(pose.gesture??0,0,1),shoulder=clamp(pose.shoulder??0,0,1),jaw=clamp(pose.jaw??0,0,1),ear=clamp(pose.earLift??0,0,1);
+  const headPitch=clamp(pose.headPitch??0),headYaw=clamp(pose.headYaw??0),headRoll=clamp(pose.headRoll??0);
   const weight=Math.sin(phase)*speed*.045;
   return {
     root:{pos:[0,Math.sin(phase*2)*.014*speed,0],rot:[0,0,weight]},
     pelvis:{rot:[stride*.025,0,-weight*.75]},
     spine:{rot:[-stride*.018,0,weight*.48]},
-    neckBase:{rot:[(pose.headPitch||0)*.22,(pose.headYaw||0)*.28,(pose.headRoll||0)*.24]},
-    neck:{rot:[(pose.headPitch||0)*.34,(pose.headYaw||0)*.38,(pose.headRoll||0)*.34]},
-    head:{rot:[(pose.headPitch||0)*.44,(pose.headYaw||0)*.34,(pose.headRoll||0)*.42]},
-    jaw:{rot:[(pose.jaw||0)*.13,0,0],pos:[0,-(pose.jaw||0)*.045,(pose.jaw||0)*.022]},
-    earL:{rot:[0,0,-(pose.earLift||0)*.055]},earR:{rot:[0,0,(pose.earLift||0)*.055]},
+    neckBase:{rot:[headPitch*.22,headYaw*.28,headRoll*.24]},
+    neck:{rot:[headPitch*.34,headYaw*.38,headRoll*.34]},
+    head:{rot:[headPitch*.44,headYaw*.34,headRoll*.42]},
+    jaw:{rot:[jaw*.13,0,0],pos:[0,-jaw*.045,jaw*.022]},
+    earL:{rot:[0,0,-ear*.055]},earR:{rot:[0,0,ear*.055]},
     shoulderL:{rot:[opposite*.20-voice*.06,0,-voice*.17-shoulder*.05]},
     shoulderR:{rot:[stride*.20+voice*.06,0,voice*.17+shoulder*.05]},
     elbowL:{rot:[Math.max(0,-opposite)*.25+voice*.12,0,-voice*.08]},
