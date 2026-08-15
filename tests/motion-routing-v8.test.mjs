@@ -16,10 +16,12 @@ test('explicit model telemetry is sanitized and unknown motion metadata is ignor
   assert.deepEqual(motionIntentsFromTelemetry({metadata:{motion:'teleport'}}),[]);
 });
 
-test('local and realtime event seams feed one provider-neutral motion-intent channel',()=>{
+test('local and realtime event seams feed one provider-neutral motion-intent channel exactly once',()=>{
   const bridge=fs.readFileSync(new URL('../web/teddy/motion-wire-v8.js',import.meta.url),'utf8');
   const local=fs.readFileSync(new URL('../web/local.js',import.meta.url),'utf8');
+  const app=fs.readFileSync(new URL('../web/app.js',import.meta.url),'utf8');
   const html=fs.readFileSync(new URL('../web/index.html',import.meta.url),'utf8');
   assert.match(bridge,/response\.audio_transcript\.done/);assert.match(bridge,/conversation\.item\.input_audio_transcription\.completed/);assert.match(bridge,/motionIntentsFromTelemetry/);assert.match(bridge,/teddy:motion-intent/);
-  assert.match(local,/teddy:local-event/);assert.match(html,/installMotionTelemetryBridge/);
+  const localEventMentions=(local.match(/teddy:local-event/g)||[]).length+(app.match(/teddy:local-event/g)||[]).length;
+  assert.equal(localEventMentions,1,'local semantic events must be emitted exactly once');assert.match(html,/installMotionTelemetryBridge/);
 });

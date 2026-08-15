@@ -1,0 +1,28 @@
+name: v9-conversation
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  conversation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 24.19.0
+      - name: context contracts
+        run: node --test tests/local-context-v9.test.mjs
+      - name: streaming contracts
+        run: node --test tests/local-stream-v9.test.mjs
+      - name: recovery contracts
+        run: node --test tests/runtime-recovery-v9.test.mjs
+      - name: end user edge cases
+        run: node --test tests/fine-tune-v9.test.mjs
+      - name: deterministic 100k saturation
+        run: node tools/fine-tune-saturation-v9.mjs --full

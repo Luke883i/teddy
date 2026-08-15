@@ -10,6 +10,7 @@ import { deploymentPolicy, guardRequest, SECURITY_HEADERS } from './lib/security
 import { normalizeProvider, providerCapabilities } from './lib/provider.mjs';
 import { createLocalService } from './lib/local-service.mjs';
 import { createRuntimeManager } from './lib/runtime-manager.mjs';
+import { recoverManagedRuntime, recoveryCooldown, shouldAttemptRuntimeRecovery } from './lib/runtime-recovery.mjs';
 
 process.umask(0o077);
 const VERSION='0.8.0';
@@ -22,7 +23,8 @@ const policy=deploymentPolicy({listenHost:HOST,publicOrigin:PUBLIC_ORIGIN,authPa
 if(!policy.ok)throw new Error(`unsafe_deployment:${policy.error}`);
 const REALTIME_URL=validateRealtimeEndpoint(process.env.TEDDY_OPENAI_REALTIME_URL||'https://api.openai.com/v1/realtime/calls');
 const secrets=new SecretStore(HOME,{externalMasterKey:MASTER_KEY}),state=new StateStore(HOME),defaults=readDefaultConfig(ROOT);let config=mergeConfig(defaults,state.getSetting('config')||{});
-const realtimeGate=new RealtimeBackoff(),runtime=createRuntimeManager({home:HOME}),localService=createLocalService({runtime});
+const realtimeGate=new RealtimeBackoff();let closing=false,runtime=createRuntimeManager({home:HOME}),localService=createLocalService({runtime});
+let runtimeWasReady=false,runtimeRecovery=null,recoveryCycles=0,nextRecoveryAt=0;
 if(PROVIDER==='local')runtime.start().catch(e=>console.error('local runtime:',e?.code||e?.message||e));
 const localAvailability=()=>runtime.status();
 const bootstrap=()=>({
@@ -36,6 +38,18 @@ const bootstrap=()=>({
   render:{backend:'client-negotiated',webgl2:true,canvas2dFallback:true,webgpuOptional:true,presenceRig:'v4',morphology:'v5',anatomy:'v6',correctedDepth:true,audioReactive:true,adaptiveNoise:true},
   install:{id:String(state.getSetting('install_id')).slice(0,8)}
 });
+
+async function checkRuntimeRecovery(){
+  if(PROVIDER!=='local'||closing)return;const current=runtime.status();
+  if(current.ready){runtimeWasReady=true;recoveryCycles=0;nextRecoveryAt=0;return}
+  if(!shouldAttemptRuntimeRecovery({provider:PROVIDER,closing,wasReady:runtimeWasReady,ready:current.ready,active:Boolean(runtimeRecovery),now:Date.now(),nextAt:nextRecoveryAt}))return;
+  const failedRuntime=runtime;
+  runtimeRecovery=recoverManagedRuntime({maxAttempts:Number(process.env.TEDDY_RUNTIME_RECOVERY_ATTEMPTS||3),createRuntime:()=>createRuntimeManager({home:HOME})})
+    .then(({runtime:next})=>{if(closing){next.stop();return}failedRuntime.stop();runtime=next;localService=createLocalService({runtime});runtimeWasReady=true;recoveryCycles=0;nextRecoveryAt=0;console.log('Teddy local runtime recovered')})
+    .catch(e=>{recoveryCycles++;nextRecoveryAt=Date.now()+recoveryCooldown(recoveryCycles);console.error('local runtime recovery:',e?.code||e?.message||e)})
+    .finally(()=>{runtimeRecovery=null});
+  await runtimeRecovery;
+}
 
 async function route(req,res){
   const guard=guardRequest(req,{listenHost:HOST,publicOrigin:PUBLIC_ORIGIN,authPassword:AUTH_PASSWORD});if(!guard.ok)return json(res,guard.status,{error:guard.error},guard.headers||{});
@@ -82,5 +96,6 @@ const server=http.createServer((req,res)=>{Promise.resolve(route(req,res)).catch
 server.requestTimeout=30_000;server.headersTimeout=10_000;server.keepAliveTimeout=5_000;server.maxHeadersCount=100;server.maxRequestsPerSocket=1000;
 server.on('clientError',(_err,socket)=>{if(socket.writable)socket.end('HTTP/1.1 400 Bad Request\r\nConnection: close\r\n\r\n')});
 server.listen(PORT,HOST,()=>console.log(`Teddy ${VERSION} listening on http://${HOST}:${PORT} (${policy.mode}, ${PROVIDER})`));
-let closing=false;function shutdown(){if(closing)return;closing=true;runtime.stop();server.close(()=>{state.close();process.exit(0)});setTimeout(()=>process.exit(1),3000).unref()}
+const recoveryTimer=setInterval(()=>checkRuntimeRecovery().catch(()=>{}),1000);recoveryTimer.unref?.();
+function shutdown(){if(closing)return;closing=true;clearInterval(recoveryTimer);runtime.stop();server.close(()=>{state.close();process.exit(0)});setTimeout(()=>process.exit(1),3000).unref()}
 process.on('SIGINT',shutdown);process.on('SIGTERM',shutdown);

@@ -6,7 +6,7 @@
   "engines":{"node":">=24.0.0 <25"},
   "scripts":{
     "start":"node server/main.mjs",
-    "test":"node --test tests/*.test.mjs && node tools/mutate-startup-v8.mjs --full",
+    "test":"node --test tests/*.test.mjs && node tools/mutate-startup-v8.mjs --full && node tools/fine-tune-saturation-v9.mjs --full",
     "simulate":"node tools/simulate.mjs",
     "simulate:full":"node tools/simulate.mjs --full",
     "simulate:e2e":"node tools/simulate-e2e-v2.mjs",
@@ -20,6 +20,7 @@
     "fuzz:presence":"node tools/scenario-presence-v8.mjs --full",
     "mutate:local":"node tools/mutate-local-v7.mjs",
     "mutate:startup":"node tools/mutate-startup-v8.mjs --full",
+    "saturate:finetune":"node tools/fine-tune-saturation-v9.mjs --full",
     "doctor":"node server/doctor.mjs"
   }
 }
