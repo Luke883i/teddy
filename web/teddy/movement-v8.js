@@ -26,7 +26,7 @@ function applySemanticAction(groups,state,sec){
     const wrist=left?'wristL':'wristR',sign=left?-1:1,angle=Math.sin(sec*16)*.24*a.amount*sign;
     return rotateGroups(raised,[wrist],'z',angle);
   }
-  if(a.name==='nod')return rotateGroups(groups,['head'],'x',Math.sin(sec*12)*.09*a.amount);
+  if(a.name==='nod')return rotateGroups(groups,['head','jaw','earL','earR'],'x',Math.sin(sec*12)*.09*a.amount);
   return groups;
 }
 function contactY(groups,id){
