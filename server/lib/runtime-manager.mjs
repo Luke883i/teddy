@@ -6,6 +6,7 @@ import {spawn} from 'node:child_process';
 import {createLocalEngines} from './local-engines.mjs';
 import {publicRuntimeStatus,assertRuntimeInvariant} from './runtime-state.mjs';
 import {artifactProblem,publicFailure,retryDelay,withRetry} from './runtime-resilience.mjs';
+import {runtimeCatalogKey,runtimeCatalogCacheRecord,hydrateRuntimeCatalogCache} from './runtime-catalog.mjs';
 
 const SHERPA_VERSION='1.13.3';
 const LLAMA_BUILD='b10218';
@@ -33,10 +34,10 @@ function cleanDigest(v=''){return String(v).replace(/^sha256:/,'').replace(/^W\/
 async function exec(command,args,{cwd}={}){return await new Promise((resolve,reject)=>{const c=spawn(command,args,{cwd,stdio:['ignore','pipe','pipe'],shell:false});let err='';c.stderr.on('data',b=>{if(err.length<8000)err+=b});c.on('error',reject);c.on('exit',code=>code===0?resolve():reject(Object.assign(new Error(`command_failed:${path.basename(command)}`),{code:'runtime_command_failed',stage:'extract',retryable:false,detail:err.slice(-2000)})))});}
 async function findNamed(root,name){const q=[root];while(q.length){const d=q.shift();let entries;try{entries=await fs.promises.readdir(d,{withFileTypes:true})}catch{continue}for(const e of entries){const p=path.join(d,e.name);if(e.isDirectory())q.push(p);else if(e.name===name)return p;}}return null;}
 async function portListening(port,{host='127.0.0.1',timeoutMs=180}={}){return await new Promise(resolve=>{let settled=false;const finish=v=>{if(settled)return;settled=true;socket.destroy();resolve(v)},socket=net.createConnection({host,port:Number(port)});socket.once('connect',()=>finish(true));socket.once('error',()=>finish(false));socket.setTimeout(timeoutMs,()=>finish(false));});}
-async function terminateChild(child,{graceMs=900}={}){if(!child||child.killed)return;await new Promise(resolve=>{let settled=false,timer;const done=()=>{if(settled)return;settled=true;clearTimeout(timer);resolve()};child.once?.('exit',done);try{child.kill('SIGTERM')}catch{return done()}timer=setTimeout(()=>{try{if(!child.killed)child.kill('SIGKILL')}catch{}done()},graceMs);timer.unref?.();});}
+async function terminateChild(child,{graceMs=900}={}){if(!child||child.exitCode!=null)return;await new Promise(resolve=>{let settled=false,exited=false,timer;const done=()=>{if(settled)return;settled=true;clearTimeout(timer);resolve()},onExit=()=>{exited=true;done()};child.once?.('exit',onExit);try{child.kill('SIGTERM')}catch{return done()}timer=setTimeout(()=>{if(!exited){try{child.kill('SIGKILL')}catch{}}done()},graceMs)})}
 
 export function createRuntimeManager({home,env=process.env,fetchImpl=fetch,spawnImpl=spawn}={}){
-  const root=path.join(home,'runtime'),generations=path.join(root,'generations'),staging=path.join(root,'staging'),pointer=path.join(root,'current.json'),statusFile=path.join(root,'install-state.json');
+  const root=path.join(home,'runtime'),generations=path.join(root,'generations'),staging=path.join(root,'staging'),pointer=path.join(root,'current.json'),statusFile=path.join(root,'install-state.json'),catalogCache=path.join(root,'catalog-cache.json');
   const external=Boolean(env.TEDDY_ASR_COMMAND&&env.TEDDY_TTS_COMMAND);
   const autoinstall=env.TEDDY_RUNTIME_AUTOINSTALL==='1';
   const retryAttempts=Math.max(1,Math.min(8,Number(env.TEDDY_RUNTIME_FETCH_ATTEMPTS||4)));
@@ -80,8 +81,7 @@ export function createRuntimeManager({home,env=process.env,fetchImpl=fetch,spawn
     },{attempts:retryAttempts});
   }
   async function extract(archive,dest){await fs.promises.mkdir(dest,{recursive:true,mode:0o700});await exec('tar',['-xf',archive,'-C',dest]);}
-  async function buildCatalog(){
-    const p=platformNames();
+  async function discoverCatalog(p){
     const sherpa=await releaseAsset('k2-fsa/sherpa-onnx',`v${SHERPA_VERSION}`,a=>a.name===p.sherpa,{artifactId:'sherpa-runtime'});
     const asr=await releaseAsset('k2-fsa/sherpa-onnx','asr-models',a=>a.name===ASR_MODEL,{artifactId:'asr-whisper-tiny'});
     const tts=await releaseAsset('k2-fsa/sherpa-onnx','tts-models',a=>a.name===TTS_MODEL,{artifactId:'tts-riccardo'});
@@ -93,7 +93,17 @@ export function createRuntimeManager({home,env=process.env,fetchImpl=fetch,spawn
       {id:'tts-riccardo',role:'tts',version:'it_IT-riccardo-x_low',publisher:'k2-fsa',...tts},
       {id:'llama-runtime',role:'runtime',version:LLAMA_BUILD,publisher:'ggml-org',...llamaMeta},
       {id:'qwen3-0.6b',role:'llm',version:'Q8_0',publisher:'Qwen',...qwen}
-    ].map(a=>({...a,phase:'pending',downloadedBytes:0,verified:false}));
+    ].map(a=>({...a,phase:'pending',downloadedBytes:0,verified:false,catalogSource:'live'}));
+  }
+  async function buildCatalog(){
+    const p=platformNames(),key=runtimeCatalogKey({platform:process.platform,arch:p.arch,sherpaVersion:SHERPA_VERSION,llamaBuild:LLAMA_BUILD,asrModel:ASR_MODEL,ttsModel:TTS_MODEL,qwenModel:QWEN_MODEL});
+    try{
+      const live=await discoverCatalog(p);await atomicJson(catalogCache,runtimeCatalogCacheRecord(key,live));return live;
+    }catch(e){
+      if(e?.retryable!==true)throw e;
+      const cached=hydrateRuntimeCatalogCache(await readJson(catalogCache),key);if(cached)return cached;
+      throw e;
+    }
   }
   async function writeWrappers(gen,sherpaBin,asrDir,ttsDir){
     const asrWrapper=path.join(gen,'asr-wrapper.mjs'),ttsWrapper=path.join(gen,'tts-wrapper.mjs');
@@ -117,7 +127,7 @@ export function createRuntimeManager({home,env=process.env,fetchImpl=fetch,spawn
     const args=['-m',config.model,'--host','127.0.0.1','--port',String(config.port),'--ctx-size','2048','--n-predict','128'];
     let child;try{child=spawnImpl(config.executable,args,{stdio:['ignore','ignore','pipe'],shell:false})}catch(e){throw Object.assign(new Error('local_llm_start_failed'),{code:'local_llm_start_failed',stage:'start',retryable:false,cause:e})}
     llama=child;let exited=false,spawnError=null;child.stderr?.on('data',()=>{});child.once?.('error',e=>{spawnError=e});child.once?.('exit',()=>{exited=true;if(state.engines.llm.healthy){state.engines.llm={state:'stopped',healthy:false};state.installPhase='failed';publish().catch(()=>{})}});
-    for(let i=0;i<120;i++){if(spawnError||exited){if(llama===child)llama=null;throw Object.assign(new Error('local_llm_start_failed'),{code:'local_llm_start_failed',stage:'start',retryable:false,cause:spawnError||undefined})}try{const r=await fetchImpl(`http://127.0.0.1:${config.port}/v1/models`);if(r.ok&&!exited&&!spawnError)return}catch{}await sleep(250)}
+    for(let i=0;i<120;i++){if(stopping){if(llama===child)llama=null;await terminateChild(child);throw Object.assign(new Error('runtime_stopped'),{code:'runtime_stopped',stage:'start',retryable:false})}if(spawnError||exited){if(llama===child)llama=null;throw Object.assign(new Error('local_llm_start_failed'),{code:'local_llm_start_failed',stage:'start',retryable:false,cause:spawnError||undefined})}try{const r=await fetchImpl(`http://127.0.0.1:${config.port}/v1/models`);if(r.ok&&!exited&&!spawnError)return}catch{}await sleep(250)}
     if(llama===child)llama=null;await terminateChild(child);throw Object.assign(new Error('local_llm_start_timeout'),{code:'local_llm_start_timeout',stage:'start',retryable:true});
   }
   async function activate(generation){

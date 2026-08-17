@@ -58,3 +58,17 @@ test('spawn errors fail closed instead of becoming uncaught process errors',asyn
     manager.stop();
   }finally{fs.rmSync(home,{recursive:true,force:true})}
 });
+
+test('owned child escalates from SIGTERM to SIGKILL when it does not exit',async()=>{
+  const home=tempHome();
+  const probe=net.createServer();await new Promise((resolve,reject)=>probe.listen(0,'127.0.0.1',resolve).once('error',reject));const port=probe.address().port;await closeServer(probe);
+  const signals=[];
+  try{
+    writeGeneration(home,'g3',{engines:{asrCommand:'/unused',asrArgs:[],ttsCommand:'/unused',ttsArgs:[]},llama:{executable:'/fake',model:'/unused.gguf',port}});
+    const spawnImpl=()=>{const child=new EventEmitter();child.stderr=new EventEmitter();child.exitCode=null;child.killed=false;child.kill=s=>{signals.push(s);child.killed=true;return true};return child};
+    const manager=createRuntimeManager({home,env:envBase,spawnImpl,fetchImpl:async()=>{throw new Error('not ready')}});
+    const started=manager.start();await new Promise(r=>setTimeout(r,20));manager.stop();await started;
+    assert.equal(signals[0],'SIGTERM');assert.ok(signals.includes('SIGKILL'));
+    assert.equal(manager.status().ready,false);
+  }finally{fs.rmSync(home,{recursive:true,force:true})}
+});
