@@ -4,7 +4,7 @@ import crypto from 'node:crypto';
 import {spawn} from 'node:child_process';
 import {createLocalEngines} from './local-engines.mjs';
 import {publicRuntimeStatus,assertRuntimeInvariant} from './runtime-state.mjs';
-import {artifactProblem,publicFailure,withRetry} from './runtime-resilience.mjs';
+import {artifactProblem,publicFailure,retryDelay,withRetry} from './runtime-resilience.mjs';
 
 const SHERPA_VERSION='1.13.3';
 const LLAMA_BUILD='b10218';
@@ -37,7 +37,8 @@ export function createRuntimeManager({home,env=process.env,fetchImpl=fetch,spawn
   const external=Boolean(env.TEDDY_ASR_COMMAND&&env.TEDDY_TTS_COMMAND);
   const autoinstall=env.TEDDY_RUNTIME_AUTOINSTALL==='1';
   const retryAttempts=Math.max(1,Math.min(8,Number(env.TEDDY_RUNTIME_FETCH_ATTEMPTS||4)));
-  let llama=null,startPromise=null,engineConfig=null;
+  const initialRetryLimit=Math.max(0,Math.min(5,Number(env.TEDDY_RUNTIME_INITIAL_RETRY_CYCLES??3)));
+  let llama=null,startPromise=null,engineConfig=null,retryTimer=null,initialRetryCycles=0,stopping=false;
   let state={installPhase:'idle',currentGeneration:null,previousGeneration:null,engines:{asr:{state:'missing',healthy:false},llm:{state:'missing',healthy:false},tts:{state:'missing',healthy:false}},artifacts:[],selfTest:null,lastError:null};
   const publish=async()=>{assertRuntimeInvariant(state);await atomicJson(statusFile,publicRuntimeStatus(state)).catch(()=>{});};
   const setPhase=async phase=>{state.installPhase=phase;await publish()};
@@ -125,7 +126,7 @@ export function createRuntimeManager({home,env=process.env,fetchImpl=fetch,spawn
       const final=await engines.tts(reply||'Sono pronto',{});steps.tts=final.length>44;
     }catch(e){throw Object.assign(e,{stage:'self_test',retryable:false})}
     if(!Object.values(steps).every(Boolean))throw Object.assign(new Error('runtime_self_test_failed'),{code:'runtime_self_test_failed',stage:'self_test',retryable:false});
-    state.engines={asr:{state:'ready',healthy:true},llm:{state:'ready',healthy:true},tts:{state:'ready',healthy:true}};state.selfTest={ok:true,at:now(),steps};state.currentGeneration={id:generation.id,createdAt:generation.createdAt};state.lastError=null;state.installPhase='ready';await publish();return true;
+    state.engines={asr:{state:'ready',healthy:true},llm:{state:'ready',healthy:true},tts:{state:'ready',healthy:true}};state.selfTest={ok:true,at:now(),steps};state.currentGeneration={id:generation.id,createdAt:generation.createdAt};state.lastError=null;state.installPhase='ready';initialRetryCycles=0;if(retryTimer){clearTimeout(retryTimer);retryTimer=null}await publish();return true;
   }
   async function loadCurrent(){const p=await readJson(pointer);if(!p?.id)return false;const g={id:p.id,createdAt:p.createdAt,path:path.join(generations,p.id)};try{await activate(g);return true}catch(e){await fail(e);return false}}
   async function provision(){
@@ -146,18 +147,23 @@ export function createRuntimeManager({home,env=process.env,fetchImpl=fetch,spawn
   async function attemptStart(){
     if(status().ready)return status();
     if(env.TEDDY_LOCAL_ENGINE_MOCK==='1')return status();
-    if(external){engineConfig={llamaUrl:env.TEDDY_LLAMA_URL||'http://127.0.0.1:8080',asrCommand:env.TEDDY_ASR_COMMAND,asrArgs:env.TEDDY_ASR_ARGS?JSON.parse(env.TEDDY_ASR_ARGS):[],ttsCommand:env.TEDDY_TTS_COMMAND,ttsArgs:env.TEDDY_TTS_ARGS?JSON.parse(env.TEDDY_TTS_ARGS):[]};state.engines={asr:{state:'external',healthy:true},llm:{state:'external',healthy:true},tts:{state:'external',healthy:true}};state.currentGeneration={id:'external',createdAt:now()};state.installPhase='ready';state.lastError=null;await publish();return status();}
+    if(external){engineConfig={llamaUrl:env.TEDDY_LLAMA_URL||'http://127.0.0.1:8080',asrCommand:env.TEDDY_ASR_COMMAND,asrArgs:env.TEDDY_ASR_ARGS?JSON.parse(env.TEDDY_ASR_ARGS):[],ttsCommand:env.TEDDY_TTS_COMMAND,ttsArgs:env.TEDDY_TTS_ARGS?JSON.parse(env.TEDDY_TTS_ARGS):[]};state.engines={asr:{state:'external',healthy:true},llm:{state:'external',healthy:true},tts:{state:'external',healthy:true}};state.currentGeneration={id:'external',createdAt:now()};state.installPhase='ready';state.lastError=null;initialRetryCycles=0;await publish();return status();}
     if(await loadCurrent())return status();
     if(!autoinstall){state.lastError={error:'local_runtime_not_installed',stage:null,artifactId:null,provider:null,httpStatus:null,retryable:false,at:now()};await publish();return status();}
     return provision();
   }
+  function scheduleInitialRetry(error){
+    if(stopping||status().ready||error?.retryable!==true||initialRetryCycles>=initialRetryLimit||retryTimer)return;
+    initialRetryCycles++;const delay=retryDelay(initialRetryCycles);
+    retryTimer=setTimeout(()=>{retryTimer=null;start().catch(()=>{})},delay);retryTimer.unref?.();
+  }
   async function start(){
     if(startPromise)return startPromise;
-    startPromise=attemptStart().catch(async e=>{await fail(e);return status()}).finally(()=>{startPromise=null});
+    startPromise=attemptStart().catch(async e=>{await fail(e);scheduleInitialRetry(e);return status()}).finally(()=>{startPromise=null});
     return startPromise;
   }
-  async function retry(){if(status().ready)return status();return start()}
+  async function retry(){if(status().ready)return status();if(retryTimer){clearTimeout(retryTimer);retryTimer=null}initialRetryCycles=0;return start()}
   function config(){return engineConfig?{...engineConfig,llamaUrl:engineConfig.llamaUrl||`http://127.0.0.1:${Number(env.TEDDY_LLAMA_PORT||8080)}`}:null}
-  function stop(){if(llama){llama.kill('SIGTERM');llama=null}}
+  function stop(){stopping=true;if(retryTimer){clearTimeout(retryTimer);retryTimer=null}if(llama){llama.kill('SIGTERM');llama=null}}
   return {start,retry,status,config,stop,paths:{root,pointer,statusFile}};
 }

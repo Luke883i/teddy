@@ -48,6 +48,14 @@ test('managed runtime uses a verified existing llama build and can be retried af
   assert.match(source,/GITHUB_TOKEN/);
 });
 
+test('first-install transient failures receive bounded automatic recovery',()=>{
+  const source=fs.readFileSync(new URL('../server/lib/runtime-manager.mjs',import.meta.url),'utf8');
+  assert.match(source,/TEDDY_RUNTIME_INITIAL_RETRY_CYCLES/);
+  assert.match(source,/initialRetryCycles>=initialRetryLimit/);
+  assert.match(source,/scheduleInitialRetry\(e\)/);
+  assert.match(source,/clearTimeout\(retryTimer\)/);
+});
+
 test('runtime preflight requires TTS data and executable engine binaries',()=>{
   const source=fs.readFileSync(new URL('../server/lib/runtime-manager.mjs',import.meta.url),'utf8');
   assert.match(source,/dataOk/);
