@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import net from 'node:net';
 import {spawn} from 'node:child_process';
 import {createLocalEngines} from './local-engines.mjs';
 import {publicRuntimeStatus,assertRuntimeInvariant} from './runtime-state.mjs';
@@ -31,6 +32,8 @@ async function sha256(file){return await new Promise((resolve,reject)=>{const h=
 function cleanDigest(v=''){return String(v).replace(/^sha256:/,'').replace(/^W\//,'').replace(/^"|"$/g,'').trim();}
 async function exec(command,args,{cwd}={}){return await new Promise((resolve,reject)=>{const c=spawn(command,args,{cwd,stdio:['ignore','pipe','pipe'],shell:false});let err='';c.stderr.on('data',b=>{if(err.length<8000)err+=b});c.on('error',reject);c.on('exit',code=>code===0?resolve():reject(Object.assign(new Error(`command_failed:${path.basename(command)}`),{code:'runtime_command_failed',stage:'extract',retryable:false,detail:err.slice(-2000)})))});}
 async function findNamed(root,name){const q=[root];while(q.length){const d=q.shift();let entries;try{entries=await fs.promises.readdir(d,{withFileTypes:true})}catch{continue}for(const e of entries){const p=path.join(d,e.name);if(e.isDirectory())q.push(p);else if(e.name===name)return p;}}return null;}
+async function portListening(port,{host='127.0.0.1',timeoutMs=180}={}){return await new Promise(resolve=>{let settled=false;const finish=v=>{if(settled)return;settled=true;socket.destroy();resolve(v)},socket=net.createConnection({host,port:Number(port)});socket.once('connect',()=>finish(true));socket.once('error',()=>finish(false));socket.setTimeout(timeoutMs,()=>finish(false));});}
+async function terminateChild(child,{graceMs=900}={}){if(!child||child.killed)return;await new Promise(resolve=>{let settled=false,timer;const done=()=>{if(settled)return;settled=true;clearTimeout(timer);resolve()};child.once?.('exit',done);try{child.kill('SIGTERM')}catch{return done()}timer=setTimeout(()=>{try{if(!child.killed)child.kill('SIGKILL')}catch{}done()},graceMs);timer.unref?.();});}
 
 export function createRuntimeManager({home,env=process.env,fetchImpl=fetch,spawnImpl=spawn}={}){
   const root=path.join(home,'runtime'),generations=path.join(root,'generations'),staging=path.join(root,'staging'),pointer=path.join(root,'current.json'),statusFile=path.join(root,'install-state.json');
@@ -109,9 +112,13 @@ export function createRuntimeManager({home,env=process.env,fetchImpl=fetch,spawn
     return {asrCommand:process.execPath,asrArgs:[asrWrapper,asrSpec],ttsCommand:process.execPath,ttsArgs:[ttsWrapper]};
   }
   async function startLlama(config){
-    if(llama){llama.kill('SIGTERM');llama=null}const args=['-m',config.model,'--host','127.0.0.1','--port',String(config.port),'--ctx-size','2048','--n-predict','128'];
-    llama=spawnImpl(config.executable,args,{stdio:['ignore','ignore','pipe'],shell:false});let exited=false;llama.stderr?.on('data',()=>{});llama.on?.('exit',()=>{exited=true;if(state.engines.llm.healthy){state.engines.llm={state:'stopped',healthy:false};state.installPhase='failed';publish().catch(()=>{})}});
-    for(let i=0;i<120;i++){if(exited)throw Object.assign(new Error('local_llm_start_failed'),{code:'local_llm_start_failed',stage:'start',retryable:false});try{const r=await fetchImpl(`http://127.0.0.1:${config.port}/v1/models`);if(r.ok)return}catch{}await sleep(250)}throw Object.assign(new Error('local_llm_start_timeout'),{code:'local_llm_start_timeout',stage:'start',retryable:true});
+    if(llama){const old=llama;llama=null;await terminateChild(old)}
+    if(await portListening(config.port))throw Object.assign(new Error('local_llm_port_in_use'),{code:'local_llm_port_in_use',stage:'start',retryable:false});
+    const args=['-m',config.model,'--host','127.0.0.1','--port',String(config.port),'--ctx-size','2048','--n-predict','128'];
+    let child;try{child=spawnImpl(config.executable,args,{stdio:['ignore','ignore','pipe'],shell:false})}catch(e){throw Object.assign(new Error('local_llm_start_failed'),{code:'local_llm_start_failed',stage:'start',retryable:false,cause:e})}
+    llama=child;let exited=false,spawnError=null;child.stderr?.on('data',()=>{});child.once?.('error',e=>{spawnError=e});child.once?.('exit',()=>{exited=true;if(state.engines.llm.healthy){state.engines.llm={state:'stopped',healthy:false};state.installPhase='failed';publish().catch(()=>{})}});
+    for(let i=0;i<120;i++){if(spawnError||exited){if(llama===child)llama=null;throw Object.assign(new Error('local_llm_start_failed'),{code:'local_llm_start_failed',stage:'start',retryable:false,cause:spawnError||undefined})}try{const r=await fetchImpl(`http://127.0.0.1:${config.port}/v1/models`);if(r.ok&&!exited&&!spawnError)return}catch{}await sleep(250)}
+    if(llama===child)llama=null;await terminateChild(child);throw Object.assign(new Error('local_llm_start_timeout'),{code:'local_llm_start_timeout',stage:'start',retryable:true});
   }
   async function activate(generation){
     const cfg=await readJson(path.join(generation.path,'runtime.json'));if(!cfg)return false;
@@ -128,7 +135,7 @@ export function createRuntimeManager({home,env=process.env,fetchImpl=fetch,spawn
     if(!Object.values(steps).every(Boolean))throw Object.assign(new Error('runtime_self_test_failed'),{code:'runtime_self_test_failed',stage:'self_test',retryable:false});
     state.engines={asr:{state:'ready',healthy:true},llm:{state:'ready',healthy:true},tts:{state:'ready',healthy:true}};state.selfTest={ok:true,at:now(),steps};state.currentGeneration={id:generation.id,createdAt:generation.createdAt};state.lastError=null;state.installPhase='ready';initialRetryCycles=0;if(retryTimer){clearTimeout(retryTimer);retryTimer=null}await publish();return true;
   }
-  async function loadCurrent(){const p=await readJson(pointer);if(!p?.id)return false;const g={id:p.id,createdAt:p.createdAt,path:path.join(generations,p.id)};try{await activate(g);return true}catch(e){await fail(e);return false}}
+  async function loadCurrent(){const p=await readJson(pointer);if(!p?.id)return false;const g={id:p.id,createdAt:p.createdAt,path:path.join(generations,p.id)};try{const activated=await activate(g);if(!activated){await fs.promises.rm(pointer,{force:true}).catch(()=>{});throw Object.assign(new Error('runtime_generation_invalid'),{code:'runtime_generation_invalid',stage:'layout',retryable:false})}return true}catch(e){await fail(e);return false}}
   async function provision(){
     await fs.promises.mkdir(staging,{recursive:true,mode:0o700});await setPhase('discovering');state.artifacts=await buildCatalog();await publish();
     const id=`${Date.now()}-${crypto.randomBytes(4).toString('hex')}`,stage=path.join(staging,id);await fs.promises.mkdir(stage,{recursive:true,mode:0o700});
@@ -137,7 +144,8 @@ export function createRuntimeManager({home,env=process.env,fetchImpl=fetch,spawn
       const wrappers=await writeWrappers(stage,path.join(stage,'sherpa-runtime'),path.join(stage,'asr-whisper-tiny'),path.join(stage,'tts-riccardo'));
       const llamaExe=await findNamed(path.join(stage,'llama-runtime'),'llama-server');if(!llamaExe)throw Object.assign(new Error('runtime_layout_invalid'),{code:'runtime_layout_invalid',stage:'layout',retryable:false});
       try{await fs.promises.access(llamaExe,fs.constants.X_OK)}catch{throw Object.assign(new Error('runtime_layout_invalid'),{code:'runtime_layout_invalid',stage:'layout',retryable:false})}
-      const model=path.join(stage,'qwen3-0.6b',QWEN_MODEL),port=Number(env.TEDDY_LLAMA_PORT||8080);
+      const model=path.join(stage,'qwen3-0.6b',QWEN_MODEL);let modelOk=false;try{modelOk=(await fs.promises.stat(model)).isFile()}catch{}if(!modelOk)throw Object.assign(new Error('runtime_layout_invalid'),{code:'runtime_layout_invalid',stage:'layout',retryable:false});
+      const port=Number(env.TEDDY_LLAMA_PORT||8080);if(!Number.isInteger(port)||port<1||port>65535)throw Object.assign(new Error('local_llm_port_invalid'),{code:'local_llm_port_invalid',stage:'start',retryable:false});
       await atomicJson(path.join(stage,'runtime.json'),{engines:wrappers,llama:{executable:llamaExe,model,port},artifacts:state.artifacts.map(({id,sha256,source,version})=>({id,sha256,source,version}))});
       const final=path.join(generations,id);await fs.promises.mkdir(generations,{recursive:true,mode:0o700});await fs.promises.rename(stage,final);
       const candidate={id,createdAt:now(),path:final};const old=await readJson(pointer);state.previousGeneration=old?.id?{id:old.id,createdAt:old.createdAt}:null;
@@ -149,7 +157,7 @@ export function createRuntimeManager({home,env=process.env,fetchImpl=fetch,spawn
     if(env.TEDDY_LOCAL_ENGINE_MOCK==='1')return status();
     if(external){engineConfig={llamaUrl:env.TEDDY_LLAMA_URL||'http://127.0.0.1:8080',asrCommand:env.TEDDY_ASR_COMMAND,asrArgs:env.TEDDY_ASR_ARGS?JSON.parse(env.TEDDY_ASR_ARGS):[],ttsCommand:env.TEDDY_TTS_COMMAND,ttsArgs:env.TEDDY_TTS_ARGS?JSON.parse(env.TEDDY_TTS_ARGS):[]};state.engines={asr:{state:'external',healthy:true},llm:{state:'external',healthy:true},tts:{state:'external',healthy:true}};state.currentGeneration={id:'external',createdAt:now()};state.installPhase='ready';state.lastError=null;initialRetryCycles=0;await publish();return status();}
     if(await loadCurrent())return status();
-    if(!autoinstall){state.lastError={error:'local_runtime_not_installed',stage:null,artifactId:null,provider:null,httpStatus:null,retryable:false,at:now()};await publish();return status();}
+    if(!autoinstall){if(!state.lastError)state.lastError={error:'local_runtime_not_installed',stage:null,artifactId:null,provider:null,httpStatus:null,retryable:false,at:now()};await publish();return status();}
     return provision();
   }
   function scheduleInitialRetry(error){
@@ -164,6 +172,6 @@ export function createRuntimeManager({home,env=process.env,fetchImpl=fetch,spawn
   }
   async function retry(){if(status().ready)return status();if(retryTimer){clearTimeout(retryTimer);retryTimer=null}initialRetryCycles=0;return start()}
   function config(){return engineConfig?{...engineConfig,llamaUrl:engineConfig.llamaUrl||`http://127.0.0.1:${Number(env.TEDDY_LLAMA_PORT||8080)}`}:null}
-  function stop(){stopping=true;if(retryTimer){clearTimeout(retryTimer);retryTimer=null}if(llama){llama.kill('SIGTERM');llama=null}}
+  function stop(){stopping=true;if(retryTimer){clearTimeout(retryTimer);retryTimer=null}if(llama){const child=llama;llama=null;try{child.kill('SIGTERM')}catch{}}}
   return {start,retry,status,config,stop,paths:{root,pointer,statusFile}};
 }
