@@ -2,8 +2,10 @@ const DEFAULT_TRANSIENT_STATUS=new Set([408,425,429,500,502,503,504]);
 
 export const ARTIFACT_STAGES=Object.freeze(['catalog','download','verify','extract','layout','start','self_test']);
 
+const finiteStatus=value=>value!==null&&value!==undefined&&value!==''&&Number.isFinite(Number(value))?Number(value):null;
+
 export function artifactProblem({stage='catalog',artifactId=null,provider=null,status=null,cause=null,retryable}={}){
-  const httpStatus=Number.isFinite(Number(status))?Number(status):null;
+  const httpStatus=finiteStatus(status);
   const transient=retryable??(httpStatus==null||DEFAULT_TRANSIENT_STATUS.has(httpStatus));
   const code=stage==='catalog'?'artifact_catalog_unavailable':stage==='download'?'artifact_download_failed':`runtime_${stage}_failed`;
   return Object.assign(new Error(code),{
@@ -13,7 +15,7 @@ export function artifactProblem({stage='catalog',artifactId=null,provider=null,s
     provider:provider||null,
     httpStatus,
     retryable:Boolean(transient),
-    cause: cause instanceof Error?cause:undefined
+    cause:cause instanceof Error?cause:undefined
   });
 }
 
@@ -39,7 +41,7 @@ export function publicFailure(error){
     stage:ARTIFACT_STAGES.includes(error.stage)?error.stage:null,
     artifactId:error.artifactId||null,
     provider:error.provider||null,
-    httpStatus:Number.isFinite(Number(error.httpStatus))?Number(error.httpStatus):null,
+    httpStatus:finiteStatus(error.httpStatus),
     retryable:error.retryable===true
   };
 }

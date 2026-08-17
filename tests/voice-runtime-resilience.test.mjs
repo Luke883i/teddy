@@ -34,6 +34,8 @@ test('voice provisioning diagnostics preserve actionable public failure context'
   assert.equal(status.lastProblem.artifactId,'tts-riccardo');
   assert.equal(status.lastProblem.httpStatus,503);
   assert.equal(status.lastProblem.retryable,true);
+  assert.equal(publicFailure(artifactProblem({stage:'catalog'})).httpStatus,null);
+  assert.equal(publicRuntimeStatus({installPhase:'failed',lastError:{error:'x',httpStatus:null}}).lastProblem.httpStatus,null);
 });
 
 test('managed runtime uses a verified existing llama build and can be retried after failure',()=>{

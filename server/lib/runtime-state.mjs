@@ -2,6 +2,7 @@ export const AVAILABILITY=Object.freeze({INSTALLING:'installazione',READY:'pront
 export const INSTALL_PHASES=Object.freeze(['idle','discovering','downloading','verifying','extracting','starting','self_testing','ready','failed','rolled_back']);
 export function engineReadiness(engines={}){return ['asr','llm','tts'].every(name=>engines?.[name]?.healthy===true)}
 function selfTestReadiness({currentGeneration,selfTest}={}){return currentGeneration?.id==='external'||selfTest?.ok===true}
+const finiteStatus=value=>value!==null&&value!==undefined&&value!==''&&Number.isFinite(Number(value))?Number(value):null;
 export function deriveAvailability({installPhase='idle',engines={},currentGeneration=null,selfTest=null,lastError=null}={}){
   if(['discovering','downloading','verifying','extracting','starting','self_testing'].includes(installPhase))return AVAILABILITY.INSTALLING;
   if(engineReadiness(engines)&&currentGeneration&&selfTestReadiness({currentGeneration,selfTest}))return AVAILABILITY.READY;
@@ -18,7 +19,7 @@ export function publicRuntimeStatus(state={}){
     stage:state.lastError.stage||null,
     artifactId:state.lastError.artifactId||null,
     provider:state.lastError.provider||null,
-    httpStatus:Number.isFinite(Number(state.lastError.httpStatus))?Number(state.lastError.httpStatus):null,
+    httpStatus:finiteStatus(state.lastError.httpStatus),
     retryable:state.lastError.retryable===true
   }:null;
   return {availability,ready:availability===AVAILABILITY.READY,installPhase:state.installPhase||'idle',generation:state.currentGeneration?{id:state.currentGeneration.id,createdAt:state.currentGeneration.createdAt}:null,rollbackAvailable:Boolean(state.previousGeneration),engines,artifacts,selfTest:state.selfTest?{ok:state.selfTest.ok===true,at:state.selfTest.at||null,steps:state.selfTest.steps||{}}:null,lastProblem:problem};
