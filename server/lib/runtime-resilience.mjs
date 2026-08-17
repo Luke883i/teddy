@@ -19,17 +19,20 @@ export function artifactProblem({stage='catalog',artifactId=null,provider=null,s
   });
 }
 
-export function retryDelay(attempt,{baseMs=250,maxMs=4000}={}){
+export function retryDelay(attempt,{baseMs=250,maxMs=4000,random=Math.random,jitter=.2}={}){
   const n=Math.max(1,Math.min(8,Number(attempt)||1));
-  return Math.min(maxMs,baseMs*(2**(n-1)));
+  const raw=Math.min(maxMs,baseMs*(2**(n-1)));
+  const spread=Math.max(0,Math.min(1,Number(jitter)||0));
+  const unit=Math.max(0,Math.min(1,Number(random?.())||0));
+  return Math.max(0,Math.min(maxMs,Math.round(raw*(1-spread+spread*unit))));
 }
 
-export async function withRetry(operation,{attempts=4,sleep=ms=>new Promise(r=>setTimeout(r,ms)),shouldRetry=e=>e?.retryable===true}={}){
+export async function withRetry(operation,{attempts=4,sleep=ms=>new Promise(r=>setTimeout(r,ms)),shouldRetry=e=>e?.retryable===true,random=Math.random}={}){
   if(typeof operation!=='function')throw new TypeError('operation required');
   const limit=Math.max(1,Math.min(8,Number(attempts)||4));
   let last;
   for(let attempt=1;attempt<=limit;attempt++){
-    try{return await operation(attempt)}catch(e){last=e;if(attempt>=limit||!shouldRetry(e))throw e;await sleep(retryDelay(attempt));}
+    try{return await operation(attempt)}catch(e){last=e;if(attempt>=limit||!shouldRetry(e))throw e;await sleep(retryDelay(attempt,{random}));}
   }
   throw last;
 }
