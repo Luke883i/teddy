@@ -26,5 +26,5 @@ test('voice and locomotion remain bounded through adversarial articulated motion
 });
 
 test('opaque body pass is separated from transparent floor contact shadow',()=>{
-  const src=fs.readFileSync(new URL('../web/teddy/render.js',import.meta.url),'utf8');assert.match(src,/gl\.disable\(gl\.BLEND\)/);assert.match(src,/contact shadow/);assert.match(src,/gl\.depthMask\(false\)/);assert.match(src,/setLocomotion/);assert.match(src,/M4\.lookAt/);assert.match(src,/function plane/);
+  const src=fs.readFileSync(new URL('../web/teddy/render.js',import.meta.url),'utf8');assert.match(src,/gl\.disable\(gl\.BLEND\)/);assert.match(src,/gl\.depthMask\(false\)/);assert.match(src,/shadowPose/);assert.match(src,/motionStatus/);assert.match(src,/setLocomotion/);assert.match(src,/M4\.lookAt/);assert.match(src,/function plane/);
 });
