@@ -5,7 +5,7 @@ import {TeddyRenderer} from '../web/teddy/render.js';
 import {transformPoint} from '../web/teddy/math.js';
 const source=fs.readFileSync(new URL('../web/teddy/render.js',import.meta.url),'utf8');
 test('renderer keeps corrected depth, local plush noise and organic primitives',()=>{assert.match(source,/noise3\(vLocal/);assert.match(source,/function capsule/);assert.match(source,/function sphere/);assert.match(source,/function prism/);assert.match(source,/function plane/);assert.doesNotMatch(source,/function box/);assert.match(source,/uCamera/);});
-test('Canvas2D fallback carries grounded v6 landmarks instead of the old seated stack',()=>{for(const needle of ['Grounded macro anatomy','FLOOR_Y','.76,.72','.35,.245','.31,.18','mouthCavity'])assert.ok(source.includes(needle),needle);});
+test('Canvas2D fallback carries grounded v6 landmarks instead of the old seated stack',()=>{for(const needle of ['FLOOR_Y','.76,.72','.35,.245','.31,.18','mouthCavity'])assert.ok(source.includes(needle),needle);assert.match(source,/c\.fillRect\(0,cy-FLOOR_Y\*s,w,h\)/);});
 test('WebGL initialization failure degrades to Canvas2D, not a dead renderer',()=>{assert.match(source,/catch\(e\)\{console\.warn\('Teddy WebGL2 fallback'/);assert.match(source,/this\.init2d\(\)/);});
 test('speaking pose opens a forward mouth while idle stays subordinate',()=>{
  globalThis.document={documentElement:{style:{setProperty(){}}}};globalThis.innerWidth=1195;globalThis.innerHeight=865;globalThis.devicePixelRatio=1;
