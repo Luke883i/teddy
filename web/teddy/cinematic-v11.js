@@ -12,7 +12,6 @@ const ABS=Object.freeze({
 });
 
 export const CINEMATIC_V11=Object.freeze({version:11,restYaw:-.075,objective:'readable plush volume from front and three-quarter views',depthModel:'explicit rest-stage depth plus embedded joints',cameraIntent:'near-frontal portrait; volume comes from geometry rather than billboard offsets'});
-
 export function cinematicPart(input){const p=clone(input),a=ABS[p.id];if(a){if(a.pos)p.pos=[...a.pos];if(a.scale)p.scale=[...a.scale];if(a.rot)p.rot=[...a.rot];if(a.geometry)p.geometry=a.geometry;}if(/^toe/.test(p.id)){p.scale=[.031,.025,.008];p.pos[2]-=.075;}return p;}
 
 const pivot=m=>[m?.[12]||0,m?.[13]||0,m?.[14]||0];
@@ -20,16 +19,26 @@ const deltaAt=(m,translation=[0,0,0],rotation=[0,0,0])=>{const p=pivot(m);return
 const apply=(out,names,d)=>{for(const n of names)if(out[n])out[n]=M4.mul(d,out[n]);};
 const LARM=['shoulderL','elbowL','wristL'],RARM=['shoulderR','elbowR','wristR'],LFORE=['elbowL','wristL'],RFORE=['elbowR','wristR'];
 const LLEG=['hipL','kneeL','ankleL'],RLEG=['hipR','kneeR','ankleR'],LSHIN=['kneeL','ankleL'],RSHIN=['kneeR','ankleR'];
+export function cinematicStageMatrices(base){const out={...base},rest=M4.rotY(CINEMATIC_V11.restYaw);for(const [name,m] of Object.entries(out))if(m?.length===16)out[name]=M4.mul(rest,m);apply(out,LARM,deltaAt(out.shoulderL,[.025,-.005,-.055],[-.045,.09,-.03]));apply(out,RARM,deltaAt(out.shoulderR,[-.025,-.005,-.055],[-.045,-.09,.03]));apply(out,LFORE,deltaAt(out.elbowL,[.010,.045,.030],[-.13,-.045,.05]));apply(out,RFORE,deltaAt(out.elbowR,[-.010,.045,.030],[-.13,.045,-.05]));apply(out,['wristL'],M4.translate(.006,.030,.010));apply(out,['wristR'],M4.translate(-.006,.030,.010));apply(out,LLEG,deltaAt(out.hipL,[.025,.010,-.035],[-.035,.06,.005]));apply(out,RLEG,deltaAt(out.hipR,[-.025,.010,-.035],[-.035,-.06,-.005]));apply(out,LSHIN,M4.translate(.010,.020,.025));apply(out,RSHIN,M4.translate(-.010,.020,.025));apply(out,['ankleL'],M4.translate(.006,.030,.045));apply(out,['ankleR'],M4.translate(-.006,.030,.045));return out;}
 
-export function cinematicStageMatrices(base){
-  const out={...base},rest=M4.rotY(CINEMATIC_V11.restYaw);
-  for(const [name,m] of Object.entries(out))if(m?.length===16)out[name]=M4.mul(rest,m);
-  apply(out,LARM,deltaAt(out.shoulderL,[.025,-.005,-.055],[-.045,.09,-.03]));apply(out,RARM,deltaAt(out.shoulderR,[-.025,-.005,-.055],[-.045,-.09,.03]));
-  apply(out,LFORE,deltaAt(out.elbowL,[.010,.045,.030],[-.13,-.045,.05]));apply(out,RFORE,deltaAt(out.elbowR,[-.010,.045,.030],[-.13,.045,-.05]));
-  apply(out,['wristL'],M4.translate(.006,.030,.010));apply(out,['wristR'],M4.translate(-.006,.030,.010));
-  apply(out,LLEG,deltaAt(out.hipL,[.025,.010,-.035],[-.035,.06,.005]));apply(out,RLEG,deltaAt(out.hipR,[-.025,.010,-.035],[-.035,-.06,-.005]));
-  apply(out,LSHIN,M4.translate(.010,.020,.025));apply(out,RSHIN,M4.translate(-.010,.020,.025));apply(out,['ankleL'],M4.translate(.006,.030,.045));apply(out,['ankleR'],M4.translate(-.006,.030,.045));
-  return out;
+const tone=(hex,k)=>{const s=String(hex||'#000000').replace('#','').padEnd(6,'0'),n=parseInt(s.slice(0,6),16),f=c=>Math.max(0,Math.min(255,Math.round(c+(k>=0?(255-c):c)*k))),r=f((n>>16)&255),g=f((n>>8)&255),b=f(n&255);return `rgb(${r},${g},${b})`;};
+function cinematicFallback2d(renderer){
+  const c=renderer.ctx;if(!c)return;const w=renderer.canvas.width,h=renderer.canvas.height,s=Math.min(w*.285,h*.215),cx=w*.50,cy=h*.55,fur=renderer.config.appearance.fur,muz=renderer.config.appearance.muzzle,eyes=renderer.config.appearance.eyes,inner=tone(muz,-.06),paw=tone(muz,-.12),dark=tone(fur,-.36),hx=(renderer.pose?.headYaw||0)*.055,hy=-(renderer.pose?.headPitch||0)*.045;
+  const ell=(x,y,rx,ry,fill,rot=0,depth=.16)=>{const X=cx+x*s,Y=cy-y*s,RX=rx*s,RY=ry*s;c.save();c.translate(X,Y);c.rotate(rot);const g=c.createRadialGradient(-RX*.26,-RY*.32,Math.max(1,RX*.06),0,0,Math.max(RX,RY));g.addColorStop(0,tone(fill,.20));g.addColorStop(.58,fill);g.addColorStop(1,tone(fill,-depth));c.fillStyle=g;c.beginPath();c.ellipse(0,0,RX,RY,0,0,Math.PI*2);c.fill();c.restore();};
+  c.clearRect(0,0,w,h);c.fillStyle=renderer.config.appearance.background;c.fillRect(0,0,w,h);
+  c.save();c.globalAlpha=.28;c.fillStyle='#000';c.beginPath();c.ellipse(cx,cy+1.37*s,.72*s,.075*s,0,0,Math.PI*2);c.fill();c.restore();
+  // Far-side chains first: depth is encoded in overlap order as well as shading.
+  ell(-.36,-.82,.225,.45,fur,-.025,.24);ell(-.34,-1.18,.29,.17,fur,-.06,.22);ell(-.60,.13,.19,.62,fur,-.05,.24);ell(-.61,-.43,.19,.20,fur,-.03,.24);
+  ell(.34,-.82,.235,.46,fur,.02,.18);ell(.34,-1.18,.29,.17,fur,.06,.16);
+  ell(0,-.18,.585,.405,fur,0,.22);ell(0,.19,.685,.92,fur,0,.19);ell(0,.13,.345,.43,tone(muz,-.03),0,.12);
+  ell(.61,.13,.205,.63,fur,.05,.17);ell(.61,-.43,.20,.205,fur,.03,.17);
+  ell(-.55+hx,1.48+hy,.238,.252,fur,-.08,.22);ell(.55+hx,1.48+hy,.238,.252,fur,.08,.17);ell(-.55+hx,1.47+hy,.13,.14,inner,-.08,.10);ell(.55+hx,1.47+hy,.13,.14,inner,.08,.08);
+  ell(hx,1.06+hy,.72,.68,fur,0,.18);ell(-.255+hx,.955+hy,.20,.19,fur,0,.15);ell(.255+hx,.955+hy,.20,.19,fur,0,.12);
+  ell(hx,.87+hy,.345,.225,muz,0,.10);ell(-.11+hx,.82+hy,.142,.115,muz,0,.08);ell(.11+hx,.82+hy,.142,.115,muz,0,.08);
+  const open=Math.max(.05,1-(renderer.pose?.blink||0)*.94-(renderer.pose?.squint||0)*.12);ell(-.205+hx,1.16+hy,.074,.082*open,eyes,0,.04);ell(.205+hx,1.16+hy,.074,.082*open,eyes,0,.04);if(open>.14){ell(-.184+hx,1.19+hy,.014,.018,'#fff8e6',0,.02);ell(.228+hx,1.19+hy,.014,.018,'#fff8e6',0,.02);}
+  ell(hx,.805+hy,.112,.075,eyes,.02,.05);const jaw=renderer.pose?.jaw||0;if(jaw>.025)ell(hx,.70-jaw*.045+hy,.105,.012+.060*jaw,tone(eyes,-.05),0,.02);
+  // Pads sit on the front of the feet, not as floating decals.
+  ell(-.34,-1.195,.175,.07,paw,-.04,.08);ell(.34,-1.195,.175,.07,paw,.04,.08);
 }
 
-export function installCinematicV11(){if(TeddyRenderer.prototype.__cinematicV11)return;TeddyRenderer.prototype.__cinematicV11=true;const partTransform=TeddyRenderer.prototype.partTransform;TeddyRenderer.prototype.partTransform=function(part,g,sec,p){return partTransform.call(this,cinematicPart(part),g,sec,p);};const groupMatrices=TeddyRenderer.prototype.groupMatrices;TeddyRenderer.prototype.groupMatrices=function(sec,p){return cinematicStageMatrices(groupMatrices.call(this,sec,p));};}
+export function installCinematicV11(){if(TeddyRenderer.prototype.__cinematicV11)return;TeddyRenderer.prototype.__cinematicV11=true;const partTransform=TeddyRenderer.prototype.partTransform;TeddyRenderer.prototype.partTransform=function(part,g,sec,p){return partTransform.call(this,cinematicPart(part),g,sec,p);};const groupMatrices=TeddyRenderer.prototype.groupMatrices;TeddyRenderer.prototype.groupMatrices=function(sec,p){return cinematicStageMatrices(groupMatrices.call(this,sec,p));};TeddyRenderer.prototype.frame2d=function(){return cinematicFallback2d(this);};}
