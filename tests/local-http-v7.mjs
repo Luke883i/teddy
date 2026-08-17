@@ -6,6 +6,7 @@ try{
  let ready=false;for(let i=0;i<80;i++){try{const r=await fetch(`${base}/api/health`);if(r.ok){ready=true;break}}catch{}await sleep(50)}assert.equal(ready,true,'server ready');
  const boot=await (await fetch(`${base}/api/bootstrap`)).json();assert.match(boot.version,/^0\.[7-9]\.|^[1-9]\d*\./);assert.equal(boot.ai.provider,'local');assert.equal(boot.ai.accountRequired,false);assert.equal(boot.ai.configured,true);assert.equal(boot.ai.ready,true);
  const availability=await (await fetch(`${base}/api/availability`)).json();assert.equal(availability.ready,false,'managed availability stays separate from mock service compatibility');
+ const retry=await fetch(`${base}/api/runtime/retry`,{method:'POST'});assert.equal(retry.status,202);const retryBody=await retry.json();assert.equal(retryBody.retryRequested,true);assert.equal(retryBody.ready,false);
  const wav=Buffer.alloc(44);wav.write('RIFF');wav.write('WAVE',8);wav.write('data',36);
  const turn=await fetch(`${base}/api/local/turn`,{method:'POST',headers:{'content-type':'audio/wav'},body:wav});assert.equal(turn.status,200);const text=await turn.text();for(const type of ['transcript','text.delta','audio','done'])assert.match(text,new RegExp(`"type":"${type.replace('.','\\.')}"`));
  const cloud=await fetch(`${base}/api/realtime/session`,{method:'POST',headers:{'content-type':'application/sdp'},body:'v=0\r\n'});assert.equal(cloud.status,409);assert.equal((await cloud.json()).error,'cloud_provider_not_selected');

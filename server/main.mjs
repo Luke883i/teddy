@@ -59,6 +59,14 @@ async function route(req,res){
   if(req.method==='GET'&&u.pathname==='/api/ready'){const a=PROVIDER==='local'?localAvailability():bootstrap().availability;return json(res,a.ready?200:503,a)}
   if(req.method==='GET'&&u.pathname==='/api/bootstrap')return json(res,200,bootstrap());
   if(req.method==='GET'&&u.pathname==='/api/local/status')return json(res,200,localService.status());
+  if(req.method==='POST'&&u.pathname==='/api/runtime/retry'){
+    if(PROVIDER!=='local')return json(res,409,{error:'local_provider_disabled'});
+    if(closing)return json(res,503,{error:'server_shutting_down'});
+    if(runtimeRecovery)return json(res,202,{...localAvailability(),recovery:'in_progress'});
+    const current=localAvailability();if(current.ready)return json(res,200,current);
+    runtime.retry().catch(e=>console.error('local runtime retry:',e?.code||e?.message||e));
+    return json(res,202,{...runtime.status(),retryRequested:true});
+  }
   if(req.method==='POST'&&u.pathname==='/api/local/turn'){
     if(PROVIDER!=='local')return json(res,409,{error:'local_provider_disabled'});
     const localStatus=localService.status();if(!localStatus.ready)return json(res,503,{error:'local_runtime_not_ready',status:localStatus});
