@@ -1,0 +1,17 @@
+{
+  "schema": 1,
+  "campaign": "oral-pipe-v11",
+  "seed": "0x54edd1c3",
+  "unitCases": 100000,
+  "totalCases": 104321,
+  "checks": 730247,
+  "scenarioClasses": 22,
+  "signaturesAtTarget": 2811,
+  "signaturesFinal": 2826,
+  "noNoveltyWindow": 1000,
+  "noNoveltyReached": 1000,
+  "syntheticStateSpace": true,
+  "physicalDownloads": false,
+  "physicalInference": false,
+  "qwenRevision": "1eaf4d9657fe65ad10a51eab76a8db5b363bddaa"
+}
