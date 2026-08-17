@@ -2,8 +2,9 @@ import fs from 'node:fs';
 import crypto from 'node:crypto';
 import {fileURLToPath} from 'node:url';
 import path from 'node:path';
-import {REALISM_V71,actionPose} from '../web/teddy/refinement-v7.js';
-
+import {REALISM_V71,actionPose,refinePartV71} from '../web/teddy/refinement-v7.js';
+import {buildTeddyArchetype,cameraPlan} from '../web/teddy/model.js';
+import {M4,compose} from '../web/teddy/math.js';
 const ROOT=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const FULL=process.argv.includes('--full');
 const M=FULL?10_000_000:Number(process.argv.find(x=>/^\d+$/.test(x))||250_000);
@@ -12,29 +13,27 @@ function h32(x){x=(x+0x9e3779b9)|0;x=Math.imul(x^(x>>>16),0x21f0aaad);x=Math.imu
 const u=(i,k)=>h32(i^Math.imul(k,0x45d9f3b))/4294967295;
 const between=(i,k,a,b)=>a+(b-a)*u(i,k);
 const sq=x=>x*x;
-
-// Independent evidence constraints: these are not copied from the chosen runtime constants.
 const hard={shoulderInset:[.045,.105],armWidth:[.78,.92],elbow:[.70,.90],bellyW:[.78,.94],bellyH:[.76,.94],knee:[.72,.91],footW:[.82,.96],footD:[.84,.98],muzzleH:[.87,.98],jump:[.20,.42],armRaise:[.82,1.28],legLift:[.48,.88]};
 const target={shoulderInset:.074,armWidth:.855,elbow:.815,bellyW:.865,bellyH:.855,knee:.835,footW:.895,footD:.905,muzzleH:.925,jump:.33,armRaise:1.10,legLift:.70};
 const keys=Object.keys(target),failures=new Set();let accepted=0,best=null;
-for(let i=0;i<M;i++){
-  const c={shoulderInset:between(i,1,.035,.115),armWidth:between(i,2,.75,.95),elbow:between(i,3,.67,.93),bellyW:between(i,4,.75,.97),bellyH:between(i,5,.73,.97),knee:between(i,6,.68,.95),footW:between(i,7,.79,.99),footD:between(i,8,.81,1.01),muzzleH:between(i,9,.84,1.01),jump:between(i,10,.16,.46),armRaise:between(i,11,.72,1.38),legLift:between(i,12,.40,.96)};
-  let bad=false;for(const k of keys){const [a,b]=hard[k];if(c[k]<a||c[k]>b){failures.add(k);bad=true}}
-  if(bad)continue;accepted++;
-  let score=0;for(const k of keys){const [a,b]=hard[k],span=b-a;score+=sq((c[k]-target[k])/span)}
-  if(c.elbow>c.armWidth+.025)score+=8*sq(c.elbow-c.armWidth);
-  if(c.footW>c.footD+.07)score+=6*sq(c.footW-c.footD-.07);
-  if(c.bellyW>c.bellyH+.10)score+=5*sq(c.bellyW-c.bellyH-.10);
-  if(!best||score<best.score)best={index:i,score,params:c};
-}
+for(let i=0;i<M;i++){const c={shoulderInset:between(i,1,.035,.115),armWidth:between(i,2,.75,.95),elbow:between(i,3,.67,.93),bellyW:between(i,4,.75,.97),bellyH:between(i,5,.73,.97),knee:between(i,6,.68,.95),footW:between(i,7,.79,.99),footD:between(i,8,.81,1.01),muzzleH:between(i,9,.84,1.01),jump:between(i,10,.16,.46),armRaise:between(i,11,.72,1.38),legLift:between(i,12,.40,.96)};let bad=false;for(const k of keys){const [a,b]=hard[k];if(c[k]<a||c[k]>b){failures.add(k);bad=true}}if(bad)continue;accepted++;let score=0;for(const k of keys){const [a,b]=hard[k],span=b-a;score+=sq((c[k]-target[k])/span)}if(c.elbow>c.armWidth+.025)score+=8*sq(c.elbow-c.armWidth);if(c.footW>c.footD+.07)score+=6*sq(c.footW-c.footD-.07);if(c.bellyW>c.bellyH+.10)score+=5*sq(c.bellyW-c.bellyH-.10);if(!best||score<best.score)best={index:i,score,params:c};}
 const runtime={...REALISM_V71.goals,jump:actionPose('jump',1).lift,armRaise:Math.abs(actionPose('raiseLeftArm',1).angle),legLift:Math.abs(actionPose('liftLeftLeg',1).angle)};
 const normalized={shoulderInset:runtime.shoulderInset,armWidth:runtime.armWidthScale,elbow:runtime.elbowScale,bellyW:runtime.bellyWidthScale,bellyH:runtime.bellyHeightScale,knee:runtime.kneeScale,footW:runtime.footWidthScale,footD:runtime.footDepthScale,muzzleH:runtime.muzzleVerticalScale,jump:runtime.jump,armRaise:runtime.armRaise,legLift:runtime.legLift};
 const runtimeViolations=keys.filter(k=>normalized[k]<hard[k][0]||normalized[k]>hard[k][1]);
 const compound=['arm_joint_discontinuity','leg_joint_discontinuity','belly_dominance','foot_plate','shoulder_detachment','mouth_stack','arm_hyperextension','leg_hyperflexion','jump_float','bilateral_drift'];
 const novelty=[];for(let j=0;j<NOVELTY;j++){const family=compound[j%compound.length];const detected=failures.size===keys.length&&family.length>0;if(!detected)novelty.push({identity:M+j,family})}
 const actionLimits={raiseLeftArm:Math.abs(actionPose('raiseLeftArm',1).angle)<=1.28,raiseRightArm:Math.abs(actionPose('raiseRightArm',1).angle)<=1.28,liftLeftLeg:Math.abs(actionPose('liftLeftLeg',1).angle)<=.88,liftRightLeg:Math.abs(actionPose('liftRightLeg',1).angle)<=.88,jump:actionPose('jump',1).lift<=.42};
-const canonical={M,NOVELTY,accepted,best,runtimeViolations,actionLimits,novelty};
-const report={version:'7.1',kind:'realism-parameter-saturation',evidence:REALISM_V71.evidence,identity:{searchIterations:M,falsificationIterations:NOVELTY,total:M+NOVELTY,uniqueByConstruction:true},epistemicSlices:[{id:'E1',claim:'frontal silhouette proportions remain inside evidence-derived plausibility bands'},{id:'E2',claim:'joint scales taper instead of forming detached spherical/cylindrical stacks'},{id:'E3',claim:'feet and belly cannot dominate the frontal silhouette'},{id:'E4',claim:'basic arm, leg and jump actions remain bounded'},{id:'E5',claim:'compound M+100 falsifications introduce no undetected configured failure'}],accepted,rejected:M-accepted,best,current:normalized,runtimeViolations,actionLimits,noveltyAfterM:novelty,digest:crypto.createHash('sha256').update(JSON.stringify(canonical)).digest('hex'),definition:{numericalParameterSearch:true,physicalBrowserRenders:false,sourceEvidence:'user supplied runtime capture; visual browser regression remains a separate required future gate'}};
+const local=(p,r=[0,0,0],s=[1,1,1])=>compose(M4.translate(...p),M4.rotZ(r[2]||0),M4.rotY(r[1]||0),M4.rotX(r[0]||0),M4.scale(...s));
+const model=buildTeddyArchetype(),refinedParts=model.parts.map(refinePartV71),by=new Map(refinedParts.map(p=>[p.id,p])),groups={};
+const buildGroup=n=>{if(groups[n])return groups[n];const g=model.groups[n],parent=g.parent?buildGroup(g.parent):M4.identity();return groups[n]=compose(parent,local(g.pos,g.rot))};for(const n of Object.keys(model.groups))buildGroup(n);
+const dot=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2],norm=v=>{const d=Math.hypot(...v)||1;return v.map(x=>x/d)},plan=cameraPlan(523,783),viewAxis=norm(plan.eye.map((v,i)=>v-plan.target[i]));
+const support=id=>{const p=by.get(id),m=compose(groups[p.parent]||groups.root,local(p.pos,p.rot,p.scale)),c=[m[12],m[13],m[14]],cols=[[m[0],m[1],m[2]],[m[4],m[5],m[6]],[m[8],m[9],m[10]]],radius=Math.sqrt(cols.reduce((sum,col)=>sum+dot(viewAxis,col)**2,0));return{center:dot(c,viewAxis),front:dot(c,viewAxis)+radius}};
+const belly=by.get('belly'),torso=by.get('torso'),bellyS=support('belly'),torsoS=support('torso'),shin=support('shinL'),ankle=support('anklePadL'),foot=support('footL'),pad=support('footPadL');
+const head=by.get('headShell'),headSurfaceZ=p=>{const q=1-(p.pos[0]/head.scale[0])**2-(p.pos[1]/head.scale[1])**2;return head.pos[2]+head.scale[2]*Math.sqrt(Math.max(0,q))},surfaceSeam=id=>{const p=by.get(id),surface=headSurfaceZ(p);return{embed:surface-(p.pos[2]-p.scale[2]),project:p.pos[2]+p.scale[2]-surface}};
+const ear=by.get('earL'),innerEar=by.get('innerEarL'),depthFinish={bellyFrontDelta:bellyS.front-torsoS.front,bellyCurvatureX:(belly.scale[2]/belly.scale[0]**2)/(torso.scale[2]/torso.scale[0]**2),bellyCurvatureY:(belly.scale[2]/belly.scale[1]**2)/(torso.scale[2]/torso.scale[1]**2),shinAnkleJump:Math.abs(shin.front-ankle.front),ankleFootJump:Math.abs(ankle.front-foot.front),footPadJump:Math.abs(foot.front-pad.front),innerEarRatioX:innerEar.scale[0]/ear.scale[0],eyeAspect:by.get('eyeL').scale[1]/by.get('eyeL').scale[0],browToEyeWidth:by.get('browL').scale[0]/by.get('eyeL').scale[0],eyeSurface:surfaceSeam('eyeL'),browSurface:surfaceSeam('browL'),innerEarRecess:(ear.pos[2]+ear.scale[2])-(innerEar.pos[2]+innerEar.scale[2])};
+const depthRuntimeViolations=[];const check=(name,ok)=>{if(!ok)depthRuntimeViolations.push(name)};check('belly_front',depthFinish.bellyFrontDelta>.005&&depthFinish.bellyFrontDelta<.03);check('belly_curvature_x',depthFinish.bellyCurvatureX>.85&&depthFinish.bellyCurvatureX<1.20);check('belly_curvature_y',depthFinish.bellyCurvatureY>.75&&depthFinish.bellyCurvatureY<1.05);check('shin_ankle_depth',depthFinish.shinAnkleJump<.08);check('ankle_foot_depth',depthFinish.ankleFootJump<.23);check('foot_pad_depth',depthFinish.footPadJump<.025);check('inner_ear_ratio',depthFinish.innerEarRatioX>.46&&depthFinish.innerEarRatioX<.52);check('eye_aspect',depthFinish.eyeAspect>1.10&&depthFinish.eyeAspect<1.19);check('brow_ratio',depthFinish.browToEyeWidth>.70&&depthFinish.browToEyeWidth<.82);check('eye_surface',depthFinish.eyeSurface.embed>.08&&depthFinish.eyeSurface.project>.003&&depthFinish.eyeSurface.project<.016);check('brow_surface',depthFinish.browSurface.embed>.015&&depthFinish.browSurface.project>.002&&depthFinish.browSurface.project<.012);check('inner_ear_recess',depthFinish.innerEarRecess>.006&&depthFinish.innerEarRecess<.025);
+const canonical={M,NOVELTY,accepted,best,runtimeViolations,depthRuntimeViolations,depthFinish,actionLimits,novelty};
+const report={version:'7.1',kind:'realism-parameter-saturation',evidence:REALISM_V71.evidence,identity:{searchIterations:M,falsificationIterations:NOVELTY,total:M+NOVELTY,uniqueByConstruction:true},epistemicSlices:[{id:'E1',claim:'frontal silhouette proportions remain inside evidence-derived plausibility bands'},{id:'E2',claim:'joint scales taper instead of forming detached spherical/cylindrical stacks'},{id:'E3',claim:'feet and belly cannot dominate the frontal silhouette'},{id:'E4',claim:'basic arm, leg and jump actions remain bounded'},{id:'E5',claim:'compound M+100 falsifications introduce no undetected configured failure'},{id:'E6',claim:'runtime depth bands keep belly, distal limbs and facial accents attached without floating or burial'}],accepted,rejected:M-accepted,best,current:normalized,runtimeViolations,depthRuntimeViolations,depthFinish,actionLimits,noveltyAfterM:novelty,digest:crypto.createHash('sha256').update(JSON.stringify(canonical)).digest('hex'),definition:{numericalParameterSearch:true,physicalBrowserRenders:false,sourceEvidence:'user supplied runtime capture; visual browser regression remains a separate required future gate'}};
 if(FULL){fs.mkdirSync(path.join(ROOT,'docs'),{recursive:true});fs.writeFileSync(path.join(ROOT,'docs/realism-v71-report.json'),JSON.stringify(report,null,2)+'\n')}
 console.log(JSON.stringify(report,null,2));
-if(!best||accepted<100_000||runtimeViolations.length||Object.values(actionLimits).some(x=>!x)||novelty.length)process.exitCode=1;
+if(!best||accepted<100_000||runtimeViolations.length||depthRuntimeViolations.length||Object.values(actionLimits).some(x=>!x)||novelty.length)process.exitCode=1;

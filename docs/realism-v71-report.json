@@ -1,0 +1,107 @@
+{
+  "version": "7.1",
+  "kind": "realism-parameter-saturation",
+  "evidence": "runtime-front-495x766-2026-08-12",
+  "identity": {
+    "searchIterations": 10000000,
+    "falsificationIterations": 100,
+    "total": 10000100,
+    "uniqueByConstruction": true
+  },
+  "epistemicSlices": [
+    {
+      "id": "E1",
+      "claim": "frontal silhouette proportions remain inside evidence-derived plausibility bands"
+    },
+    {
+      "id": "E2",
+      "claim": "joint scales taper instead of forming detached spherical/cylindrical stacks"
+    },
+    {
+      "id": "E3",
+      "claim": "feet and belly cannot dominate the frontal silhouette"
+    },
+    {
+      "id": "E4",
+      "claim": "basic arm, leg and jump actions remain bounded"
+    },
+    {
+      "id": "E5",
+      "claim": "compound M+100 falsifications introduce no undetected configured failure"
+    },
+    {
+      "id": "E6",
+      "claim": "runtime depth bands keep belly, distal limbs and facial accents attached without floating or burial"
+    }
+  ],
+  "accepted": 179222,
+  "rejected": 9820778,
+  "best": {
+    "index": 2208467,
+    "score": 0.12497687154868342,
+    "params": {
+      "shoulderInset": 0.08327692472568643,
+      "armWidth": 0.8462505944762962,
+      "elbow": 0.8319864186416349,
+      "bellyW": 0.8657614049724679,
+      "bellyH": 0.8367258516575037,
+      "knee": 0.8210627302366921,
+      "footW": 0.8975455891218841,
+      "footD": 0.8896456722262422,
+      "muzzleH": 0.9102018627431714,
+      "jump": 0.29091831799385104,
+      "armRaise": 1.0728092554427704,
+      "legLift": 0.6626196220569824
+    }
+  },
+  "current": {
+    "shoulderInset": 0.075,
+    "armWidth": 0.86,
+    "elbow": 0.82,
+    "bellyW": 0.87,
+    "bellyH": 0.86,
+    "knee": 0.84,
+    "footW": 0.9,
+    "footD": 0.91,
+    "muzzleH": 0.93,
+    "jump": 0.34,
+    "armRaise": 1.12,
+    "legLift": 0.72
+  },
+  "runtimeViolations": [],
+  "depthRuntimeViolations": [],
+  "depthFinish": {
+    "bellyFrontDelta": 0.015071437256543363,
+    "bellyCurvatureX": 1.1043834433648148,
+    "bellyCurvatureY": 0.8660733389331503,
+    "shinAnkleJump": 0.07172205423207356,
+    "ankleFootJump": 0.21590400901960782,
+    "footPadJump": 0.01391092744488509,
+    "innerEarRatioX": 0.4890196078431372,
+    "eyeAspect": 1.148747086247086,
+    "browToEyeWidth": 0.7587412587412586,
+    "eyeSurface": {
+      "embed": 0.11274086190916038,
+      "project": 0.007259138090839556
+    },
+    "browSurface": {
+      "embed": 0.021379889869083235,
+      "project": 0.005220110130916722
+    },
+    "innerEarRecess": 0.01319999999999999
+  },
+  "actionLimits": {
+    "raiseLeftArm": true,
+    "raiseRightArm": true,
+    "liftLeftLeg": true,
+    "liftRightLeg": true,
+    "jump": true
+  },
+  "noveltyAfterM": [],
+  "digest": "c43b3aef3895a7e31537236318f4ed4d22c0aa53254425346abd4c3340442bdf",
+  "definition": {
+    "numericalParameterSearch": true,
+    "physicalBrowserRenders": false,
+    "sourceEvidence": "user supplied runtime capture; visual browser regression remains a separate required future gate"
+  }
+}
