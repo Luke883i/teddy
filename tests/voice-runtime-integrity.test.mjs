@@ -72,3 +72,20 @@ test('owned child escalates from SIGTERM to SIGKILL when it does not exit',async
     assert.equal(manager.status().ready,false);
   }finally{fs.rmSync(home,{recursive:true,force:true})}
 });
+
+test('structurally invalid runtime descriptor is quarantined before network or spawn',async()=>{
+  const home=tempHome();let spawns=0,fetches=0;
+  try{
+    writeGeneration(home,'malformed',{engines:{},llama:{port:'NaN'}});
+    const manager=createRuntimeManager({home,env:envBase,spawnImpl:()=>{spawns++;throw new Error('unexpected spawn')},fetchImpl:async()=>{fetches++;throw new Error('unexpected fetch')}});
+    const status=await manager.start();
+    assert.equal(spawns,0);assert.equal(fetches,0);assert.equal(status.lastProblem?.error,'runtime_generation_invalid');assert.equal(fs.existsSync(path.join(home,'runtime','current.json')),false);manager.stop();
+  }finally{fs.rmSync(home,{recursive:true,force:true})}
+});
+
+test('failed promoted candidates are explicitly garbage-collected by the provisioning transaction',()=>{
+  const source=fs.readFileSync(new URL('../server/lib/runtime-manager.mjs',import.meta.url),'utf8');
+  assert.match(source,/failedGenerationPath=final/);
+  assert.match(source,/rm\(failedGenerationPath,\{recursive:true,force:true\}\)/);
+  assert.match(source,/failedGenerationPath=null;return status\(\)/);
+});

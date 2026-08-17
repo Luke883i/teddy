@@ -16,6 +16,7 @@ const QWEN_MODEL='Qwen3-0.6B-Q8_0.gguf';
 const QWEN_URL=`https://huggingface.co/Qwen/Qwen3-0.6B-GGUF/resolve/main/${QWEN_MODEL}?download=true`;
 const now=()=>new Date().toISOString();
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const terminationPromises=new WeakMap();
 
 function platformNames(){
   const arch=process.arch==='x64'?'x64':process.arch==='arm64'?'arm64':null;
@@ -34,7 +35,8 @@ function cleanDigest(v=''){return String(v).replace(/^sha256:/,'').replace(/^W\/
 async function exec(command,args,{cwd}={}){return await new Promise((resolve,reject)=>{const c=spawn(command,args,{cwd,stdio:['ignore','pipe','pipe'],shell:false});let err='';c.stderr.on('data',b=>{if(err.length<8000)err+=b});c.on('error',reject);c.on('exit',code=>code===0?resolve():reject(Object.assign(new Error(`command_failed:${path.basename(command)}`),{code:'runtime_command_failed',stage:'extract',retryable:false,detail:err.slice(-2000)})))});}
 async function findNamed(root,name){const q=[root];while(q.length){const d=q.shift();let entries;try{entries=await fs.promises.readdir(d,{withFileTypes:true})}catch{continue}for(const e of entries){const p=path.join(d,e.name);if(e.isDirectory())q.push(p);else if(e.name===name)return p;}}return null;}
 async function portListening(port,{host='127.0.0.1',timeoutMs=180}={}){return await new Promise(resolve=>{let settled=false;const finish=v=>{if(settled)return;settled=true;socket.destroy();resolve(v)},socket=net.createConnection({host,port:Number(port)});socket.once('connect',()=>finish(true));socket.once('error',()=>finish(false));socket.setTimeout(timeoutMs,()=>finish(false));});}
-async function terminateChild(child,{graceMs=900}={}){if(!child||child.exitCode!=null)return;await new Promise(resolve=>{let settled=false,exited=false,timer;const done=()=>{if(settled)return;settled=true;clearTimeout(timer);resolve()},onExit=()=>{exited=true;done()};child.once?.('exit',onExit);try{child.kill('SIGTERM')}catch{return done()}timer=setTimeout(()=>{if(!exited){try{child.kill('SIGKILL')}catch{}}done()},graceMs)})}
+async function terminateChild(child,{graceMs=900}={}){if(!child||child.exitCode!=null)return;const active=terminationPromises.get(child);if(active)return active;const task=new Promise(resolve=>{let settled=false,exited=false,timer;const done=()=>{if(settled)return;settled=true;clearTimeout(timer);resolve()},onExit=()=>{exited=true;done()};child.once?.('exit',onExit);try{child.kill('SIGTERM')}catch{return done()}timer=setTimeout(()=>{if(!exited){try{child.kill('SIGKILL')}catch{}}done()},graceMs)});terminationPromises.set(child,task);try{await task}finally{terminationPromises.delete(child)}}
+function validRuntimeConfig(cfg){const port=Number(cfg?.llama?.port);return Boolean(cfg&&typeof cfg.engines?.asrCommand==='string'&&cfg.engines.asrCommand&&Array.isArray(cfg.engines?.asrArgs)&&typeof cfg.engines?.ttsCommand==='string'&&cfg.engines.ttsCommand&&Array.isArray(cfg.engines?.ttsArgs)&&typeof cfg.llama?.executable==='string'&&cfg.llama.executable&&typeof cfg.llama?.model==='string'&&cfg.llama.model&&Number.isInteger(port)&&port>=1&&port<=65535)}
 
 export function createRuntimeManager({home,env=process.env,fetchImpl=fetch,spawnImpl=spawn}={}){
   const root=path.join(home,'runtime'),generations=path.join(root,'generations'),staging=path.join(root,'staging'),pointer=path.join(root,'current.json'),statusFile=path.join(root,'install-state.json'),catalogCache=path.join(root,'catalog-cache.json');
@@ -131,7 +133,7 @@ export function createRuntimeManager({home,env=process.env,fetchImpl=fetch,spawn
     if(llama===child)llama=null;await terminateChild(child);throw Object.assign(new Error('local_llm_start_timeout'),{code:'local_llm_start_timeout',stage:'start',retryable:true});
   }
   async function activate(generation){
-    const cfg=await readJson(path.join(generation.path,'runtime.json'));if(!cfg)return false;
+    const cfg=await readJson(path.join(generation.path,'runtime.json'));if(!validRuntimeConfig(cfg))return false;
     await setPhase('starting');await startLlama(cfg.llama);engineConfig=cfg.engines;
     state.engines={asr:{state:'checking',healthy:false},llm:{state:'running',healthy:true},tts:{state:'checking',healthy:false}};await publish();
     const engines=createLocalEngines({...engineConfig,llamaUrl:`http://127.0.0.1:${cfg.llama.port}`,fetchImpl});
@@ -148,7 +150,7 @@ export function createRuntimeManager({home,env=process.env,fetchImpl=fetch,spawn
   async function loadCurrent(){const p=await readJson(pointer);if(!p?.id)return false;const g={id:p.id,createdAt:p.createdAt,path:path.join(generations,p.id)};try{const activated=await activate(g);if(!activated){await fs.promises.rm(pointer,{force:true}).catch(()=>{});throw Object.assign(new Error('runtime_generation_invalid'),{code:'runtime_generation_invalid',stage:'layout',retryable:false})}return true}catch(e){await fail(e);return false}}
   async function provision(){
     await fs.promises.mkdir(staging,{recursive:true,mode:0o700});await setPhase('discovering');state.artifacts=await buildCatalog();await publish();
-    const id=`${Date.now()}-${crypto.randomBytes(4).toString('hex')}`,stage=path.join(staging,id);await fs.promises.mkdir(stage,{recursive:true,mode:0o700});
+    const id=`${Date.now()}-${crypto.randomBytes(4).toString('hex')}`,stage=path.join(staging,id);let failedGenerationPath=null;await fs.promises.mkdir(stage,{recursive:true,mode:0o700});
     try{
       for(const a of state.artifacts){const archive=path.join(stage,'downloads',a.name);await download(a,archive);if(a.id!=='qwen3-0.6b'){a.phase='extracting';await publish();await extract(archive,path.join(stage,a.id));}else{await fs.promises.mkdir(path.join(stage,'qwen3-0.6b'),{recursive:true});await fs.promises.rename(archive,path.join(stage,'qwen3-0.6b',QWEN_MODEL));}a.phase='installed';await publish();}
       const wrappers=await writeWrappers(stage,path.join(stage,'sherpa-runtime'),path.join(stage,'asr-whisper-tiny'),path.join(stage,'tts-riccardo'));
@@ -157,10 +159,10 @@ export function createRuntimeManager({home,env=process.env,fetchImpl=fetch,spawn
       const model=path.join(stage,'qwen3-0.6b',QWEN_MODEL);let modelOk=false;try{modelOk=(await fs.promises.stat(model)).isFile()}catch{}if(!modelOk)throw Object.assign(new Error('runtime_layout_invalid'),{code:'runtime_layout_invalid',stage:'layout',retryable:false});
       const port=Number(env.TEDDY_LLAMA_PORT||8080);if(!Number.isInteger(port)||port<1||port>65535)throw Object.assign(new Error('local_llm_port_invalid'),{code:'local_llm_port_invalid',stage:'start',retryable:false});
       await atomicJson(path.join(stage,'runtime.json'),{engines:wrappers,llama:{executable:llamaExe,model,port},artifacts:state.artifacts.map(({id,sha256,source,version})=>({id,sha256,source,version}))});
-      const final=path.join(generations,id);await fs.promises.mkdir(generations,{recursive:true,mode:0o700});await fs.promises.rename(stage,final);
+      const final=path.join(generations,id);await fs.promises.mkdir(generations,{recursive:true,mode:0o700});await fs.promises.rename(stage,final);failedGenerationPath=final;
       const candidate={id,createdAt:now(),path:final};const old=await readJson(pointer);state.previousGeneration=old?.id?{id:old.id,createdAt:old.createdAt}:null;
-      await activate(candidate);await atomicJson(pointer,{id,createdAt:candidate.createdAt});return status();
-    }catch(e){await fs.promises.rm(stage,{recursive:true,force:true}).catch(()=>{});if(await loadCurrent())state.installPhase='rolled_back';else await fail(e);await publish();throw e}
+      await activate(candidate);await atomicJson(pointer,{id,createdAt:candidate.createdAt});failedGenerationPath=null;return status();
+    }catch(e){if(llama){const failed=llama;llama=null;await terminateChild(failed).catch(()=>{})}await fs.promises.rm(stage,{recursive:true,force:true}).catch(()=>{});if(failedGenerationPath)await fs.promises.rm(failedGenerationPath,{recursive:true,force:true}).catch(()=>{});if(await loadCurrent())state.installPhase='rolled_back';else await fail(e);await publish();throw e}
   }
   async function attemptStart(){
     if(status().ready)return status();
@@ -182,6 +184,6 @@ export function createRuntimeManager({home,env=process.env,fetchImpl=fetch,spawn
   }
   async function retry(){if(status().ready)return status();if(retryTimer){clearTimeout(retryTimer);retryTimer=null}initialRetryCycles=0;return start()}
   function config(){return engineConfig?{...engineConfig,llamaUrl:engineConfig.llamaUrl||`http://127.0.0.1:${Number(env.TEDDY_LLAMA_PORT||8080)}`}:null}
-  function stop(){stopping=true;if(retryTimer){clearTimeout(retryTimer);retryTimer=null}if(llama){const child=llama;llama=null;try{child.kill('SIGTERM')}catch{}}}
+  function stop(){stopping=true;if(retryTimer){clearTimeout(retryTimer);retryTimer=null}if(llama){const child=llama;llama=null;terminateChild(child).catch(()=>{})}}
   return {start,retry,status,config,stop,paths:{root,pointer,statusFile}};
 }
