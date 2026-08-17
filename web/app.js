@@ -29,8 +29,10 @@ async function saveTurn(role,text){if(!conversationId||!text?.trim())return;awai
 async function ensureConversation(){if(!conversationId)conversationId=(await (await fetch('/api/conversations',{method:'POST'})).json()).id;return conversationId}
 async function endConversation(){const id=conversationId;conversationId=null;if(id)await fetch(`/api/conversations/${id}/end`,{method:'POST'}).catch(()=>{})}
 function cancelLocalTurn(){if(!localAbort)return false;const ac=localAbort;localAbort=null;turnGeneration++;ac.abort();presence.stop();renderer.setListening(0);talkBtn.textContent='Parla con Teddy';talkBtn.classList.remove('live');talkBtn.disabled=!runtimeReady();stateText.textContent='interrotto';return true}
+async function primeLocalOutput(){try{const ctx=await presence.context();if(ctx.state!=='running')throw Object.assign(new Error('audio_output_blocked'),{code:'audio_output_blocked'});return ctx}catch(e){if(e?.code)throw e;throw Object.assign(new Error('audio_output_unavailable'),{code:'audio_output_unavailable',cause:e})}}
 async function startLocalTurn(){
   if(!runtimeReady()){showProblem({error:'local_runtime_not_ready',kind:'local'});await refreshAvailability();return}
+  try{await primeLocalOutput()}catch(e){showProblem({error:e.code||'audio_output_unavailable',kind:'audio'});return}
   hideConnectionNotice();await ensureConversation();const ac=new AbortController(),generation=++turnGeneration;localAbort=ac;talkBtn.textContent='Interrompi';talkBtn.classList.add('live');talkBtn.disabled=false;
   try{
     renderer.setListening(1);stateText.textContent='ti ascolto';const wav=await captureWav({durationMs:8000,signal:ac.signal,adaptive:true});renderer.setListening(0);stateText.textContent='trascrivo';let assistant='';
