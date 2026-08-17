@@ -2,13 +2,14 @@ import {M4,compose,transformPoint} from './math.js';
 import {buildTeddyArchetype,FLOOR_Y} from './model.js';
 import {TeddyRenderer} from './render.js';
 import {applyActionMatrices,refinePartV71} from './refinement-v7.js';
+import {cinematicPart} from './cinematic-v11.js';
 import {MotionEngine} from './motion-engine.js';
 import {sanitizeMotionIntent} from './motion-contract.js';
 
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,Number(v)||0));
 const local=(p,r=[0,0,0],s=[1,1,1])=>compose(M4.translate(...p),M4.rotZ(r[2]||0),M4.rotY(r[1]||0),M4.rotX(r[0]||0),M4.scale(...s));
 const archetype=buildTeddyArchetype();
-const refined=new Map(archetype.parts.map(p=>[p.id,refinePartV71(p)]));
+const refined=new Map(archetype.parts.map(p=>[p.id,cinematicPart(refinePartV71(p))]));
 
 function preMultiplyAll(groups,delta){const out={...groups};for(const [name,m] of Object.entries(out))if(m?.length===16)out[name]=M4.mul(delta,m);return out;}
 function pivotRotation(matrix,axis,angle){
