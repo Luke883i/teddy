@@ -114,6 +114,8 @@ export function installSurfaceV12(){
   TeddyRenderer.prototype.init=function(){const r=originalInit.call(this);if(this.gl&&this.p&&this.meshes){for(const [name,g] of Object.entries(buildSurfaceMeshesV12()))this.meshes[name]=uploadMesh(this.gl,this.p,g);}return r;};
   const originalPart=TeddyRenderer.prototype.partTransform;
   TeddyRenderer.prototype.partTransform=function(part,g,sec,p){return originalPart.call(this,resolvePartV12(part),g,sec,p);};
+  const originalDraw=TeddyRenderer.prototype.draw;
+  TeddyRenderer.prototype.draw=function(model,mvp,part,camera,alpha=1){return originalDraw.call(this,model,mvp,resolvePartV12(part),camera,alpha);};
   const originalGroups=TeddyRenderer.prototype.groupMatrices;
   TeddyRenderer.prototype.groupMatrices=function(sec,p){return surfaceStageMatricesV12(originalGroups.call(this,sec,p));};
   TeddyRenderer.prototype.frame2d=function(){return fallbackV12(this);};
