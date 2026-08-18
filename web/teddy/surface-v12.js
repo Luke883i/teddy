@@ -68,7 +68,8 @@ const deltaAt=(m,translation=[0,0,0],rotation=[0,0,0])=>{const p=pivot(m);return
 const apply=(out,names,d)=>{for(const n of names)if(out[n])out[n]=M4.mul(d,out[n]);};
 
 export function surfaceStageMatricesV12(base){
-  const out=cinematicStageMatrices(base);
+  const out=cinematicStageMatrices(base),perspective=M4.rotY(-.035);
+  for(const [name,m] of Object.entries(out))if(m?.length===16)out[name]=M4.mul(perspective,m);
   apply(out,['earL'],deltaAt(out.earL,[.015,-.005,-.055],[.02,.18,-.025]));
   apply(out,['earR'],deltaAt(out.earR,[-.015,-.005,-.055],[.02,-.18,.025]));
   apply(out,['shoulderL','elbowL','wristL'],M4.translate(-.035,.012,-.025));
@@ -98,7 +99,7 @@ function fallbackV12(renderer){
   c.clearRect(0,0,w,h);c.fillStyle=renderer.config.appearance.background;c.fillRect(0,0,w,h);c.save();c.globalAlpha=.25;c.fillStyle='#000';c.beginPath();c.ellipse(cx,cy+1.38*s,.68*s,.065*s,0,0,Math.PI*2);c.fill();c.restore();
   // Far limbs, then one body skin: no connector balls and no stacked chest/pelvis masses.
   ell(-.52,.12,.17,.60,fur,-.045,.22);ell(.50,.12,.17,.60,fur,.035,.18);ell(-.31,-.83,.23,.47,fur,-.018,.20);ell(.31,-.83,.23,.47,fur,.018,.17);
-  ell(0,.10,.69,1.01,fur,0,.17);ell(0,.08,.36,.48,tone(muz,-.03),0,.08);
+  ell(0,.10,.72,.93,fur,0,.17);
   ell(-.56+hx,1.47+hy,.245,.265,fur,-.10,.20);ell(.56+hx,1.47+hy,.245,.265,fur,.10,.17);ell(-.56+hx,1.47+hy,.14,.15,inner,-.10,.08);ell(.56+hx,1.47+hy,.14,.15,inner,.10,.07);
   ell(hx,1.06+hy,.73,.69,fur,0,.16);ell(hx,.86+hy,.36,.235,muz,0,.08);
   const open=Math.max(.05,1-(renderer.pose?.blink||0)*.94-(renderer.pose?.squint||0)*.12);ell(-.205+hx,1.17+hy,.077,.094*open,eyes,0,.04);ell(.205+hx,1.17+hy,.077,.094*open,eyes,0,.04);if(open>.14){ell(-.184+hx,1.20+hy,.014,.017,'#fff8e6',0,.02);ell(.228+hx,1.20+hy,.014,.017,'#fff8e6',0,.02);}
