@@ -24,9 +24,11 @@ export async function acquireInstallLock(lockDir,{timeoutMs=30_000,staleMs=120_0
         if(e?.code==='ENOENT'){await fs.promises.rm(lockDir,{recursive:true,force:true}).catch(()=>{});continue;}
         throw e;
       }
-      const owner=await safeRead(ownerFile),heartbeat=Number(owner?.heartbeatAt||0),age=heartbeat?Math.max(0,now()-heartbeat):Infinity;
+      const owner=await safeRead(ownerFile),heartbeat=Number(owner?.heartbeatAt||0);
+      let age=heartbeat?Math.max(0,now()-heartbeat):0;
+      if(!owner){try{const st=await fs.promises.stat(lockDir);age=Math.max(0,now()-st.mtimeMs)}catch{age=0}}
       const ownerPid=Number(owner?.pid);
-      const dead=!owner||!isProcessAlive(ownerPid);
+      const dead=Boolean(owner)&&!isProcessAlive(ownerPid);
       const staleMalformed=!owner&&age>staleMs;
       if(dead||staleMalformed){
         const quarantine=`${lockDir}.stale.${process.pid}.${crypto.randomUUID()}`;
@@ -44,7 +46,6 @@ export function timeoutSignal(parent,{timeoutMs=30_000,code='runtime_operation_t
   const controller=new AbortController();let timedOut=false;
   const abort=()=>{if(!controller.signal.aborted)controller.abort(parent?.reason)};
   if(parent?.aborted)abort();else parent?.addEventListener?.('abort',abort,{once:true});
-  const timer=setTimeout(()=>{timedOut=true;if(!controller.signal.aborted)controller.abort(Object.assign(new Error(code),{code}))},Math.max(1,timeoutMs));
-  timer.unref?.();
+  const timer=setTimeout(()=>{if(!controller.signal.aborted){timedOut=true;controller.abort(Object.assign(new Error(code),{code}))}},Math.max(1,timeoutMs));
   return {signal:controller.signal,timedOut:()=>timedOut,cleanup(){clearTimeout(timer);parent?.removeEventListener?.('abort',abort)}};
 }

@@ -1,0 +1,202 @@
+{
+  "schema": 1,
+  "campaign": "oral-pipe-mutation-v12",
+  "mutants": 27,
+  "validMutants": 27,
+  "killed": 27,
+  "survived": 0,
+  "killRate": 1,
+  "criticalSurvivors": [],
+  "survivors": [],
+  "results": [
+    {
+      "id": "trust-legacy-url-bypass",
+      "critical": true,
+      "valid": true,
+      "killed": true,
+      "reason": "test_failure"
+    },
+    {
+      "id": "trust-artifact-profile-bypass",
+      "critical": true,
+      "valid": true,
+      "killed": true,
+      "reason": "test_failure"
+    },
+    {
+      "id": "trust-qwen-mutable-main",
+      "critical": true,
+      "valid": true,
+      "killed": true,
+      "reason": "test_failure"
+    },
+    {
+      "id": "trust-qwen-sha-altered",
+      "critical": true,
+      "valid": true,
+      "killed": true,
+      "reason": "test_failure"
+    },
+    {
+      "id": "trust-legacy-zero-size",
+      "critical": true,
+      "valid": true,
+      "killed": true,
+      "reason": "test_failure"
+    },
+    {
+      "id": "state-selftest-bypass",
+      "critical": true,
+      "valid": true,
+      "killed": true,
+      "reason": "test_failure"
+    },
+    {
+      "id": "state-digest-mismatch-bypass",
+      "critical": true,
+      "valid": true,
+      "killed": true,
+      "reason": "test_failure"
+    },
+    {
+      "id": "state-provenance-bypass",
+      "critical": true,
+      "valid": true,
+      "killed": true,
+      "reason": "test_failure"
+    },
+    {
+      "id": "lock-live-owner-stolen-by-age",
+      "critical": true,
+      "valid": true,
+      "killed": true,
+      "reason": "test_failure"
+    },
+    {
+      "id": "lock-initialization-gap-stolen",
+      "critical": true,
+      "valid": true,
+      "killed": true,
+      "reason": "test_failure"
+    },
+    {
+      "id": "lock-release-token-bypass",
+      "critical": true,
+      "valid": true,
+      "killed": true,
+      "reason": "test_failure"
+    },
+    {
+      "id": "timeout-signal-disabled",
+      "critical": true,
+      "valid": true,
+      "killed": true,
+      "reason": "test_failure"
+    },
+    {
+      "id": "command-timeout-disabled",
+      "critical": true,
+      "valid": true,
+      "killed": true,
+      "reason": "timeout"
+    },
+    {
+      "id": "asr-timeout-hardcoded",
+      "critical": true,
+      "valid": true,
+      "killed": true,
+      "reason": "test_failure"
+    },
+    {
+      "id": "tts-timeout-hardcoded",
+      "critical": true,
+      "valid": true,
+      "killed": true,
+      "reason": "test_failure"
+    },
+    {
+      "id": "llm-timeout-hardcoded",
+      "critical": true,
+      "valid": true,
+      "killed": true,
+      "reason": "timeout"
+    },
+    {
+      "id": "tts-invalid-wav-accepted",
+      "critical": true,
+      "valid": true,
+      "killed": true,
+      "reason": "test_failure"
+    },
+    {
+      "id": "retry-permanent-errors",
+      "critical": true,
+      "valid": true,
+      "killed": true,
+      "reason": "test_failure"
+    },
+    {
+      "id": "retry-jitter-disabled",
+      "critical": false,
+      "valid": true,
+      "killed": true,
+      "reason": "test_failure"
+    },
+    {
+      "id": "catalog-host-validation-bypass",
+      "critical": true,
+      "valid": true,
+      "killed": true,
+      "reason": "test_failure"
+    },
+    {
+      "id": "platform-windows-removed",
+      "critical": true,
+      "valid": true,
+      "killed": true,
+      "reason": "test_failure"
+    },
+    {
+      "id": "platform-windows-cuda-selected",
+      "critical": true,
+      "valid": true,
+      "killed": true,
+      "reason": "test_failure"
+    },
+    {
+      "id": "platform-windows-exe-suffix-removed",
+      "critical": true,
+      "valid": true,
+      "killed": true,
+      "reason": "test_failure"
+    },
+    {
+      "id": "manager-install-lock-bypass",
+      "critical": true,
+      "valid": true,
+      "killed": true,
+      "reason": "test_failure"
+    },
+    {
+      "id": "manager-canary-after-pointer",
+      "critical": true,
+      "valid": true,
+      "killed": true,
+      "reason": "test_failure"
+    },
+    {
+      "id": "manager-finalize-before-hash",
+      "critical": true,
+      "valid": true,
+      "killed": true,
+      "reason": "test_failure"
+    },
+    {
+      "id": "manager-digest-check-bypass",
+      "critical": true,
+      "valid": true,
+      "killed": true,
+      "reason": "test_failure"
+    }
+  ]
+}

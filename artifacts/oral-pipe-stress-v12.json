@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "campaign": "oral-pipe-stress-v12",
+  "workers": 10,
+  "lockAcquisitions": 5000,
+  "overlapViolations": 0,
+  "timeoutGuards": 2000,
+  "cancelledGuards": 400,
+  "timedOutGuards": 1600,
+  "timeoutFailures": 0,
+  "physicalModels": false
+}
