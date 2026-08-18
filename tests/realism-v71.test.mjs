@@ -37,8 +37,8 @@ test('scaled primitives use an inverse-transpose normal matrix',()=>{
   const source=fs.readFileSync(new URL('../web/teddy/render.js',import.meta.url),'utf8'),normal3=new Function(`${extractFunction(source,'normal3')};return normal3`)(),m=M4.mul(M4.rotY(.41),M4.scale(.31,.18,.39)),n=normal3(m),t=[m[0],m[1],m[2]],normal=[n[6],n[7],n[8]],dot=t[0]*normal[0]+t[1]*normal[1]+t[2]*normal[2];assert.ok(Math.abs(dot)<1e-6,dot);assert.ok(Math.abs(n[0])>1&&Math.abs(n[4])>1&&Math.abs(n[8])>1);
 });
 
-test('runtime page installs the refinement before app construction',()=>{
-  const html=fs.readFileSync(new URL('../web/index.html',import.meta.url),'utf8'),refine=html.indexOf('installTeddyRefinement'),app=html.indexOf('src="/app.js"');assert.ok(refine>=0&&app>refine);
+test('runtime page installs v12 surface before motion and app construction',()=>{
+  const html=fs.readFileSync(new URL('../web/index.html',import.meta.url),'utf8'),surface=html.indexOf('installSurfaceV12()'),motion=html.indexOf('installMovementEngine()'),app=html.indexOf('src="/app.js"');assert.ok(surface>=0&&motion>surface&&app>motion,{surface,motion,app});assert.doesNotMatch(html,/installTeddyRefinement\(\)/);
 });
 
 test('v7.1 realism saturation executes 10M numerical identities plus M+100 compound falsification',()=>{

@@ -1,0 +1,52 @@
+{
+  "version": 12,
+  "kind": "continuous-skin visual geometry convergence",
+  "sourceEvidence": "user runtime capture 432x798 on 2026-08-18 plus CPU projection of exact v12 mesh vertices",
+  "visualIterations": [
+    {
+      "candidate": "A",
+      "result": "rejected",
+      "reason": "belly patch still read as a shield and torso remained too humanoid"
+    },
+    {
+      "candidate": "B",
+      "result": "rejected",
+      "reason": "belly removed but upper torso stayed too vertical and near-front depth remained compressed"
+    },
+    {
+      "candidate": "C",
+      "result": "accepted-proxy",
+      "reason": "single core body, tapered shoulder skin, recessed ear dishes, one muzzle, hidden connectors, ~6.3deg near-front yaw"
+    }
+  ],
+  "runtimeOwnership": "installSurfaceV12 only; v7/v11 consumed as pure compatibility inputs",
+  "depthInvariants": {
+    "bellyShieldVisible": false,
+    "browPadsVisible": false,
+    "cheekBallsVisible": false,
+    "legacyMuzzleSideBallsVisible": false,
+    "jointConnectorBallsVisible": false,
+    "frontalFootPadDiscsVisible": false,
+    "earDishRecess": true,
+    "embeddedEyes": true,
+    "singleMuzzleSurface": true
+  },
+  "meshMetrics": {
+    "bodyV12": {"vertices":2067,"triangles":3952,"bounds":{"min":[-1.0330733060836792,-1,-1.0200873613357544],"max":[1.0330733060836792,1,1.0200873613357544]}},
+    "skullV12": {"vertices":2337,"triangles":4480,"bounds":{"min":[-1.0750000476837158,-0.9850000143051147,-1.0099999904632568],"max":[1.0750000476837158,0.9850000143051147,1.0099999904632568]}},
+    "muzzleV12": {"vertices":1855,"triangles":3536,"bounds":{"min":[-1.100000023841858,-0.9599999785423279,-1.0268688201904297],"max":[1.100000023841858,0.9599999785423279,1.0268688201904297]}},
+    "earV12": {"vertices":1395,"triangles":2640,"bounds":{"min":[-1,-1,-0.5849999785423279],"max":[1,1,0.6549999713897705]}},
+    "earDishV12": {"vertices":1009,"triangles":1960,"bounds":{"min":[-1,-1,-0.20000000298023224],"max":[1,1,0.014999999664723873]}},
+    "bellyPatchV12": {"vertices":1281,"triangles":2496,"bounds":{"min":[-1,-1,0],"max":[1,1,0.15000000596046448]}},
+    "limbV12": {"vertices":343,"triangles":576,"bounds":{"min":[-1,-1,-1],"max":[1,1,1.0399999618530273]}},
+    "footV12": {"vertices":1305,"triangles":2464,"bounds":{"min":[-0.9599999785423279,-1,-0.9700000286102295],"max":[0.9599999785423279,1,1.100000023841858]}}
+  },
+  "verification": {
+    "physicalBrowserWebGL": false,
+    "cpuProjectionUsesExactSurfaceMeshes": true,
+    "frontViewReviewed": true,
+    "threeQuarterViewReviewed": true,
+    "limitation": "container browser EGL/ANGLE is not a reliable physical WebGL gate; GitHub CI remains the runtime gate"
+  },
+  "digest": "df44d3124023a59de71958f878084983dc088c6874d8f316b17be787d073ebb8"
+}
