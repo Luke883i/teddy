@@ -126,7 +126,7 @@ test('sphere and floor geometry have outward/upward winding with back-face culli
     if(Math.hypot(...n)>1e-7){assert.ok(dot>0,`inward sphere triangle ${k/3}: ${dot}`);checked++;}
   }
   assert.ok(checked>900);
-  const floor=flatAndPlane;
+  const floor=flatAndPlane();
   for(let k=1;k<floor.n.length;k+=3)assert.ok(floor.n[k]>.99,'floor normal must face up');
   assert.match(source,/gl\.enable\(gl\.CULL_FACE\)/);
   assert.match(source,/gl\.enable\(gl\.DEPTH_TEST\)/);
