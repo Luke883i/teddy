@@ -38,8 +38,10 @@ jobs:
           node --check web/teddy/motion-wire-v8.js
           node --check web/teddy/world-v8.js
           node --check web/local.js
-      - name: test UI and renderer integration
-        run: node --test tests/visible-motion-v13.test.mjs tests/motion-ui-v12.test.mjs
+      - name: test visible pose changes for 32 routines
+        run: node --test tests/visible-motion-v13.test.mjs
+      - name: test inherited UI renderer integration
+        run: node --test tests/motion-ui-v12.test.mjs
       - name: test choreography contracts
         run: node --test tests/choreography-v12.test.mjs
       - name: test inherited motion contracts
