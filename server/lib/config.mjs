@@ -17,6 +17,7 @@ export function mergeConfig(base,patch){
   for(const group of ['persona','appearance','audio','render'])if(patch?.[group]&&typeof patch[group]==='object'&&!Array.isArray(patch[group]))out[group]={...out[group],...patch[group]};
   for(const k of ['irritability','warmth','wit','verbosity'])out.persona[k]=clamp(out.persona[k],0,1,base.persona[k]);
   for(const k of ['fur','muzzle','eyes','background'])if(!HEX.test(out.appearance[k]))out.appearance[k]=base.appearance[k];
+  out.appearance.furEnabled=typeof out.appearance.furEnabled==='boolean'?out.appearance.furEnabled:true;
   out.appearance.exposure=clamp(out.appearance.exposure,.6,1.6,base.appearance.exposure);
   out.audio.inputGain=clamp(out.audio.inputGain,0,2,1);out.audio.outputGain=clamp(out.audio.outputGain,0,2,1);out.audio.outputSpeed=clamp(out.audio.outputSpeed,.25,1.5,1);
   if(!VAD.has(out.audio.vadEagerness))out.audio.vadEagerness=base.audio.vadEagerness;if(!NR.has(out.audio.noiseReduction))out.audio.noiseReduction=base.audio.noiseReduction;
