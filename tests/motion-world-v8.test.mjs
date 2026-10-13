@@ -23,7 +23,8 @@ test('world scenario sits behind the canvas and receives bounded motion parallax
   const html=fs.readFileSync(new URL('../web/index.html',import.meta.url),'utf8');
   const world=fs.readFileSync(new URL('../web/world-v8.css',import.meta.url),'utf8');
   const runtime=fs.readFileSync(new URL('../web/teddy/world-v8.js',import.meta.url),'utf8');
-  assert.match(html,/world-v8\.css/);assert.match(html,/installMovementEngine/);assert.match(html,/installWorldScene/);assert.ok(html.indexOf('installTeddyRefinement')<html.indexOf('src="\/app.js"'));
+  const boot=fs.readFileSync(new URL('../web/teddy/init-v13.js',import.meta.url),'utf8');
+  assert.match(html,/world-v8\.css/);assert.match(boot,/installMovementEngine/);assert.match(boot,/installWorldScene/);assert.ok(boot.indexOf('installTeddyRefinement()')<boot.indexOf("await import('../app.js')"));
   assert.match(world,/world-horizon/);assert.match(world,/perspective\(/);assert.match(world,/#scene\{z-index:1\}/);assert.match(runtime,/teddy:motion-frame/);assert.match(runtime,/--world-x/);
 });
 

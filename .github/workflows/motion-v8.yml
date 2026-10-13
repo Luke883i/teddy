@@ -27,6 +27,8 @@ jobs:
           node --check web/teddy/motion-contract.js
           node --check web/teddy/motion-engine.js
           node --check web/teddy/choreography-v12.js
+          node --check web/teddy/init-v13.js
+          node --check web/teddy/canvas-motion-v13.js
           node --check web/teddy/motion-panel-v12.js
           node --check web/teddy/fur-material-v12.js
           node --check web/teddy/render.js
@@ -36,12 +38,22 @@ jobs:
           node --check web/teddy/motion-wire-v8.js
           node --check web/teddy/world-v8.js
           node --check web/local.js
-      - name: test UI and renderer integration
+      - name: test Canvas2D project and paint
+        run: node --test --test-name-pattern="Canvas2D uses same" tests/visible-motion-v13.test.mjs
+      - name: test every named routine changes geometry
+        run: node --test --test-name-pattern="every Base and Complex" tests/visible-motion-v13.test.mjs
+      - name: test interrupt and replay from new UI click
+        run: node --test --test-name-pattern="new UI click" tests/visible-motion-v13.test.mjs
+      - name: test CSP safe boot gate
+        run: node --test --test-name-pattern="CSP allows sole" tests/visible-motion-v13.test.mjs
+      - name: test inherited UI renderer integration
         run: node --test tests/motion-ui-v12.test.mjs
       - name: test choreography contracts
         run: node --test tests/choreography-v12.test.mjs
       - name: test inherited motion contracts
         run: node --test tests/motion-contract-v8.test.mjs tests/motion-world-v8.test.mjs tests/motion-routing-v8.test.mjs
+      - name: prove motion through real browser pixels under production CSP
+        run: node tools/browser-motion-smoke-v13.mjs
       - name: saturate 1m movement scenarios
         run: node tools/simulate-motion-v8.mjs --full
       - name: kill 1m motion mutations

@@ -38,7 +38,7 @@ test('scaled primitives use an inverse-transpose normal matrix',()=>{
 });
 
 test('runtime page installs the refinement before app construction',()=>{
-  const html=fs.readFileSync(new URL('../web/index.html',import.meta.url),'utf8'),refine=html.indexOf('installTeddyRefinement'),app=html.indexOf('src="/app.js"');assert.ok(refine>=0&&app>refine);
+  const boot=fs.readFileSync(new URL('../web/teddy/init-v13.js',import.meta.url),'utf8'),refine=boot.indexOf('installTeddyRefinement()'),app=boot.indexOf("await import('../app.js')");assert.ok(refine>=0&&app>refine);
 });
 
 test('v7.1 realism saturation executes 10M numerical identities plus M+100 compound falsification',()=>{
