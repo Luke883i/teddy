@@ -87,3 +87,6 @@ Each row is a *distinct tuned behavior*, not just a relabelled primitive. Beats 
 - **Safety:** no NaN or ±1.2 limit breaches; mutation 50M has zero survivors, both invalid and accepted populations tracked.
 - **Regression:** existing browser/reset/material/CI checks must remain green on final HEAD.
 - **Not established:** no perceptual metric can prove 'realistic' from unit tests; note remaining visual-debt and surface intersections as such.
+
+## Canvas2D merged pelt rendering
+The Canvas2D fallback previously re-shaded every individual fur ellipsoid, visually accentuating overlaps and protruding segment boundaries. V15 constructs a single nonzero-winding union path from all posed fur ellipses, fills it once with a shared coherent fur gradient, and clips the optional fur marks to that union. The *same partTransform skeleton* drives the union. Eyes/muzzle/paw details remain separate opaque overlays. This reduces visible inner seams in Canvas2D; it does not transform the WebGL sphere/capsule geometry into a mathematically watertight mesh. The WebGL shared radius envelopes remain the cross-backend anatomical contour fix.
