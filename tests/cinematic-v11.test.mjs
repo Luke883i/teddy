@@ -11,9 +11,10 @@ const by=new Map(base.parts.map(p=>[p.id,cinematicPart(refinePartV71(p))]));
 
 test('v11 is installed before refinement and motion so absolute visual targets own the runtime',()=>{
   const html=fs.readFileSync(new URL('../web/index.html',import.meta.url),'utf8');
-  const c=html.indexOf('installCinematicV11()'),r=html.indexOf('installTeddyRefinement()'),m=html.indexOf('installMovementEngine()');
+  const boot=fs.readFileSync(new URL('../web/teddy/init-v13.js',import.meta.url),'utf8');
+  const c=boot.indexOf('installCinematicV11()'),r=boot.indexOf('installTeddyRefinement()'),m=boot.indexOf('installMovementEngine()');
   assert.ok(c>=0&&r>c&&m>r,{c,r,m});
-  assert.match(html,/cinematic-v11\.js/);
+  assert.match(boot,/cinematic-v11\.js/);assert.match(html,/src="\/teddy\/init-v13\.js"/);
 });
 
 test('face layers have explicit forward depth instead of coplanar decals',()=>{

@@ -23,5 +23,7 @@ test('local and realtime event seams feed one provider-neutral motion-intent cha
   const html=fs.readFileSync(new URL('../web/index.html',import.meta.url),'utf8');
   assert.match(bridge,/response\.audio_transcript\.done/);assert.match(bridge,/conversation\.item\.input_audio_transcription\.completed/);assert.match(bridge,/motionIntentsFromTelemetry/);assert.match(bridge,/teddy:motion-intent/);
   const localEventMentions=(local.match(/teddy:local-event/g)||[]).length+(app.match(/teddy:local-event/g)||[]).length;
-  assert.equal(localEventMentions,1,'local semantic events must be emitted exactly once');assert.match(html,/installMotionTelemetryBridge/);
+  assert.equal(localEventMentions,1,'local semantic events must be emitted exactly once');
+  const boot=fs.readFileSync(new URL('../web/teddy/init-v13.js',import.meta.url),'utf8');
+  assert.match(html,/src="\/teddy\/init-v13\.js"/);assert.match(boot,/installMotionTelemetryBridge/);
 });
