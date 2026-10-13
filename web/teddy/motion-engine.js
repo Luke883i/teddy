@@ -31,7 +31,8 @@ export class MotionEngine{
     }else if(c.name==='waveLeft'||c.name==='waveRight'){
       action={name:c.name,amount:clamp((.35+.65*pulse)*i)};
     }else if(c.name==='boltPose'){
-      action={name:'boltPose',amount:clamp(pulse*i)};\n    }else if(c.name==='nod'){
+      action={name:'boltPose',amount:clamp(pulse*i)};
+    }else if(c.name==='nod'){
       action={name:'nod',amount:clamp(pulse*i)};
     }else if(c.name!=='stand'){
       action={name:c.name,amount:clamp(pulse*i)};
