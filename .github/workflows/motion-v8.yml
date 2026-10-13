@@ -38,8 +38,14 @@ jobs:
           node --check web/teddy/motion-wire-v8.js
           node --check web/teddy/world-v8.js
           node --check web/local.js
-      - name: test visible pose changes for 32 routines
-        run: node --test tests/visible-motion-v13.test.mjs
+      - name: test Canvas2D project and paint
+        run: node --test --test-name-pattern="Canvas2D uses same" tests/visible-motion-v13.test.mjs
+      - name: test every named routine changes geometry
+        run: node --test --test-name-pattern="every Base and Complex" tests/visible-motion-v13.test.mjs
+      - name: test interrupt and replay from new UI click
+        run: node --test --test-name-pattern="new UI click" tests/visible-motion-v13.test.mjs
+      - name: test CSP safe boot gate
+        run: node --test --test-name-pattern="CSP allows sole" tests/visible-motion-v13.test.mjs
       - name: test inherited UI renderer integration
         run: node --test tests/motion-ui-v12.test.mjs
       - name: test choreography contracts
