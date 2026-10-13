@@ -30,7 +30,8 @@ export class MotionEngine{
       const h=.12+.22*i;this.world.y=Math.max(0,Math.sin(Math.PI*phase)*h);airborne=this.world.y>MOTION_LIMITS.groundEpsilon;action={name:'jump',amount:clamp(pulse*i)};
     }else if(c.name==='waveLeft'||c.name==='waveRight'){
       action={name:c.name,amount:clamp((.35+.65*pulse)*i)};
-    }else if(c.name==='nod'){
+    }else if(c.name==='boltPose'){
+      action={name:'boltPose',amount:clamp(pulse*i)};\n    }else if(c.name==='nod'){
       action={name:'nod',amount:clamp(pulse*i)};
     }else if(c.name!=='stand'){
       action={name:c.name,amount:clamp(pulse*i)};
