@@ -13,12 +13,13 @@
     "muzzle": "#d1a173",
     "eyes": "#17100d",
     "background": "#0b0c10",
-    "exposure": 1.18
+    "exposure": 1.18,
+    "furEnabled": true
   },
   "audio": {
-    "inputGain": 1.0,
-    "outputGain": 1.0,
-    "outputSpeed": 1.0,
+    "inputGain": 1,
+    "outputGain": 1,
+    "outputSpeed": 1,
     "vadEagerness": "auto",
     "noiseReduction": "near_field",
     "echoCancellation": true,

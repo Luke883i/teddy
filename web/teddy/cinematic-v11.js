@@ -23,15 +23,25 @@ export function cinematicStageMatrices(base){const out={...base},rest=M4.rotY(CI
 
 const tone=(hex,k)=>{const s=String(hex||'#000000').replace('#','').padEnd(6,'0'),n=parseInt(s.slice(0,6),16),f=c=>Math.max(0,Math.min(255,Math.round(c+(k>=0?(255-c):c)*k))),r=f((n>>16)&255),g=f((n>>8)&255),b=f(n&255);return `rgb(${r},${g},${b})`;};
 function cinematicFallback2d(renderer){
-  const c=renderer.ctx;if(!c)return;const w=renderer.canvas.width,h=renderer.canvas.height,s=Math.min(w*.285,h*.215),cx=w*.50,cy=h*.55,fur=renderer.config.appearance.fur,muz=renderer.config.appearance.muzzle,eyes=renderer.config.appearance.eyes,inner=tone(muz,-.06),paw=tone(muz,-.12),dark=tone(fur,-.36),hx=(renderer.pose?.headYaw||0)*.055,hy=-(renderer.pose?.headPitch||0)*.045;
-  const ell=(x,y,rx,ry,fill,rot=0,depth=.16)=>{const X=cx+x*s,Y=cy-y*s,RX=rx*s,RY=ry*s;c.save();c.translate(X,Y);c.rotate(rot);const g=c.createRadialGradient(-RX*.26,-RY*.32,Math.max(1,RX*.06),0,0,Math.max(RX,RY));g.addColorStop(0,tone(fill,.20));g.addColorStop(.58,fill);g.addColorStop(1,tone(fill,-depth));c.fillStyle=g;c.beginPath();c.ellipse(0,0,RX,RY,0,0,Math.PI*2);c.fill();c.restore();};
+  const c=renderer.ctx;if(!c)return;renderer.groupMatrices(renderer.lastPose||0,renderer.pose);const motion=renderer.motionStatus?.()||{},world=motion.world||{},bolt=motion.action?.name==='boltPose'?(motion.action.amount||0):0;const w=renderer.canvas.width,h=renderer.canvas.height,s=Math.min(w*.285,h*.215),cx=w*.50+(world.x||0)*s,cy=h*.55-(world.y||0)*s,fur=renderer.config.appearance.fur,muz=renderer.config.appearance.muzzle,eyes=renderer.config.appearance.eyes,inner=tone(muz,-.06),paw=tone(muz,-.12),dark=tone(fur,-.36),hx=(renderer.pose?.headYaw||0)*.055,hy=-(renderer.pose?.headPitch||0)*.045;
+  const ell=(x,y,rx,ry,fill,rot=0,depth=.16)=>{const X=cx+x*s,Y=cy-y*s,RX=rx*s,RY=ry*s;c.save();c.translate(X,Y);c.rotate(rot);const g=c.createRadialGradient(-RX*.26,-RY*.32,Math.max(1,RX*.06),0,0,Math.max(RX,RY));g.addColorStop(0,tone(fill,.20));g.addColorStop(.58,fill);g.addColorStop(1,tone(fill,-depth));c.fillStyle=g;c.beginPath();c.ellipse(0,0,RX,RY,0,0,Math.PI*2);c.fill();
+    if(renderer.furEnabled&&fill===fur){
+      c.save();c.beginPath();c.ellipse(0,0,RX,RY,0,0,Math.PI*2);c.clip();
+      c.globalAlpha=.16;c.strokeStyle=tone(fill,.34);c.lineWidth=Math.max(.55,s*.0014);
+      for(let i=0;i<84;i++){
+        const a=(i*.61803398875)%1,b=(i*.7548776662)%1,xx=(a*1.8-.9)*RX,yy=(b*1.8-.9)*RY;
+        const len=Math.max(1,s*.005);c.beginPath();c.moveTo(xx,yy);c.lineTo(xx+len*.42,yy-len);c.stroke();
+      }
+      c.restore();
+    }
+    c.restore();};
   c.clearRect(0,0,w,h);c.fillStyle=renderer.config.appearance.background;c.fillRect(0,0,w,h);
   c.save();c.globalAlpha=.28;c.fillStyle='#000';c.beginPath();c.ellipse(cx,cy+1.37*s,.72*s,.075*s,0,0,Math.PI*2);c.fill();c.restore();
   // Far-side chains first: depth is encoded in overlap order as well as shading.
   ell(-.36,-.82,.225,.45,fur,-.025,.24);ell(-.34,-1.18,.29,.17,fur,-.06,.22);ell(-.60,.13,.19,.62,fur,-.05,.24);ell(-.61,-.43,.19,.20,fur,-.03,.24);
   ell(.34,-.82,.235,.46,fur,.02,.18);ell(.34,-1.18,.29,.17,fur,.06,.16);
   ell(0,-.18,.585,.405,fur,0,.22);ell(0,.19,.685,.92,fur,0,.19);ell(0,.13,.345,.43,tone(muz,-.03),0,.12);
-  ell(.61,.13,.205,.63,fur,.05,.17);ell(.61,-.43,.20,.205,fur,.03,.17);
+  ell(.61+bolt*.08,.13+bolt*.49,.205,.63,fur,.05-bolt*.42,.17);ell(.61+bolt*.21,-.43+bolt*.96,.20,.205,fur,.03-bolt*.42,.17);
   ell(-.55+hx,1.48+hy,.238,.252,fur,-.08,.22);ell(.55+hx,1.48+hy,.238,.252,fur,.08,.17);ell(-.55+hx,1.47+hy,.13,.14,inner,-.08,.10);ell(.55+hx,1.47+hy,.13,.14,inner,.08,.08);
   ell(hx,1.06+hy,.72,.68,fur,0,.18);ell(-.255+hx,.955+hy,.20,.19,fur,0,.15);ell(.255+hx,.955+hy,.20,.19,fur,0,.12);
   ell(hx,.87+hy,.345,.225,muz,0,.10);ell(-.11+hx,.82+hy,.142,.115,muz,0,.08);ell(.11+hx,.82+hy,.142,.115,muz,0,.08);
