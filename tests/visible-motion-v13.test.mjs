@@ -69,7 +69,7 @@ test('new UI click must replace running choreography and affect next visible can
     click(){this.listeners.click()}
   }
   const doc={createElement(tag){return new Element(tag,doc)}},root=new Element('div',doc);
-  const {r}=renderer();const panel=renderMotionPanel(root,{onMove:name=>{r.clearMotion();return r.enqueueMotion({routine:name,source:'user'})},onStop:()=>r.clearMotion()});
+  const {r}=renderer();const panel=renderMotionPanel(root,{onMove:name=>{r.clearMotion();return r.enqueueMotion({routine:name,source:'user'})},onStop:()=>r.clearMotion(),onReset:()=>r.resetMotion()});
   panel.items.children.find(b=>b.dataset.routine==='celebrate').click();
   for(let i=0;i<35;i++)r.groupMatrices(i/60,r.pose);
   panel.complex.click();panel.items.children.find(b=>b.dataset.routine==='lightningBolt').click();
