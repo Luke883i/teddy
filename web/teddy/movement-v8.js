@@ -65,7 +65,7 @@ function contactY(groups,id){
   const model=compose(parent,local(part.pos,part.rot,part.scale));return transformPoint(model,[0,-1,0,1])[1];
 }
 function groundGroups(groups,state){
-  const action=state.action?.name,support=state.routine?.name&&EXPRESSIVE_PROFILES[state.routine.name]?.support;let feet=['footL','footR'];if(support==='rightFoot'||action==='liftLeftLeg')feet=['footR'];if(support==='leftFoot'||action==='liftRightLeg')feet=['footL'];
+  const action=state.action?.name,supportMode=state.routine?.name&&EXPRESSIVE_PROFILES[state.routine.name]?.support;let feet=['footL','footR'];if(supportMode==='rightFoot'||action==='liftLeftLeg')feet=['footR'];if(supportMode==='leftFoot'||action==='liftRightLeg')feet=['footL'];
   const ys=feet.map(id=>contactY(groups,id)).filter(Number.isFinite);if(!ys.length)return {groups,correction:0,penetration:0};
   const support=Math.min(...ys),dy=clamp(FLOOR_Y-support,-.085,.085),out=preMultiplyAll(groups,M4.translate(0,dy,0));
   const corrected=support+dy,penetration=Math.max(0,FLOOR_Y-corrected);return {groups:out,correction:dy,penetration};
