@@ -48,7 +48,35 @@ export function drawCanvasMotion(renderer){
   c.save();c.globalAlpha=.22;c.fillStyle='#090705';c.beginPath();
   const world=renderer.motionStatus?.()?.world||{};
   c.ellipse(cx+(world.x||0)*scale,cy-FLOOR_Y*scale,.75*scale,.095*scale,0,0,Math.PI*2);c.fill();c.restore();
+  // One filled union path for opaque fur. Previously every capsule/sphere drew its
+  // own radial gradient and advertised a mechanical seam as the character turned.
+  // Path fill uses nonzero winding; shared gradient makes the silhouette visually one pelt.
+  const furParts=parts.filter(part=>part.material==='fur');
+  c.save();c.beginPath();
+  for(const part of furParts){
+    c.save();c.translate(cx+part.x*scale,cy-part.y*scale);c.rotate(-part.angle);
+    c.ellipse(0,0,Math.max(.5,part.rx*scale),Math.max(.5,part.ry*scale),0,0,Math.PI*2);
+    c.restore();
+  }
+  const furColor=appearance.fur||'#8a5a3b';
+  const furGradient=c.createRadialGradient(cx-scale*.26,cy-scale*.58,Math.max(1,scale*.08),cx,cy,scale*2.1);
+  furGradient.addColorStop(0,tone(furColor,.17));furGradient.addColorStop(.78,furColor);
+  furGradient.addColorStop(1,tone(furColor,-.19));c.fillStyle=furGradient;c.fill();
+  if(renderer.furEnabled){
+    c.clip();c.globalAlpha=.11;c.strokeStyle=tone(furColor,.23);
+    c.lineWidth=Math.max(.5,scale*.0015);
+    for(const part of furParts){
+      const x=cx+part.x*scale,y=cy-part.y*scale,rx=part.rx*scale,ry=part.ry*scale;
+      for(let i=0;i<9;i++){
+        const a=(i*.61803398875)%1,b=(i*.7548776662)%1;
+        const px=x+(a*1.6-.8)*rx,py=y+(b*1.6-.8)*ry;
+        c.beginPath();c.moveTo(px,py);c.lineTo(px+1,py-2.5);c.stroke();
+      }
+    }
+  }
+  c.restore();
   for(const part of parts){
+    if(part.material==='fur')continue; // fur is a merged opaque silhouette, not independent shaded balls
     const X=cx+part.x*scale,Y=cy-part.y*scale;
     const rx=Math.max(.5,part.rx*scale),ry=Math.max(.5,part.ry*scale);
     const color=materialColor(appearance,part.material);
