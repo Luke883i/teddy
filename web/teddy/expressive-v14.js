@@ -1,3 +1,4 @@
+import {sampleKineticJoint,styleForMotion} from './motion-dynamics-v15.js';
 // Motion v14 — physical, authored, continuous whole-body trajectories.
 // Each entry has explicit semantic intent and different coordinated joint targets.
 // Values are rotations in radians about the *existing* anatomical joint pivots.
@@ -56,11 +57,12 @@ export function sampleExpressivePose(name,phase,intensity=1){
   if(!profile)return null;
   const p=clamp(Number.isFinite(phase)?phase:0,0,1),gain=clamp(Number.isFinite(intensity)?intensity:0,0,1)*profile.amplitude;
   let index=profile.frames.findIndex(f=>f.t>=p);if(index<1)index=1;
-  const left=profile.frames[index-1],right=profile.frames[index],span=Math.max(.0001,right.t-left.t),u=smooth(clamp((p-left.t)/span,0,1));
-  const joints={};
-  for(const code of new Set([...Object.keys(left.pose),...Object.keys(right.pose)])){
-    const a=left.pose[code]||[0,0,0],b=right.pose[code]||[0,0,0];
-    joints[BONE[code]]=Object.freeze(a.map((value,i)=>clamp((value+(b[i]-value)*u)*gain,-1.2,1.2)));
+  const style=styleForMotion(name),joints={};
+  // All authored joints stay present throughout the entire routine.
+  // Previously keys were dropped when a joint was absent in adjacent keyposes.
+  for(const code of new Set(profile.frames.flatMap(frame=>Object.keys(frame.pose)))){
+    joints[BONE[code]]=Object.freeze([0,1,2].map(axis=>
+      clamp(sampleKineticJoint(profile.frames,code,axis,p,style)*gain,-1.2,1.2)));
   }
   return Object.freeze({name,phase:p,support:profile.support,intent:profile.intent,joints:Object.freeze(joints)});
 }

@@ -1,3 +1,4 @@
+import {finishJointEnvelope} from './silhouette-v15.js';
 import {M4,compose} from './math.js';
 import {TeddyRenderer} from './render.js';
 
@@ -12,7 +13,7 @@ const ABS=Object.freeze({
 });
 
 export const CINEMATIC_V11=Object.freeze({version:11,restYaw:-.075,objective:'readable plush volume from front and three-quarter views',depthModel:'explicit rest-stage depth plus embedded joints',cameraIntent:'near-frontal portrait; volume comes from geometry rather than billboard offsets'});
-export function cinematicPart(input){const p=clone(input),a=ABS[p.id];if(a){if(a.pos)p.pos=[...a.pos];if(a.scale)p.scale=[...a.scale];if(a.rot)p.rot=[...a.rot];if(a.geometry)p.geometry=a.geometry;}if(/^toe/.test(p.id)){p.scale=[.031,.025,.008];p.pos[2]-=.075;}return p;}
+export function cinematicPart(input){const p=clone(input),a=ABS[p.id];if(a){if(a.pos)p.pos=[...a.pos];if(a.scale)p.scale=[...a.scale];if(a.rot)p.rot=[...a.rot];if(a.geometry)p.geometry=a.geometry;}if(/^toe/.test(p.id)){p.scale=[.031,.025,.008];p.pos[2]-=.075;}return finishJointEnvelope(p);}
 
 const pivot=m=>[m?.[12]||0,m?.[13]||0,m?.[14]||0];
 const deltaAt=(m,translation=[0,0,0],rotation=[0,0,0])=>{const p=pivot(m);return compose(M4.translate(...translation),M4.translate(...p),M4.rotZ(rotation[2]||0),M4.rotY(rotation[1]||0),M4.rotX(rotation[0]||0),M4.translate(-p[0],-p[1],-p[2]));};

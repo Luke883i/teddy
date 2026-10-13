@@ -32,10 +32,10 @@ test('torso and distal limbs are volumetric while connector joints remain buried
   const torso=by.get('torso'),belly=by.get('belly'),upper=by.get('upperArmL'),elbow=by.get('elbowPadL'),fore=by.get('forearmL'),wrist=by.get('wristPadL'),thigh=by.get('thighL'),knee=by.get('kneePadL'),shin=by.get('shinL'),ankle=by.get('anklePadL'),foot=by.get('footL'),pad=by.get('footPadL');
   assert.ok(torso.scale[1]>.9&&torso.scale[2]>=.60);
   assert.ok(belly.scale[2]>=.12&&belly.scale[2]/torso.scale[2]>.19);
-  assert.ok(elbow.scale[0]/upper.scale[0]<.55);
-  assert.ok(wrist.scale[0]/fore.scale[0]<.55);
-  assert.ok(knee.scale[0]/thigh.scale[0]<.50);
-  assert.ok(ankle.scale[0]/shin.scale[0]<.60);
+  assert.ok(elbow.scale[0]/upper.scale[0]>.78&&elbow.scale[0]/upper.scale[0]<.98);
+  assert.ok(wrist.scale[0]/fore.scale[0]>.80&&wrist.scale[0]/fore.scale[0]<1.02);
+  assert.ok(knee.scale[0]/thigh.scale[0]>.68&&knee.scale[0]/thigh.scale[0]<.92);
+  assert.ok(ankle.scale[0]/shin.scale[0]>.82&&ankle.scale[0]/shin.scale[0]<1.02);
   assert.ok(foot.scale[2]>.30&&pad.pos[2]>foot.pos[2]+.28);
 });
 

@@ -28,6 +28,9 @@ jobs:
           node --check web/teddy/motion-engine.js
           node --check web/teddy/choreography-v12.js
           node --check web/teddy/expressive-v14.js
+          node --check web/teddy/motion-dynamics-v15.js
+          node --check web/teddy/silhouette-v15.js
+          node --check web/teddy/motion-falsifiers-v15.js
           node --check web/teddy/init-v13.js
           node --check web/teddy/canvas-motion-v13.js
           node --check web/teddy/motion-panel-v12.js
@@ -39,6 +42,8 @@ jobs:
           node --check web/teddy/motion-wire-v8.js
           node --check web/teddy/world-v8.js
           node --check web/local.js
+      - name: test 32 character dynamics and moving-joint silhouette
+        run: node --test tests/motion-silhouette-v15.test.mjs
       - name: test expressive 32-profile movement and reset
         run: node --test tests/expressive-v14.test.mjs
       - name: test Canvas2D project and paint
@@ -57,6 +62,8 @@ jobs:
         run: node --test tests/motion-contract-v8.test.mjs tests/motion-world-v8.test.mjs tests/motion-routing-v8.test.mjs
       - name: prove motion through real browser pixels under production CSP
         run: node tools/browser-motion-smoke-v13.mjs
+      - name: falsify 50m local-intermediate-global motion mutations
+        run: node tools/mutate-motion-v15.mjs
       - name: mutate 100 million semantic kinematic parameters
         run: node tools/mutate-expressive-v14.mjs
       - name: saturate 1m movement scenarios
