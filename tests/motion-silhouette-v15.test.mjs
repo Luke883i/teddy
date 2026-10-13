@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {buildTeddyArchetype} from '../web/teddy/model.js';
@@ -122,4 +123,12 @@ test('all 32 routines keep elbow, wrist, knee and ankle volume overlaps from fro
     }
     assert.ok(checked>=150);
   }
+});
+
+test('Canvas2D applies a single pelt silhouette fill instead of separately shaded fur balls',()=>{
+  const source=fs.readFileSync(new URL('../web/teddy/canvas-motion-v13.js',import.meta.url),'utf8');
+  assert.match(source,/const furParts=parts\.filter/);
+  assert.match(source,/furGradient\.addColorStop/);
+  assert.match(source,/if\(part\.material==='fur'\)continue/);
+  assert.match(source,/if\(renderer\.furEnabled\)/);
 });
