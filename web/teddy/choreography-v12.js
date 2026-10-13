@@ -41,3 +41,26 @@ export function queueRoutine(engine,name,options={}){
   for(const action of actions)if(!engine.enqueue(action)){engine.queue=old;return false;}
   return true;
 }
+
+export function sanitizeRoutineRequest(value){
+  if(!value||typeof value!=='object'||typeof value.routine!=='string'||!Object.hasOwn(ROUTINES,value.routine))return null;
+  const probe=sanitizeMotionIntent({name:'nod',intensity:value.intensity,source:value.source||'telemetry'});
+  return Object.freeze({routine:value.routine,intensity:probe.intensity,source:probe.source});
+}
+export function routineRequestsFromTelemetry(event={}){
+  if(!event||typeof event!=='object')return [];
+  const values=[event.motion,event.metadata?.motion,event.response?.metadata?.motion,event.item?.metadata?.motion];
+  const found=[];
+  for(const value of values)for(const v of Array.isArray(value)?value:[value]){
+    const request=sanitizeRoutineRequest(v);if(request)found.push(request);
+    if(found.length>=3)return found;
+  }
+  return found;
+}
+export function routineRequestsFromText(text,role='user'){
+  const s=String(text||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+  if(!s||/\b(?:non|evita|don't|do not)\b.{0,20}\b(?:balla|ballo|fulmine|lightning|bolt)\b/.test(s))return [];
+  const patterns=[['lightningBolt',/\b(?:mettiti|fai|assumi|mostra)\b.{0,35}\b(?:posa del fulmine|lightning bolt)\b|\bposa del fulmine\b/],['dance',/\b(?:balla|balliamo|fai un ballo|inizia a ballare|dance)\b/]];
+  for(const [routine,re] of patterns)if(re.test(s))return [sanitizeRoutineRequest({routine,source:role==='user'?'user':'assistant'})];
+  return [];
+}

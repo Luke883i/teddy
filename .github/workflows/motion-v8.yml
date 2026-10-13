@@ -26,11 +26,12 @@ jobs:
           npm ci --ignore-scripts
           node --check web/teddy/motion-contract.js
           node --check web/teddy/motion-engine.js
+          node --check web/teddy/choreography-v12.js
           node --check web/teddy/movement-v8.js
           node --check web/teddy/motion-wire-v8.js
           node --check web/teddy/world-v8.js
           node --check web/local.js
-          node --test tests/motion-contract-v8.test.mjs tests/motion-world-v8.test.mjs tests/motion-routing-v8.test.mjs
+          node --test tests/choreography-v12.test.mjs tests/motion-contract-v8.test.mjs tests/motion-world-v8.test.mjs tests/motion-routing-v8.test.mjs
       - name: saturate 1m movement scenarios
         run: node tools/simulate-motion-v8.mjs --full
       - name: kill 1m motion mutations

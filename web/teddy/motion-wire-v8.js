@@ -1,19 +1,21 @@
 import {TeddyRealtime} from '../realtime.js';
 import {motionIntentsFromText,motionIntentsFromTelemetry,sanitizeMotionIntent} from './motion-contract.js';
+import {sanitizeRoutineRequest,routineRequestsFromTelemetry,routineRequestsFromText} from './choreography-v12.js';
 
-function dispatch(intent){const safe=sanitizeMotionIntent(intent);if(!safe)return;if(typeof window!=='undefined'&&typeof window.dispatchEvent==='function'&&typeof CustomEvent==='function')window.dispatchEvent(new CustomEvent('teddy:motion-intent',{detail:safe}));}
+function dispatch(intent){const safe=sanitizeRoutineRequest(intent)||sanitizeMotionIntent(intent);if(!safe)return;if(typeof window!=='undefined'&&typeof window.dispatchEvent==='function'&&typeof CustomEvent==='function')window.dispatchEvent(new CustomEvent('teddy:motion-intent',{detail:safe}));}
 function dispatchMany(items){for(const item of items||[])dispatch(item);}
 function consumeRuntimeEvent(event={}){
+  dispatchMany(routineRequestsFromTelemetry(event));
   dispatchMany(motionIntentsFromTelemetry(event));
   const t=event?.type||'';
-  if(t==='conversation.item.input_audio_transcription.completed')dispatchMany(motionIntentsFromText(event.transcript||'',{role:'user'}));
-  if(t==='response.audio_transcript.done'||t==='response.output_audio_transcript.done')dispatchMany(motionIntentsFromText(event.transcript||'',{role:'assistant'}));
+  if(t==='conversation.item.input_audio_transcription.completed'){dispatchMany(routineRequestsFromText(event.transcript||'','user'));dispatchMany(motionIntentsFromText(event.transcript||'',{role:'user'}));}
+  if(t==='response.audio_transcript.done'||t==='response.output_audio_transcript.done'){dispatchMany(routineRequestsFromText(event.transcript||'','assistant'));dispatchMany(motionIntentsFromText(event.transcript||'',{role:'assistant'}));}
 }
 function consumeLocalEvent(event={}){
-  if(event?.type==='motion'&&event.motion)dispatch(event.motion);
+  dispatchMany(routineRequestsFromTelemetry(event));
   dispatchMany(motionIntentsFromTelemetry(event));
-  if(event?.type==='transcript')dispatchMany(motionIntentsFromText(event.text||'',{role:'user'}));
-  if(event?.type==='text.delta')dispatchMany(motionIntentsFromText(event.text||'',{role:'assistant'}));
+  if(event?.type==='transcript'){dispatchMany(routineRequestsFromText(event.text||'','user'));dispatchMany(motionIntentsFromText(event.text||'',{role:'user'}));}
+  if(event?.type==='text.delta'){dispatchMany(routineRequestsFromText(event.text||'','assistant'));dispatchMany(motionIntentsFromText(event.text||'',{role:'assistant'}));}
 }
 export function installMotionTelemetryBridge(){
   if(TeddyRealtime.prototype.__motionBridgeV8)return;TeddyRealtime.prototype.__motionBridgeV8=true;
