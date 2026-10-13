@@ -89,17 +89,27 @@ try{
     if(!button)throw Error('UI movement button missing');
     const canvas=document.querySelector('#scene');
     const before=canvas.toDataURL('image/png');
-    const amounts=[];
+    const amounts=[],states=[];
     window.addEventListener('teddy:motion-frame',e=>{
       const a=e.detail?.action;if(a?.name==='waveRight'&&a.amount>.1)amounts.push(a.amount);
+      states.push({routine:e.detail?.routine?.name||null,world:e.detail?.world,action:a?.name||null});
     });
     button.click();
     await sleep(1300);
     const after=canvas.toDataURL('image/png');
-    return {pixelChanged:before!==after,frames:amounts.length,
+    const complex=document.querySelector('.motion-tabs button:nth-child(2)');
+    if(!complex)throw Error('Complex motion tab missing');
+    complex.click();document.querySelector('button[data-routine="dance"]')?.click();
+    await sleep(260);
+    const hadDance=states.some(x=>x.routine==='dance');
+    const reset=document.querySelector('.motion-reset');if(!reset)throw Error('Reset button missing');
+    reset.click();await sleep(200);
+    const last=states.at(-1);const resetWorld=last?.world||{};
+    const resetOk=!last?.routine&&!last?.action&&Math.abs(resetWorld.x||0)<1e-6&&Math.abs(resetWorld.yaw||0)<1e-6&&Math.abs(resetWorld.z||0)<1e-6;
+    return {pixelChanged:before!==after,frames:amounts.length,hadDance,resetOk,
       feedback:document.querySelector('#motionFeedback')?.textContent||'',
       panelOpen:!document.querySelector('#drawer')?.classList.contains('hidden'),
-      success:before!==after&&amounts.length>3};
+      success:before!==after&&amounts.length>3&&hadDance&&resetOk};
   })()`;
   const result=await Promise.race([
     cdp.send('Runtime.evaluate',{expression,awaitPromise:true,returnByValue:true}),

@@ -15,3 +15,6 @@ header .icon{margin-left:0}
 .motion-feedback{font-size:12px;color:#f1d8bc;min-height:2.4em}
 @media(max-width:760px){.fur-toggle{padding:7px 9px;font-size:11px}.motion-grid{gap:6px}.motion-option{padding:10px;min-height:44px}}
 @media(prefers-reduced-motion:reduce){.motion-option,.motion-tabs button,.fur-toggle{transition:none!important}}
+
+.motion-reset{background:#ecd9bd!important;color:#30251b!important;border-color:#f7e4ce!important;font-weight:750!important}
+.motion-reset:focus-visible{outline:3px solid #ffc68e;outline-offset:3px}

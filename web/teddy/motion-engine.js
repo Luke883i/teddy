@@ -5,19 +5,21 @@ const ease=t=>t*t*(3-2*t);
 
 export class MotionEngine{
   constructor({reducedMotion=false}={}){
-    this.reducedMotion=!!reducedMotion;this.queue=[];this.current=null;this.elapsed=0;
+    this.reducedMotion=!!reducedMotion;this.queue=[];this.current=null;this.elapsed=0;this.routineTimeline=null;
     this.world={x:0,y:0,z:0,yaw:0};this.last={gaitSpeed:0,gaitDirection:1,grounded:true,airborne:false,action:null,phase:0,duration:.28,queueDepth:0,footPenetration:0,footSlip:0,world:{...this.world}};
   }
   enqueue(raw){
     const intent=sanitizeMotionIntent(raw);if(!intent)return false;
-    if(intent.name==='stand'){this.queue.length=0;this.current=null;this.elapsed=0;this.world.y=0;this.queue.push(intent);return true;}
+    if(intent.name==='stand'){this.queue.length=0;this.current=null;this.elapsed=0;this.routineTimeline=null;this.world.y=0;this.queue.push(intent);return true;}
     if(this.queue.length>=MOTION_LIMITS.queueMax)return false;
     const tail=this.queue[this.queue.length-1];if(!intent.reason.startsWith('routine:')&&(this.current?.name===intent.name||tail?.name===intent.name))return true;
     this.queue.push(intent);return true;
   }
+  beginRoutine(name,duration,intensity=1){this.routineTimeline={name,elapsed:0,duration:Math.max(.18,Number(duration)||1),intensity:Math.max(0,Math.min(1,Number(intensity)||0))*(this.reducedMotion?.42:1)};return true;}
+  reset(){this.queue.length=0;this.current=null;this.elapsed=0;this.routineTimeline=null;this.world={x:0,y:0,z:0,yaw:0};return this._snapshot({duration:.28,phase:0,world:{...this.world}});}
   _begin(){if(!this.current&&this.queue.length){this.current=this.queue.shift();this.elapsed=0;}}
   step(dt=1/60){
-    dt=Math.max(0,Math.min(.08,Number(dt)||0));this._begin();
+    dt=Math.max(0,Math.min(.08,Number(dt)||0));if(this.routineTimeline)this.routineTimeline.elapsed=Math.min(this.routineTimeline.duration,this.routineTimeline.elapsed+dt);this._begin();
     const c=this.current;if(!c){this.world.y=0;return this._snapshot({duration:.28,phase:0});}
     this.elapsed+=dt;const phase=Math.min(1,this.elapsed/c.duration),smooth=ease(phase),i=c.intensity*(this.reducedMotion?.42:1),pulse=Math.sin(Math.PI*phase);
     let gaitSpeed=0,gaitDirection=1,action=null,airborne=false,footSlip=0;
@@ -40,12 +42,14 @@ export class MotionEngine{
     if(c.name!=='jump')this.world.y=0;
     const done=phase>=1-1e-9;
     const snap=this._snapshot({gaitSpeed,gaitDirection,action,airborne,grounded:!airborne,phase,duration:c.duration,footSlip});
-    const violations=motionInvariantViolations(snap);if(violations.length){this.queue.length=0;this.current=null;this.world.y=0;return this._snapshot({duration:.28,phase:0,problem:violations[0]});}
+    const violations=motionInvariantViolations(snap);if(violations.length){this.queue.length=0;this.current=null;this.routineTimeline=null;this.world.y=0;return this._snapshot({duration:.28,phase:0,problem:violations[0]});}
     if(done){if(c.name==='jump')this.world.y=0;this.current=null;this.elapsed=0;}
     return snap;
   }
   _snapshot(extra={}){
-    this.last={world:{...this.world},gaitSpeed:0,gaitDirection:1,grounded:true,airborne:false,action:null,phase:0,duration:.28,queueDepth:this.queue.length,footPenetration:0,footSlip:0,...extra};return this.last;
+    const clip=this.routineTimeline;
+    const routine=clip?{name:clip.name,phase:Math.min(1,clip.elapsed/clip.duration),intensity:clip.intensity,duration:clip.duration}:null;
+    this.last={world:{...this.world},gaitSpeed:0,gaitDirection:1,grounded:true,airborne:false,action:null,phase:0,duration:.28,queueDepth:this.queue.length,footPenetration:0,footSlip:0,routine,...extra};if(clip&&clip.elapsed>=clip.duration-1e-9&&!this.current&&!this.queue.length)this.routineTimeline=null;return this.last;
   }
   status(){return {...this.last,world:{...this.last.world},queued:this.queue.map(x=>x.name),current:this.current?.name||null};}
 }

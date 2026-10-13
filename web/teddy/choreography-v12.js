@@ -1,5 +1,6 @@
 // Named choreography layer: bounded, data-only sequences of existing safe motions.
 import {sanitizeMotionIntent, MOTION_LIMITS} from './motion-contract.js';
+import {EXPRESSIVE_PROFILES} from './expressive-v14.js';
 const sequence=(...names)=>Object.freeze(names);
 export const ROUTINES=Object.freeze({
   greet:sequence('waveRight','nod'), farewell:sequence('waveLeft','turnRight'),
@@ -36,9 +37,10 @@ export function expandRoutine(name,{intensity=.7,source='runtime'}={}){
 // Atomic enqueue: no partial choreography when the finite queue lacks capacity.
 export function queueRoutine(engine,name,options={}){
   const actions=expandRoutine(name,options);
-  if(!actions||engine.current||engine.queue.length||actions.length>MOTION_LIMITS.queueMax)return false;
+  if(!actions||!Object.hasOwn(EXPRESSIVE_PROFILES,name)||engine.current||engine.queue.length||actions.length>MOTION_LIMITS.queueMax)return false;
   const old=engine.queue.slice();
   for(const action of actions)if(!engine.enqueue(action)){engine.queue=old;return false;}
+  if(typeof engine.beginRoutine==='function')engine.beginRoutine(name,actions.reduce((sum,a)=>sum+a.duration,0),actions[0]?.intensity??.7);
   return true;
 }
 

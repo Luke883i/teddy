@@ -25,7 +25,7 @@ test('thirty base and two complex options retain unique labels',()=>{
 test('real UI controls fire runtime named routines and interrupt',()=>{
   installMovementEngine();
   const renderer={reduced:false},root=new E('div',DOM);
-  const panel=renderMotionPanel(root,{onMove:n=>TeddyRenderer.prototype.enqueueMotion.call(renderer,{routine:n,source:'user'}),onStop:()=>TeddyRenderer.prototype.clearMotion.call(renderer),backend:'webgl2'});
+  const panel=renderMotionPanel(root,{onMove:n=>TeddyRenderer.prototype.enqueueMotion.call(renderer,{routine:n,source:'user'}),onStop:()=>TeddyRenderer.prototype.clearMotion.call(renderer),onReset:()=>TeddyRenderer.prototype.resetMotion.call(renderer),backend:'webgl2'});
   assert.equal(panel.items.children.length,30);
   assert.equal(panel.base.attributes['aria-pressed'],'true');
   panel.items.children[0].click();
