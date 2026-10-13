@@ -103,3 +103,31 @@ test('100k deterministic UI, named routine and fur falsification cases',()=>{
   }
   assert.equal(cases,100_000);
 });
+
+test('sphere and floor geometry have outward/upward winding with back-face culling enabled',()=>{
+  const source=fs.readFileSync(new URL('../web/teddy/render.js',import.meta.url),'utf8');
+  function extract(name){
+    const pos=source.indexOf('function '+name+'(');assert.ok(pos>=0,name);
+    const brace=source.indexOf('{',pos);let depth=0,end=-1;
+    for(let i=brace;i<source.length;i++){if(source[i]==='{')depth++;else if(source[i]==='}'&&--depth===0){end=i+1;break;}}
+    return source.slice(pos,end);
+  }
+  const sphere=new Function(extract('sphere')+';return sphere')();
+  const flatAndPlane=new Function(extract('flat')+';'+extract('plane')+';return plane')();
+  const mesh=sphere(20,32);
+  let checked=0;
+  for(let k=0;k<mesh.i.length;k+=3){
+    const [i,j,l]=Array.from(mesh.i.slice(k,k+3));
+    const A=Array.from(mesh.p.slice(3*i,3*i+3)),B=Array.from(mesh.p.slice(3*j,3*j+3)),C=Array.from(mesh.p.slice(3*l,3*l+3));
+    const u=A.map((v,x)=>B[x]-v),v=A.map((a,x)=>C[x]-a);
+    const n=[u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]];
+    const center=A.map((a,x)=>(a+B[x]+C[x])/3);
+    const dot=n.reduce((acc,x,i)=>acc+x*center[i],0);
+    if(Math.hypot(...n)>1e-7){assert.ok(dot>0,`inward sphere triangle ${k/3}: ${dot}`);checked++;}
+  }
+  assert.ok(checked>900);
+  const floor=flatAndPlane;
+  for(let k=1;k<floor.n.length;k+=3)assert.ok(floor.n[k]>.99,'floor normal must face up');
+  assert.match(source,/gl\.enable\(gl\.CULL_FACE\)/);
+  assert.match(source,/gl\.enable\(gl\.DEPTH_TEST\)/);
+});
