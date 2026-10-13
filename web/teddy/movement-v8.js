@@ -5,6 +5,7 @@ import {applyActionMatrices,refinePartV71} from './refinement-v7.js';
 import {cinematicPart} from './cinematic-v11.js';
 import {MotionEngine} from './motion-engine.js';
 import {sanitizeMotionIntent} from './motion-contract.js';
+import {queueRoutine} from './choreography-v12.js';
 
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,Number(v)||0));
 const local=(p,r=[0,0,0],s=[1,1,1])=>compose(M4.translate(...p),M4.rotZ(r[2]||0),M4.rotY(r[1]||0),M4.rotX(r[0]||0),M4.scale(...s));
@@ -26,6 +27,13 @@ function applySemanticAction(groups,state,sec){
     const left=a.name==='waveLeft',raised=applyActionMatrices(groups,left?'raiseLeftArm':'raiseRightArm',Math.min(1,.72+a.amount*.28));
     const wrist=left?'wristL':'wristR',sign=left?-1:1,angle=Math.sin(sec*16)*.24*a.amount*sign;
     return rotateGroups(raised,[wrist],'z',angle);
+  }
+  if(a.name==='boltPose'){
+    // Explicit asymmetric iconic pose, transformed through the existing articulated hierarchy.
+    let out=applyActionMatrices(groups,'raiseLeftArm',.42*a.amount);
+    out=applyActionMatrices(out,'raiseRightArm',a.amount);
+    out=applyActionMatrices(out,'liftLeftLeg',.30*a.amount);
+    return rotateGroups(out,['head','jaw','earL','earR'],'z',-.10*a.amount);
   }
   if(a.name==='nod')return rotateGroups(groups,['head','jaw','earL','earR'],'x',Math.sin(sec*12)*.09*a.amount);
   return groups;
@@ -57,7 +65,7 @@ export function installMovementEngine(){
     this.__motionGround={correction:grounded.correction,penetration:grounded.penetration,floorY:FLOOR_Y};
     emitFrame({...state,ground:this.__motionGround});return groups;
   };
-  TeddyRenderer.prototype.enqueueMotion=function(raw){const intent=sanitizeMotionIntent(raw);return intent?engineFor(this).enqueue(intent):false;};
+  TeddyRenderer.prototype.enqueueMotion=function(raw){const engine=engineFor(this);if(raw&&typeof raw==='object'&&typeof raw.routine==='string')return queueRoutine(engine,raw.routine,raw);if(typeof raw==='string'&&queueRoutine(engine,raw))return true;const intent=sanitizeMotionIntent(raw);return intent?engine.enqueue(intent):false;};
   TeddyRenderer.prototype.clearMotion=function(){const e=engineFor(this);e.queue.length=0;e.current=null;e.elapsed=0;e.world.y=0;return true;};
   TeddyRenderer.prototype.motionStatus=function(){return {...engineFor(this).status(),ground:{...(this.__motionGround||{correction:0,penetration:0,floorY:FLOOR_Y})}};};
 }

@@ -12,7 +12,7 @@ export class MotionEngine{
     const intent=sanitizeMotionIntent(raw);if(!intent)return false;
     if(intent.name==='stand'){this.queue.length=0;this.current=null;this.elapsed=0;this.world.y=0;this.queue.push(intent);return true;}
     if(this.queue.length>=MOTION_LIMITS.queueMax)return false;
-    const tail=this.queue[this.queue.length-1];if(this.current?.name===intent.name||tail?.name===intent.name)return true;
+    const tail=this.queue[this.queue.length-1];if(!intent.reason.startsWith('routine:')&&(this.current?.name===intent.name||tail?.name===intent.name))return true;
     this.queue.push(intent);return true;
   }
   _begin(){if(!this.current&&this.queue.length){this.current=this.queue.shift();this.elapsed=0;}}
@@ -30,6 +30,8 @@ export class MotionEngine{
       const h=.12+.22*i;this.world.y=Math.max(0,Math.sin(Math.PI*phase)*h);airborne=this.world.y>MOTION_LIMITS.groundEpsilon;action={name:'jump',amount:clamp(pulse*i)};
     }else if(c.name==='waveLeft'||c.name==='waveRight'){
       action={name:c.name,amount:clamp((.35+.65*pulse)*i)};
+    }else if(c.name==='boltPose'){
+      action={name:'boltPose',amount:clamp(pulse*i)};
     }else if(c.name==='nod'){
       action={name:'nod',amount:clamp(pulse*i)};
     }else if(c.name!=='stand'){

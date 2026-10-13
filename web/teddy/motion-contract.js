@@ -5,7 +5,7 @@ const fold=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLo
 export const MOTION_NAMES=Object.freeze([
   'stand','walkForward','walkBack','turnLeft','turnRight',
   'raiseLeftArm','raiseRightArm','waveLeft','waveRight',
-  'liftLeftLeg','liftRightLeg','jump','nod'
+  'liftLeftLeg','liftRightLeg','jump','nod','boltPose'
 ]);
 const MOTION_SET=new Set(MOTION_NAMES);
 export const MOTION_INVARIANTS=Object.freeze([
@@ -16,8 +16,8 @@ export const MOTION_LIMITS=Object.freeze({
   speed:Object.freeze([0,1]),duration:Object.freeze([.18,4.0]),queueMax:8,actionAmount:Object.freeze([0,1]),
   footPenetrationMax:.012,footSlipMax:.065,groundEpsilon:.012
 });
-const DEFAULT_DURATION=Object.freeze({stand:.28,walkForward:1.8,walkBack:1.5,turnLeft:.85,turnRight:.85,raiseLeftArm:.85,raiseRightArm:.85,waveLeft:1.45,waveRight:1.45,liftLeftLeg:.9,liftRightLeg:.9,jump:.82,nod:.55});
-const DEFAULT_INTENSITY=Object.freeze({stand:1,walkForward:.72,walkBack:.58,turnLeft:.58,turnRight:.58,raiseLeftArm:.78,raiseRightArm:.78,waveLeft:.72,waveRight:.72,liftLeftLeg:.62,liftRightLeg:.62,jump:.72,nod:.48});
+const DEFAULT_DURATION=Object.freeze({stand:.28,walkForward:1.8,walkBack:1.5,turnLeft:.85,turnRight:.85,raiseLeftArm:.85,raiseRightArm:.85,waveLeft:1.45,waveRight:1.45,liftLeftLeg:.9,liftRightLeg:.9,jump:.82,nod:.55,boltPose:1.6});
+const DEFAULT_INTENSITY=Object.freeze({stand:1,walkForward:.72,walkBack:.58,turnLeft:.58,turnRight:.58,raiseLeftArm:.78,raiseRightArm:.78,waveLeft:.72,waveRight:.72,liftLeftLeg:.62,liftRightLeg:.62,jump:.72,nod:.48,boltPose:.86});
 
 export function sanitizeMotionIntent(value={},fallbackSource='runtime'){
   if(typeof value==='string')value={name:value};
