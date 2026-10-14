@@ -69,6 +69,8 @@ try{
   cdp=await connectCDP(tab.webSocketDebuggerUrl);
   await cdp.send('Page.enable');await cdp.send('Runtime.enable');
   await cdp.send('Page.addScriptToEvaluateOnNewDocument',{source:`
+    window.__teddySeamQuality=null;
+    window.addEventListener('teddy:visual-quality',e=>{window.__teddySeamQuality=e.detail?.seam||null});
     window.__teddySkinV16=null;
     window.addEventListener('teddy:implicit-skin-ready',e=>{window.__teddySkinV16=e.detail});
     window.addEventListener('teddy:implicit-skin-error',e=>{window.__teddySkinV16={active:false,error:e.detail.message}});
@@ -104,6 +106,12 @@ try{
     if(!skin.underarms?.pass||skin.underarms.cutters!==2||
       skin.underarms.samples.some(s=>s.gap<=.012||s.torso>=0||s.arm>=0))
       throw Error('WebGL2 still has underarm skin webbing: '+JSON.stringify(skin.underarms));
+    if(!skin.seamEdges||skin.seamEdges<80||!skin.seamWeights||skin.seamWeights.affected<100)
+      throw Error('No V20 connected collar bound in actual GPU path: '+JSON.stringify(skin));
+    for(let i=0;i<50&&!window.__teddySeamQuality;i++)await sleep(80);
+    const quality=window.__teddySeamQuality;
+    if(!quality?.finite||quality.after>quality.before)
+      throw Error('Pose-space seam strain still unguarded in Chrome: '+JSON.stringify(quality));
     if(skin.components!==1||skin.openEdges!==0||skin.nonmanifoldEdges!==0||!skin.closed)
       throw Error('Non-watertight browser mesh: '+JSON.stringify(skin));
     const badge=document.querySelector('#visualBackend');
@@ -116,7 +124,7 @@ try{
     const rect=document.querySelector('#scene').getBoundingClientRect();
     const clip={x:Math.round(rect.left+rect.width*.08),y:Math.round(rect.top+rect.height*.02),
       width:Math.round(rect.width*.84),height:Math.round(rect.height*.94),scale:1};
-    return {success:true,backend:'webgl2',skin,clip};
+    return {success:true,backend:'webgl2',skin,clip,seamQuality:quality};
   })()`;
   const result=await Promise.race([
     cdp.send('Runtime.evaluate',{expression,awaitPromise:true,returnByValue:true}),
@@ -157,6 +165,26 @@ try{
     fs.writeFileSync(path.join(evidenceDir,'lightningBolt.png'),Buffer.from(third.data,'base64'));
     if(after.data===third.data)throw Error('Lightning Bolt produced no new compositor image');
     value.thirdPoseChanged=true;
+    // V20 regression pose: both arms elevated, reproducing the user-reported
+    // accordion geometry more directly than the asymmetrical Lightning Bolt.
+    const raised=await cdp.send('Runtime.evaluate',{expression:`(async()=>{
+      document.querySelector('.motion-tabs button:nth-child(1)')?.click();
+      const key=document.querySelector('button[data-routine="victory"]');
+      if(!key)throw Error('Victory raised-arms UI control missing');
+      key.click();
+      await new Promise(r=>setTimeout(r,790));
+      const q=window.__teddySeamQuality;
+      return {clicked:true,seam:q};
+    })()`,awaitPromise:true,returnByValue:true});
+    if(raised.exceptionDetails)throw Error('Raised-arms browser exception: '+raised.exceptionDetails.text);
+    const raisedState=raised.result?.value;
+    if(!raisedState?.clicked||!raisedState.seam?.finite||
+      raisedState.seam.after>raisedState.seam.before)
+      throw Error('Raised-arms seam regression: '+JSON.stringify(raisedState));
+    const raisedFrame=await cdp.send('Page.captureScreenshot',{format:'png',clip:value.clip,captureBeyondViewport:false});
+    fs.writeFileSync(path.join(evidenceDir,'victory-raised-arms.png'),Buffer.from(raisedFrame.data,'base64'));
+    if(raisedFrame.data===third.data)throw Error('Raised-arms gesture rendered no visible change');
+    value.raisedArms={pixelsChanged:true,seam:raisedState.seam};
   }
   console.log(capabilityProbe?'TEDDY_WEBGL2_CAPABILITY_PASS':activationProbe?'TEDDY_WEBGL2_SKIN_ACTIVATION_PASS':'TEDDY_V18_BROWSER_UI_AND_VISUAL_PASS',JSON.stringify(value));
 }finally{

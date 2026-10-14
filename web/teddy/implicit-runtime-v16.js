@@ -1,3 +1,4 @@
+import {softenShoulderBind,seamEdgeGraph,seamStretch,constrainShoulderStretch} from './skin-seam-v20.js';
 import {underarmCutters,reliefProbe} from './underarm-relief-v19.js';
 import {anatomicalInfluences,bindingSafety,deformationQuality} from './skin-quality-v18.js';
 // V16 runtime bridge: one bind-pose implicit plush surface, skinned by the existing
@@ -24,9 +25,10 @@ export function skinBindings(mesh,primitives,groups){
       weights[v*4+k]=influences[k].weight;
     }
   }
+  const seamWeights=softenShoulderBind(mesh,{groupNames,groupIds,weights},groups);
   const safety=bindingSafety({groupNames,groupIds,weights});
   if(!safety.pass)throw Error('unsafe anatomical skin weights '+JSON.stringify(safety));
-  return {groupNames,groupIds,weights,bindInverse};
+  return {groupNames,groupIds,weights,bindInverse,seamWeights};
 }
 export function deformImplicitMesh(mesh,bind,groups,target=new Float32Array(mesh.p.length)){
   const transforms=bind.groupNames.map((name,i)=>M4.mul(groups[name],bind.bindInverse[i]));
@@ -78,22 +80,27 @@ function drawImplicit(renderer,groups,seconds,projection,view,camera){
       const topology=meshTopology(mesh);
       if(!topology.closed||topology.components!==1)throw Error('non-watertight/disconnected implicit mesh: '+JSON.stringify(topology));
       const bindings=skinBindings(mesh,primitives,groups),gpu=gpuMesh(renderer,mesh);
-      renderer.__implicitSkin={mesh,topology,bindings,gpu,underarms,quality:null,frameCount:0,
+      const seamEdges=seamEdgeGraph(mesh,groups);
+      if(seamEdges.length<80)throw Error('missing connected shoulder edge constraints: '+seamEdges.length);
+      renderer.__implicitSkin={mesh,topology,bindings,gpu,underarms,seamEdges,seamQuality:null,quality:null,frameCount:0,
         startupMs:(typeof performance!=='undefined'?performance.now():0)-startup,
         positions:new Float32Array(mesh.p.length),normals:new Float32Array(mesh.p.length)};
       renderer.meshes.implicitSkin=gpu;
-      if(typeof window!=='undefined'&&typeof window.dispatchEvent==='function'&&typeof CustomEvent==='function')window.dispatchEvent(new CustomEvent('teddy:implicit-skin-ready',{detail:{...topology,underarms,active:true}}));
+      if(typeof window!=='undefined'&&typeof window.dispatchEvent==='function'&&typeof CustomEvent==='function')window.dispatchEvent(new CustomEvent('teddy:implicit-skin-ready',{detail:{...topology,underarms,seamEdges:seamEdges.length,seamWeights:bindings.seamWeights,active:true}}));
     }
     const state=renderer.__implicitSkin,gl=renderer.gl;
     deformImplicitMesh(state.mesh,state.bindings,groups,state.positions);
     // Face micro-deformation is in the SAME watertight indexed skin, not detached cheeks.
     renderer.morphImplicitFace?.(state.positions,groups,seconds,renderer.pose);
+    // Limit only anomalous axillary edge stretch; never split or remesh the unified pelt.
+    state.seamQuality=constrainShoulderStretch(state.positions,state.seamEdges);
+    if(!state.seamQuality.finite)throw Error('nonfinite shoulder seam correction');
     // Sample animated surface health without expensive full scans each frame.
     if((state.frameCount++%45)===0){
       state.quality=deformationQuality(state.mesh.p,state.positions,state.mesh.i);
       if(!state.quality.finite)throw Error('nonfinite skinned fur surface');
       if(typeof window!=='undefined'&&typeof window.dispatchEvent==='function'&&typeof CustomEvent==='function')
-        window.dispatchEvent(new CustomEvent('teddy:visual-quality',{detail:{...state.quality,skin:'fused'}}));
+        window.dispatchEvent(new CustomEvent('teddy:visual-quality',{detail:{...state.quality,seam:state.seamQuality,skin:'fused'}}));
     }
     state.normals.set(vertexNormals(state.positions,state.mesh.i));
     gl.bindBuffer(gl.ARRAY_BUFFER,state.gpu.positionBuffer);
@@ -119,6 +126,8 @@ export function installImplicitSkinV16(){
       topology:this.__implicitSkin?.topology||null,
       underarms:this.__implicitSkin?.underarms||null,
       quality:this.__implicitSkin?.quality||null,
+      seam:this.__implicitSkin?.seamQuality||null,
+      seamWeights:this.__implicitSkin?.bindings?.seamWeights||null,
       startupMs:this.__implicitSkin?.startupMs??null,
       fallbackReason:this.__implicitSkinError||null};
   };

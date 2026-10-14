@@ -45,7 +45,7 @@ test('real watertight Teddy bind weights are normalized, anatomical, and do not 
   assert.ok(t.closed&&t.components===1,JSON.stringify(t));
   const skin=skinBindings(mesh,parts,neutral),safety=bindingSafety(skin);
   assert.ok(safety.pass,JSON.stringify(safety));
-  assert.ok(safety.minDominance>=.55);
+  assert.ok(safety.minDominance>=.48);
   assert.equal(safety.badFamily,0);
   const still=deformImplicitMesh(mesh,skin,neutral);
   const identity=deformationQuality(mesh.p,still,mesh.i);
