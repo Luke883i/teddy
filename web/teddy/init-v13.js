@@ -7,6 +7,7 @@ import {installCanvasMotionV13} from './canvas-motion-v13.js';
 import {installMotionTelemetryBridge} from './motion-wire-v8.js';
 import {installWorldScene} from './world-v8.js';
 import {installImplicitSkinV16} from './implicit-runtime-v16.js';
+import {installFacialV17} from './facial-runtime-v17.js';
 
 installCinematicV11();
 installTeddyRefinement();
@@ -15,6 +16,7 @@ installCanvasMotionV13();
 installMotionTelemetryBridge();
 installWorldScene();
 installImplicitSkinV16();
+installFacialV17();
 
 // Only mount the application after motion methods and the live render path exist.
 await import('../app.js');

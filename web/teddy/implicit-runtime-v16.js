@@ -87,6 +87,8 @@ function drawImplicit(renderer,groups,seconds,projection,view,camera){
     }
     const state=renderer.__implicitSkin,gl=renderer.gl;
     deformImplicitMesh(state.mesh,state.bindings,groups,state.positions);
+    // Face micro-deformation is in the SAME watertight indexed skin, not detached cheeks.
+    renderer.morphImplicitFace?.(state.positions,groups,seconds,renderer.pose);
     state.normals.set(vertexNormals(state.positions,state.mesh.i));
     gl.bindBuffer(gl.ARRAY_BUFFER,state.gpu.positionBuffer);
     gl.bufferSubData(gl.ARRAY_BUFFER,0,state.positions);

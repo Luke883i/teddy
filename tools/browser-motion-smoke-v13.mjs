@@ -76,6 +76,8 @@ try{
     };
   `});
   await cdp.send('Page.navigate',{url:`http://127.0.0.1:${sitePort}/`});
+  const probeUI=process.argv.includes('--probe-ui');
+  const probeGreet=process.argv.includes('--probe-greet');
   const expression=`(async()=>{
     const sleep=ms=>new Promise(r=>setTimeout(r,ms));
     for(let i=0;i<140;i++){
@@ -84,6 +86,7 @@ try{
     }
     const nav=document.querySelector('button[data-view="movimento"]');
     if(!nav?.onclick)throw Error('app did not attach UI listener: '+(document.body?.getAttribute('data-motion-error')||''));
+    if(${probeUI})return {success:true,nav:true,faceFrames:!!window.__faceFrames};
     nav.click();
     const button=document.querySelector('button[data-routine="greet"]');
     if(!button)throw Error('UI movement button missing');
@@ -97,6 +100,7 @@ try{
     button.click();
     await sleep(1300);
     const after=canvas.toDataURL('image/png');
+    if(${probeGreet})return {success:before!==after&&amounts.length>3,pixelChanged:before!==after,frames:amounts.length};
     const complex=document.querySelector('.motion-tabs button:nth-child(2)');
     if(!complex)throw Error('Complex motion tab missing');
     complex.click();document.querySelector('button[data-routine="dance"]')?.click();

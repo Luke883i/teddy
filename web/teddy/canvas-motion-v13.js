@@ -28,6 +28,11 @@ function materialColor(appearance,material){
   const fur=appearance.fur||'#8a5a3b',muzzle=appearance.muzzle||'#d1a173',eye=appearance.eyes||'#17100d';
   if(material==='eyes'||material==='mouth'||material==='mouthCavity')return eye;
   if(material==='highlight')return '#fff9e9';
+  if(material==='sclera')return '#dec2a2';
+  if(material==='iris')return '#563021';
+  if(material==='noseVelvet')return '#291817';
+  if(material==='faceFur')return fur;
+  if(material==='cheekTint')return tone(muzzle,-.04);
   if(material==='tongue')return '#ad5562';
   if(material==='muzzle'||material==='belly')return muzzle;
   if(material==='innerEar')return tone(muzzle,-.16);
