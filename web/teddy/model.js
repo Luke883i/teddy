@@ -124,7 +124,7 @@ export function cameraPlan(width,height){
   const dY=spanY/(2*tan*targetY),dX=spanX/(2*tan*aspect*targetX),distance=Math.max(dY,dX);
   const visibleY=2*distance*tan,visibleX=visibleY*aspect;
   const geometricCenter=(TEDDY_BOUNDS.max[1]+TEDDY_BOUNDS.min[1])/2;
-  const centerY=geometricCenter-.09;
+  const centerY=geometricCenter-.17;
   const eye=[0,centerY+.15,distance],target=[0,centerY-.01,0];
   return {aspect,fov,distance,centerY,eye,target,occupancyY:spanY/visibleY,occupancyX:spanX/visibleX,limiter:dX>dY?'horizontal':'vertical'};
 }
