@@ -31,7 +31,8 @@ export function installAnatomicalPeltV21(){
           window.dispatchEvent(new CustomEvent('teddy:implicit-skin-ready',{detail:{
             ...composite.topology,active:true,mode:composite.mode,regions:composite.regions,
             zeroCrossRegionTriangles:crossingTriangles(composite)===0,
-            crossRegionWeights:bindings.audit.crossRegionLinks,faceGeometry,skinVersion:22
+            crossRegionWeights:bindings.audit.crossRegionLinks,faceGeometry,
+            fairing:composite.fairing,skinVersion:23
           }}));
       }
       const state=this.__anatomicalPelt,gl=this.gl;
@@ -70,7 +71,7 @@ export function installAnatomicalPeltV21(){
       topology:a?.composite.topology||null,regions:a?.composite.regions||[],
       crossRegionTriangles:a?crossingTriangles(a.composite):null,
       crossRegionWeights:a?.bindings.audit.crossRegionLinks??null,
-      quality:a?.quality||null,faceGeometry:a?.faceGeometry||null,startupMs:a?.startupMs??null,
+      quality:a?.quality||null,faceGeometry:a?.faceGeometry||null,fairing:a?.composite.fairing||null,startupMs:a?.startupMs??null,
       fallbackReason:this.__anatomicalPeltError||null};
   };
 }

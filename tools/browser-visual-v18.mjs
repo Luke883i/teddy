@@ -104,6 +104,13 @@ try{
     const skin=window.__teddySkinV16;
     if(!skin?.active)throw Error('WebGL2 implicit skin did not activate: '+JSON.stringify(skin));
     if(skin.mode==='anatomical-pelt-v21'){
+      const fair=skin.fairing;
+      if(!fair?.pass||fair.changed<=300||fair.peakDisplacement>.01801||
+        fair.regions?.length!==6||fair.regions.some(r=>
+          !Number.isFinite(r.curvatureReduction)||r.relativeVolume>.04501||
+          (r.name==='head'&&r.moved!==0)||
+          (r.name!=='head'&&r.curvatureReduction<=0)))
+        throw Error('V23 actual Chrome smoothing contract failed: '+JSON.stringify(fair));
       if(!skin.faceGeometry?.pass||skin.faceGeometry.noseOverhang>=.11||
          skin.faceGeometry.mouthDepth>=.06)
         throw Error('V22 face geometry not integrated into actual browser pelt: '+JSON.stringify(skin.faceGeometry));
@@ -202,6 +209,7 @@ try{
     fs.writeFileSync(path.join(evidenceDir,'victory-raised-arms.png'),Buffer.from(raisedFrame.data,'base64'));
     if(raisedFrame.data===third.data)throw Error('Raised-arms gesture rendered no visible change');
     value.raisedArms={pixelsChanged:true,quality:raisedState.quality};
+    value.peltFairing=value.skin.fairing;
   }
   console.log(capabilityProbe?'TEDDY_WEBGL2_CAPABILITY_PASS':activationProbe?'TEDDY_WEBGL2_SKIN_ACTIVATION_PASS':'TEDDY_V18_BROWSER_UI_AND_VISUAL_PASS',JSON.stringify(value));
 }finally{
