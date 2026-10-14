@@ -69,8 +69,8 @@ try{
   cdp=await connectCDP(tab.webSocketDebuggerUrl);
   await cdp.send('Page.enable');await cdp.send('Runtime.enable');
   await cdp.send('Page.addScriptToEvaluateOnNewDocument',{source:`
-    window.__teddySeamQuality=null;
-    window.addEventListener('teddy:visual-quality',e=>{window.__teddySeamQuality=e.detail?.seam||null});
+    window.__teddyVisualQuality=null;
+    window.addEventListener('teddy:visual-quality',e=>{window.__teddyVisualQuality=e.detail||null});
     window.__teddySkinV16=null;
     window.addEventListener('teddy:implicit-skin-ready',e=>{window.__teddySkinV16=e.detail});
     window.addEventListener('teddy:implicit-skin-error',e=>{window.__teddySkinV16={active:false,error:e.detail.message}});
@@ -89,7 +89,7 @@ try{
     const sleep=ms=>new Promise(r=>setTimeout(r,ms));
     for(let i=0;i<200&&!window.__teddySkinV16;i++)await sleep(70);
     const skin=window.__teddySkinV16;
-    return {success:!!skin?.active&&skin?.components===1&&skin?.openEdges===0,
+    return {success:!!skin?.active&&(skin?.mode==='anatomical-pelt-v21'?skin?.components===6&&skin?.zeroCrossRegionTriangles===true&&skin?.crossRegionWeights===0:skin?.components===1)&&skin?.openEdges===0,
       active:!!skin?.active,skin,hasNav:!!document.querySelector('button[data-view="movimento"]')?.onclick,
       webgl2:!!document.createElement('canvas').getContext('webgl2')};
   })()`:`(async()=>{
@@ -103,20 +103,26 @@ try{
     for(let i=0;i<140&&!window.__teddySkinV16;i++)await sleep(70);
     const skin=window.__teddySkinV16;
     if(!skin?.active)throw Error('WebGL2 implicit skin did not activate: '+JSON.stringify(skin));
-    if(!skin.underarms?.pass||skin.underarms.cutters!==2||
-      skin.underarms.samples.some(s=>s.gap<=.012||s.torso>=0||s.arm>=0))
-      throw Error('WebGL2 still has underarm skin webbing: '+JSON.stringify(skin.underarms));
-    if(!skin.seamEdges||skin.seamEdges<80||!skin.seamWeights||skin.seamWeights.affected<100)
-      throw Error('No V20 connected collar bound in actual GPU path: '+JSON.stringify(skin));
-    for(let i=0;i<50&&!window.__teddySeamQuality;i++)await sleep(80);
-    const quality=window.__teddySeamQuality;
-    if(!quality?.finite||quality.after>quality.before)
-      throw Error('Pose-space seam strain still unguarded in Chrome: '+JSON.stringify(quality));
-    if(skin.components!==1||skin.openEdges!==0||skin.nonmanifoldEdges!==0||!skin.closed)
-      throw Error('Non-watertight browser mesh: '+JSON.stringify(skin));
+    if(skin.mode==='anatomical-pelt-v21'){
+      if(skin.components!==6||!skin.zeroCrossRegionTriangles||skin.crossRegionWeights!==0||
+        skin.openEdges!==0||skin.nonmanifoldEdges!==0||!skin.closed)
+        throw Error('Anatomical pelt not closed or arm/torso topology still bridged '+JSON.stringify(skin));
+    }else{
+      if(!skin.underarms?.pass||skin.underarms.cutters!==2||
+        skin.underarms.samples.some(s=>s.gap<=.012||s.torso>=0||s.arm>=0))
+        throw Error('Legacy V19 underarm gap missing '+JSON.stringify(skin));
+      if(!skin.seamEdges||skin.seamEdges<80||!skin.seamWeights||skin.seamWeights.affected<100)
+        throw Error('Legacy V20 shoulder seam missing '+JSON.stringify(skin));
+    }
+    for(let i=0;i<50&&!window.__teddyVisualQuality;i++)await sleep(80);
+    const quality=window.__teddyVisualQuality;
+    if(skin.mode==='anatomical-pelt-v21'){
+      if(!quality?.pass||!quality.zeroCrossRegionTriangles)throw Error('V21 real pose deformation unsafe: '+JSON.stringify(quality));
+    }else if(!quality?.seam?.finite||quality.seam.after>quality.seam.before)
+      throw Error('Legacy V20 strain unsafe '+JSON.stringify(quality));
     const badge=document.querySelector('#visualBackend');
     const status=document.querySelector('#statusPanel').getBoundingClientRect();
-    if(!badge?.textContent.includes('mesh fusa')||badge.dataset.degraded!=='false')
+    if(!(badge?.textContent.includes('mesh fusa')||badge?.textContent.includes('anatomia articolata'))||badge.dataset.degraded!=='false')
       throw Error('Fused rendering not represented in UI');
     if(status.left>innerWidth*.31)throw Error('Operational status overlaps portrait');
     nav.click();
@@ -124,7 +130,7 @@ try{
     const rect=document.querySelector('#scene').getBoundingClientRect();
     const clip={x:Math.round(rect.left+rect.width*.08),y:Math.round(rect.top+rect.height*.02),
       width:Math.round(rect.width*.84),height:Math.round(rect.height*.94),scale:1};
-    return {success:true,backend:'webgl2',skin,clip,seamQuality:quality};
+    return {success:true,backend:'webgl2',skin,clip,poseQuality:quality};
   })()`;
   const result=await Promise.race([
     cdp.send('Runtime.evaluate',{expression,awaitPromise:true,returnByValue:true}),

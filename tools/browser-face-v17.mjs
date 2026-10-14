@@ -79,7 +79,7 @@ try{
     const sleep=ms=>new Promise(r=>setTimeout(r,ms));
     for(let i=0;i<180&&!window.__teddySkinV16;i++)await sleep(70);
     const skin=window.__teddySkinV16;
-    if(!skin?.active||!skin.closed||skin.components!==1)throw Error('Fused WebGL body inactive '+JSON.stringify(skin));
+    if(!skin?.active||!skin.closed||(skin.mode==='anatomical-pelt-v21'?skin.components!==6||!skin.zeroCrossRegionTriangles||skin.crossRegionWeights!==0:skin.components!==1))throw Error('WebGL pelt inactive '+JSON.stringify(skin));
     for(let i=0;i<100&&!window.__faceFrames?.length;i++)await sleep(70);
     const baseline=window.__faceFrames.at(-1);
     if(!baseline||!Number.isFinite(baseline.lipOpen))throw Error('No live facial animation telemetry');

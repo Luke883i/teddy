@@ -35,6 +35,9 @@ jobs:
           node --check web/teddy/implicit-runtime-v16.js
           node --check web/teddy/skin-quality-v18.js
           node --check web/teddy/skin-seam-v20.js
+          node --check web/teddy/anatomical-pelt-v21.js
+          node --check web/teddy/anatomical-runtime-v21.js
+          node --check tools/choose-anatomical-pelt-v21.mjs
           node --check tools/mutate-shoulder-v20.mjs
           node --check tools/browser-visual-v18.mjs
           node --check web/teddy/facial-contract-v17.js
@@ -64,6 +67,10 @@ jobs:
         run: node --test tests/visual-hardening-v18.test.mjs
       - name: mutate 1 million adversarial anatomical influence pairs
         run: node tools/mutate-anatomy-v18.mjs
+      - name: V21 prove anatomical six-part topology, dynamic motion and GPU frame wiring
+        run: node --test tests/anatomical-pelt-v21.test.mjs
+      - name: V21 rank 1000 architectures and falsify 10M realistic preseeded semantic parameter units
+        run: node tools/choose-anatomical-pelt-v21.mjs
       - name: V20 test real Teddy animated shoulder collar, edge strain and accordion falsifier
         env:
           GH_TOKEN: ${{ github.token }}
