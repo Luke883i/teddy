@@ -1,9 +1,10 @@
+import {underarmCutters,reliefProbe} from './underarm-relief-v19.js';
 import {anatomicalInfluences,bindingSafety,deformationQuality} from './skin-quality-v18.js';
 // V16 runtime bridge: one bind-pose implicit plush surface, skinned by the existing
 // anatomical group hierarchy, not by a new animation engine. No per-frame remeshing.
 import {TeddyRenderer} from './render.js';
 import {M4} from './math.js';
-import {extractImplicitMesh,furPrimitive,primitiveDistance,meshTopology,vertexNormals} from './implicit-skin-v16.js';
+import {extractImplicitMesh,furPrimitive,primitiveDistance,meshTopology,vertexNormals,skinField} from './implicit-skin-v16.js';
 
 function inverseRigid(m){
   const out=M4.identity();
@@ -70,15 +71,18 @@ function drawImplicit(renderer,groups,seconds,projection,view,camera){
       const startup=typeof performance!=='undefined'?performance.now():0;
       const primitives=renderer.model.parts.filter(p=>p.material==='fur')
         .map(part=>furPrimitive(part,renderer.partTransform(part,groups,seconds,renderer.pose))).filter(Boolean);
+      const cutters=underarmCutters(primitives);
+      const underarms=reliefProbe(cutters,p=>skinField(p,primitives,undefined,cutters));
+      if(!underarms.pass)throw Error('underarm space not open: '+JSON.stringify(underarms));
       const mesh=extractImplicitMesh(primitives);
       const topology=meshTopology(mesh);
       if(!topology.closed||topology.components!==1)throw Error('non-watertight/disconnected implicit mesh: '+JSON.stringify(topology));
       const bindings=skinBindings(mesh,primitives,groups),gpu=gpuMesh(renderer,mesh);
-      renderer.__implicitSkin={mesh,topology,bindings,gpu,quality:null,frameCount:0,
+      renderer.__implicitSkin={mesh,topology,bindings,gpu,underarms,quality:null,frameCount:0,
         startupMs:(typeof performance!=='undefined'?performance.now():0)-startup,
         positions:new Float32Array(mesh.p.length),normals:new Float32Array(mesh.p.length)};
       renderer.meshes.implicitSkin=gpu;
-      if(typeof window!=='undefined'&&typeof window.dispatchEvent==='function'&&typeof CustomEvent==='function')window.dispatchEvent(new CustomEvent('teddy:implicit-skin-ready',{detail:{...topology,active:true}}));
+      if(typeof window!=='undefined'&&typeof window.dispatchEvent==='function'&&typeof CustomEvent==='function')window.dispatchEvent(new CustomEvent('teddy:implicit-skin-ready',{detail:{...topology,underarms,active:true}}));
     }
     const state=renderer.__implicitSkin,gl=renderer.gl;
     deformImplicitMesh(state.mesh,state.bindings,groups,state.positions);
@@ -113,6 +117,7 @@ export function installImplicitSkinV16(){
   TeddyRenderer.prototype.implicitSkinStatus=function(){
     return {active:!!this.__implicitSkin,backend:this.backend,
       topology:this.__implicitSkin?.topology||null,
+      underarms:this.__implicitSkin?.underarms||null,
       quality:this.__implicitSkin?.quality||null,
       startupMs:this.__implicitSkin?.startupMs??null,
       fallbackReason:this.__implicitSkinError||null};

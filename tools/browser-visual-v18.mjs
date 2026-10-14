@@ -101,6 +101,9 @@ try{
     for(let i=0;i<140&&!window.__teddySkinV16;i++)await sleep(70);
     const skin=window.__teddySkinV16;
     if(!skin?.active)throw Error('WebGL2 implicit skin did not activate: '+JSON.stringify(skin));
+    if(!skin.underarms?.pass||skin.underarms.cutters!==2||
+      skin.underarms.samples.some(s=>s.gap<=.012||s.torso>=0||s.arm>=0))
+      throw Error('WebGL2 still has underarm skin webbing: '+JSON.stringify(skin.underarms));
     if(skin.components!==1||skin.openEdges!==0||skin.nonmanifoldEdges!==0||!skin.closed)
       throw Error('Non-watertight browser mesh: '+JSON.stringify(skin));
     const badge=document.querySelector('#visualBackend');
