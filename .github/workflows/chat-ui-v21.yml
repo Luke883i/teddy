@@ -19,6 +19,10 @@ jobs:
       - name: Adversarial 10m viewport mutation
         run: node tools/mutate-chat-layout-v21.mjs
       - name: Actual Chromium desktop UI
-        run: node tools/browser-text-v17.mjs --desktop
+        run: |
+          set -o pipefail
+          node tools/browser-text-v17.mjs --desktop 2>&1 | tee /tmp/teddy-chat-desktop.log || { echo "::error title=Teddy desktop DOM proof::$(tail -c 900 /tmp/teddy-chat-desktop.log | tr '\n' ' ')"; exit 1; }
       - name: Actual Chromium mobile UI
-        run: node tools/browser-text-v17.mjs --mobile
+        run: |
+          set -o pipefail
+          node tools/browser-text-v17.mjs --mobile 2>&1 | tee /tmp/teddy-chat-mobile.log || { echo "::error title=Teddy mobile DOM proof::$(tail -c 900 /tmp/teddy-chat-mobile.log | tr '\n' ' ')"; exit 1; }
