@@ -162,7 +162,21 @@ jobs:
       - name: prove real WebGL2 welded skin under production CSP
         run: node tools/browser-implicit-smoke-v16.mjs
       - name: capture three actual WebGL2 compositor views and verify visible quality state
-        run: node tools/browser-visual-v18.mjs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          logfile="$RUNNER_TEMP/teddy-v21-visual-forensics.log"
+          if node tools/browser-visual-v18.mjs > "$logfile" 2>&1; then
+            tail -n 30 "$logfile"
+          else
+            tail -n 110 "$logfile"
+            if test "${{ github.event_name }}" = "pull_request"; then
+              { echo '### V21 browser visual regression failure'; echo; echo '~~~'; tail -n 100 "$logfile"; echo; echo '~~~'; } > "$RUNNER_TEMP/teddy-v21-forensics.md"
+              gh issue comment "${{ github.event.pull_request.number }}" --repo "$GITHUB_REPOSITORY" --body-file "$RUNNER_TEMP/teddy-v21-forensics.md" || true
+            fi
+            exit 1
+          fi
       - name: upload V18 visual regression evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
