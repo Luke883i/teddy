@@ -50,6 +50,7 @@ try{
   await command('Page.navigate',{url:`http://127.0.0.1:${port}/`});
   if(process.argv.includes('--probe-dom')){const r=await command('Runtime.evaluate',{expression:'JSON.stringify({readyState:document.readyState,html:!!document.querySelector(\'#chatForm\'),hint:document.querySelector(\'#chatHint\')?.textContent||\'\'})',returnByValue:true});console.log('TEDDY_CHROME_DOM_PASS',r.result?.value);process.exit(0);}
   const probeBootstrap=process.argv.includes('--probe-bootstrap'),probeChat=process.argv.includes('--probe-chat');
+  const probeBalloon=process.argv.includes('--probe-balloon'),probeGeometry=process.argv.includes('--probe-geometry'),probeControls=process.argv.includes('--probe-controls');
   const expression=`(async()=>{
     const sleep=ms=>new Promise(r=>setTimeout(r,ms));
     for(let i=0;i<150&&document.querySelector('#chatForm')?.dataset.wired!=='true';i++)await sleep(75);
@@ -68,11 +69,13 @@ try{
     const history=document.querySelector('#chatHistoryPanel'),bubble=document.querySelector('#teddyBubble');
     if(!history||!bubble||bubble.classList.contains('hidden'))throw Error('history dock or real-reply balloon absent');
     if(!document.querySelector('#teddyBubbleText').textContent.includes('Ho sentito'))throw Error('balloon is not wired to real reply');
+    if(${probeBalloon})return {success:true,chatInputVisible:true,stage:'balloon'};
     const compact=innerWidth<900;
     if(compact===(!history.classList.contains('hidden')))throw Error('history default visibility mismatch');
     const balloonRect=bubble.getBoundingClientRect(),composerRect=document.querySelector('#chatPanel').getBoundingClientRect();
     if(balloonRect.right>innerWidth+1||balloonRect.left<0||composerRect.right>innerWidth+1||composerRect.left<0)throw Error('reflow outside viewport');
     if(!compact&&history.getBoundingClientRect().right>=balloonRect.left)throw Error('Teddy center corridor obscured');
+    if(${probeGeometry})return {success:true,chatInputVisible:true,stage:'geometry'};
     if(composerRect.height>Math.max(125,innerHeight*.3))throw Error('composer became a giant transcript');
     document.querySelector('#bubbleClose').click();
     if(!bubble.classList.contains('hidden'))throw Error('balloon cannot close');
@@ -88,6 +91,7 @@ try{
     if(document.querySelector('#installPanel').classList.contains('hidden'))throw Error('model details do not open');
     document.querySelector('#installClose').click();
     if(!document.querySelector('#installPanel').classList.contains('hidden'))throw Error('model details do not close');
+    if(${probeControls})return {success:true,chatInputVisible:true,stage:'controls'};
 
     const menu=document.querySelector('#settingsBtn'),nav=document.querySelector('#secondaryNav');
     if(!nav.classList.contains('hidden'))throw Error('secondary navigation leaked into primary conversation');
