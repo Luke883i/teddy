@@ -179,18 +179,20 @@ try{
       if(!key)throw Error('Victory raised-arms UI control missing');
       key.click();
       await new Promise(r=>setTimeout(r,790));
-      const q=window.__teddySeamQuality;
-      return {clicked:true,seam:q};
+      const q=window.__teddyVisualQuality;
+      return {clicked:true,quality:q};
     })()`,awaitPromise:true,returnByValue:true});
     if(raised.exceptionDetails)throw Error('Raised-arms browser exception: '+raised.exceptionDetails.text);
     const raisedState=raised.result?.value;
-    if(!raisedState?.clicked||!raisedState.seam?.finite||
-      raisedState.seam.after>raisedState.seam.before)
-      throw Error('Raised-arms seam regression: '+JSON.stringify(raisedState));
+    if(!raisedState?.clicked||(value.skin.mode==='anatomical-pelt-v21'?
+      (!raisedState.quality?.pass||!raisedState.quality.zeroCrossRegionTriangles):
+      (!raisedState.quality?.seam?.finite||
+       raisedState.quality.seam.after>raisedState.quality.seam.before)))
+      throw Error('Raised-arms region deformation regression: '+JSON.stringify(raisedState));
     const raisedFrame=await cdp.send('Page.captureScreenshot',{format:'png',clip:value.clip,captureBeyondViewport:false});
     fs.writeFileSync(path.join(evidenceDir,'victory-raised-arms.png'),Buffer.from(raisedFrame.data,'base64'));
     if(raisedFrame.data===third.data)throw Error('Raised-arms gesture rendered no visible change');
-    value.raisedArms={pixelsChanged:true,seam:raisedState.seam};
+    value.raisedArms={pixelsChanged:true,quality:raisedState.quality};
   }
   console.log(capabilityProbe?'TEDDY_WEBGL2_CAPABILITY_PASS':activationProbe?'TEDDY_WEBGL2_SKIN_ACTIVATION_PASS':'TEDDY_V18_BROWSER_UI_AND_VISUAL_PASS',JSON.stringify(value));
 }finally{
