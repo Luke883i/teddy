@@ -19,6 +19,22 @@ jobs:
         run: node --test tests/chat-history-v21.test.mjs tests/chat-layout-v21.test.mjs
       - name: Adversarial 10m viewport mutation
         run: node tools/mutate-chat-layout-v21.mjs
+      - name: Node tests A-F
+        run: node --test tests/[a-f]*.test.mjs
+      - name: Node tests G-M
+        run: node --test tests/[g-m]*.test.mjs
+      - name: Node tests N-R
+        run: node --test tests/[n-r]*.test.mjs
+      - name: Node tests S-Z
+        run: node --test tests/[s-z]*.test.mjs
+      - name: Chromium HTTP baseline
+        run: node tools/browser-text-v17.mjs --desktop --probe-chat
+      - name: Chromium real balloon
+        run: node tools/browser-text-v17.mjs --desktop --probe-balloon
+      - name: Chromium central stage
+        run: node tools/browser-text-v17.mjs --desktop --probe-geometry
+      - name: Chromium controls
+        run: node tools/browser-text-v17.mjs --desktop --probe-controls
       - name: Actual Chromium desktop UI
         run: |
           set -o pipefail
