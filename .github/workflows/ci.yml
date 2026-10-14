@@ -28,6 +28,12 @@ jobs:
           bash -n teddy.sh
           find server web tools tests -type f \( -name '*.mjs' -o -name '*.js' \) -print0 | sort -z | xargs -0 -n1 node --check
           npm run doctor
+      - name: tests / anatomy v6
+        run: node --test tests/anatomy-v6.test.mjs
+      - name: tests / model v5
+        run: node --test tests/model-v5.test.mjs
+      - name: tests / cinematic v11
+        run: node --test tests/cinematic-v11.test.mjs
       - name: tests
         run: npm test
       - name: authenticated deployment smoke

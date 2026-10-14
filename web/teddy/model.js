@@ -120,7 +120,7 @@ export function buildTeddyArchetype(){
 export function cameraPlan(width,height){
   const w=Math.max(1,Number(width)||1),h=Math.max(1,Number(height)||1),aspect=w/h,fov=.50,tan=Math.tan(fov/2);
   const spanY=TEDDY_BOUNDS.max[1]-TEDDY_BOUNDS.min[1],spanX=TEDDY_BOUNDS.max[0]-TEDDY_BOUNDS.min[0];
-  const targetY=aspect<.62?.70:.71,targetX=aspect<.62?.84:.82;
+  const targetY=aspect<.62?.61:.64,targetX=aspect<.62?.73:.74;
   const dY=spanY/(2*tan*targetY),dX=spanX/(2*tan*aspect*targetX),distance=Math.max(dY,dX);
   const visibleY=2*distance*tan,visibleX=visibleY*aspect;
   const geometricCenter=(TEDDY_BOUNDS.max[1]+TEDDY_BOUNDS.min[1])/2;

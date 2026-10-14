@@ -17,5 +17,5 @@ test('mouth geometry projects in front of muzzle and can articulate visibly',()=
 });
 test('camera reserves desktop UI safe area and contains adversarial axes',()=>{
  for(const [w,h] of [[1195,865],[1790,864],[390,844],[2560,1080],[240,1080],[3440,500],[1,1]]){const p=cameraPlan(w,h);assert.ok(Number.isFinite(p.distance)&&p.distance>0);assert.ok(p.occupancyX<=.861001);assert.ok(p.occupancyY<=.741001||p.limiter==='horizontal');}
- const desk=cameraPlan(1195,865);assert.ok(desk.occupancyY>=.70&&desk.occupancyY<=.75);const geometricCenter=(TEDDY_BOUNDS.max[1]+TEDDY_BOUNDS.min[1])/2;assert.ok(desk.centerY<geometricCenter);
+ const desk=cameraPlan(1195,865);assert.ok(desk.occupancyY>=.61&&desk.occupancyY<=.67);const geometricCenter=(TEDDY_BOUNDS.max[1]+TEDDY_BOUNDS.min[1])/2;assert.ok(desk.centerY<geometricCenter);
 });

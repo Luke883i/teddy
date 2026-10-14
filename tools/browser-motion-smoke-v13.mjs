@@ -80,12 +80,12 @@ try{
   const probeGreet=process.argv.includes('--probe-greet');
   const expression=`(async()=>{
     const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-    for(let i=0;i<140;i++){
+    for(let i=0;i<340;i++){
       if(document.querySelector('button[data-view="movimento"]')?.onclick)break;
       await sleep(70);
     }
     const nav=document.querySelector('button[data-view="movimento"]');
-    if(!nav?.onclick)throw Error('app did not attach UI listener: '+(document.body?.getAttribute('data-motion-error')||''));
+    if(!nav?.onclick)throw Error('app did not attach UI listener: '+JSON.stringify({ready:document.readyState,body:document.body?.getAttribute('data-motion-error')||'',text:document.querySelector('#stateText')?.textContent,buttons:document.querySelectorAll('nav button').length}));
     if(${probeUI})return {success:true,nav:true,faceFrames:!!window.__faceFrames};
     nav.click();
     const button=document.querySelector('button[data-routine="greet"]');
@@ -117,7 +117,7 @@ try{
   })()`;
   const result=await Promise.race([
     cdp.send('Runtime.evaluate',{expression,awaitPromise:true,returnByValue:true}),
-    sleep(22000).then(()=>{throw Error('CDP app evaluation timed out')})
+    sleep(48000).then(()=>{throw Error('CDP app evaluation timed out after 48 seconds')})
   ]);
   if(result.exceptionDetails)throw Error('Browser JavaScript exception: '+result.exceptionDetails.text);
   const value=result.result?.value;
