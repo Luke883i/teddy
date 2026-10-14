@@ -46,6 +46,7 @@ try{
       return previous.call(this,kind,...rest);
     };
   `});
+  if(process.argv.includes('--desktop')||process.argv.includes('--mobile'))await command('Emulation.setDeviceMetricsOverride',{width:process.argv.includes('--mobile')?390:1180,height:process.argv.includes('--mobile')?844:760,deviceScaleFactor:1,mobile:process.argv.includes('--mobile')});
   await command('Page.navigate',{url:`http://127.0.0.1:${port}/`});
   if(process.argv.includes('--probe-dom')){const r=await command('Runtime.evaluate',{expression:'JSON.stringify({readyState:document.readyState,html:!!document.querySelector(\'#chatForm\'),hint:document.querySelector(\'#chatHint\')?.textContent||\'\'})',returnByValue:true});console.log('TEDDY_CHROME_DOM_PASS',r.result?.value);process.exit(0);}
   const probeBootstrap=process.argv.includes('--probe-bootstrap'),probeChat=process.argv.includes('--probe-chat');
@@ -63,6 +64,31 @@ try{
     const turns=[...document.querySelectorAll('.chat-message')].map(x=>x.textContent);
     if(turns.length!==2||!turns[0].includes('Come stai Teddy?')||!turns[1].includes('Ho sentito'))throw Error('chat was not actually rendered: '+JSON.stringify(turns));
     if(${probeChat})return {success:true,chatInputVisible:input.getBoundingClientRect().width>120,turns};
+    if(document.querySelector('#chatPanel #chatLog'))throw Error('transcript still inside composer');
+    const history=document.querySelector('#chatHistoryPanel'),bubble=document.querySelector('#teddyBubble');
+    if(!history||!bubble||bubble.classList.contains('hidden'))throw Error('history dock or real-reply balloon absent');
+    if(!document.querySelector('#teddyBubbleText').textContent.includes('Ho sentito'))throw Error('balloon is not wired to real reply');
+    const compact=innerWidth<900;
+    if(compact===(!history.classList.contains('hidden')))throw Error('history default visibility mismatch');
+    const balloonRect=bubble.getBoundingClientRect(),composerRect=document.querySelector('#chatPanel').getBoundingClientRect();
+    if(balloonRect.right>innerWidth+1||balloonRect.left<0||composerRect.right>innerWidth+1||composerRect.left<0)throw Error('reflow outside viewport');
+    if(!compact&&history.getBoundingClientRect().right>=balloonRect.left)throw Error('Teddy center corridor obscured');
+    if(composerRect.height>Math.max(125,innerHeight*.3))throw Error('composer became a giant transcript');
+    document.querySelector('#bubbleClose').click();
+    if(!bubble.classList.contains('hidden'))throw Error('balloon cannot close');
+    history.querySelector('.chat-message.assistant').click();
+    if(bubble.classList.contains('hidden'))throw Error('history answer cannot reopen balloon');
+    if(history.classList.contains('hidden'))document.querySelector('#historyToggle').click();
+    if(history.classList.contains('hidden'))throw Error('history cannot open');
+    document.querySelector('#historyClose').click();
+    if(!history.classList.contains('hidden'))throw Error('history cannot close');
+    const modelButton=document.querySelector('#modelDetailsBtn');
+    if(modelButton.classList.contains('hidden'))throw Error('model details unrecoverable');
+    modelButton.click();
+    if(document.querySelector('#installPanel').classList.contains('hidden'))throw Error('model details do not open');
+    document.querySelector('#installClose').click();
+    if(!document.querySelector('#installPanel').classList.contains('hidden'))throw Error('model details do not close');
+
     const menu=document.querySelector('#settingsBtn'),nav=document.querySelector('#secondaryNav');
     if(!nav.classList.contains('hidden'))throw Error('secondary navigation leaked into primary conversation');
     menu.click();if(nav.classList.contains('hidden'))throw Error('menu cannot open');
@@ -80,6 +106,7 @@ try{
   if(!data?.success||!data?.chatInputVisible)throw Error('Unexpected UI evidence: '+JSON.stringify(data));
   const screenshot=await command('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});
   const png=Buffer.from(screenshot.data,'base64');
+  if(process.env.RUNNER_TEMP)fs.writeFileSync(path.join(process.env.RUNNER_TEMP,process.argv.includes('--mobile')?'teddy-v21-mobile.png':'teddy-v21-desktop.png'),png);
   if(png.subarray(1,4).toString()!=='PNG')throw Error('browser screenshot missing');
   const history=await (await sendHttp('/api/history?limit=10')).json();
   if(!probeBootstrap&&!history.turns?.some(t=>t.role==='user'&&t.text==='Come stai Teddy?')||!probeBootstrap&&!history.turns?.some(t=>t.role==='assistant'&&t.text.includes('Ho sentito')))throw Error('SQLite did not persist both actual HTTP turns');
