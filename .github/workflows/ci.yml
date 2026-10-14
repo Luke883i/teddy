@@ -29,6 +29,12 @@ jobs:
           bash -n teddy.sh
           find server web tools tests -type f \( -name '*.mjs' -o -name '*.js' \) -print0 | sort -z | xargs -0 -n1 node --check
           npm run doctor
+      - name: text-only runtime path and readiness contracts
+        run: node --test tests/text-runtime-v19.test.mjs
+      - name: actual text HTTP child, two-artifact installer and offline restart fixture
+        run: node --test tests/text-only-provision-v19.test.mjs
+      - name: falsify 10 million adversarial text-ready and generation-path mutations
+        run: node tools/mutate-text-runtime-v19.mjs
       - name: language contract 1 payload normalization
         run: node --test --test-name-pattern="payload normalization" tests/text-turn-v17.test.mjs
       - name: language contract 2 responses output
