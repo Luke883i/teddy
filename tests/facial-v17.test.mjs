@@ -12,7 +12,7 @@ import {installCanvasMotionV13,canvasMotionPrimitives} from '../web/teddy/canvas
 import {installImplicitSkinV16} from '../web/teddy/implicit-runtime-v16.js';
 import {M4,transformPoint} from '../web/teddy/math.js';
 const config={persona:{warmth:.6,irritability:.4,wit:.7},appearance:{fur:'#8a5a3b',muzzle:'#d1a173',eyes:'#17100d',background:'#0b0c10',exposure:1.2,furEnabled:true},render:{targetFps:60,maxPixelRatio:1}};
-const standard=({mode='idle',jaw=.05,smile=.12,browRaise=.08,blink:0,voice={}}={})=>({mode,jaw,smile,browRaise,blink,browPinch:.08,squint:.02,round:.1,wide:.2,headYaw:0,voice:{level:0,attack:0,high:0,brightness:.4,...voice}});
+const standard=({mode='idle',jaw=.05,smile=.12,browRaise=.08,blink=0,voice={}}={})=>({mode,jaw,smile,browRaise,blink,browPinch:.08,squint:.02,round:.1,wide:.2,headYaw:0,voice:{level:0,attack:0,high:0,brightness:.4,...voice}});
 test('the 32 routine and five mode semantic lattice is total and bounded',()=>{
   assert.equal(FACE_V17.motifs.length,32);assert.equal(new Set(FACE_V17.motifs).size,32);
   assert.equal(FACE_V17.modes.length,5);
