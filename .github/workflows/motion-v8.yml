@@ -161,13 +161,19 @@ jobs:
         run: node tools/browser-implicit-smoke-v16.mjs --probe-activation
       - name: prove real WebGL2 welded skin under production CSP
         run: node tools/browser-implicit-smoke-v16.mjs
+      - name: V21 Chrome fused-state and viewport preflight
+        run: node tools/browser-visual-v18.mjs --until=ready
+      - name: V21 Chrome live greeting and first compositor frame
+        run: node tools/browser-visual-v18.mjs --until=greet
+      - name: V21 Chrome Lightning Bolt second compositor frame
+        run: node tools/browser-visual-v18.mjs --until=bolt
       - name: capture three actual WebGL2 compositor views and verify visible quality state
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           logfile="$RUNNER_TEMP/teddy-v21-visual-forensics.log"
-          if node tools/browser-visual-v18.mjs > "$logfile" 2>&1; then
+          if node tools/browser-visual-v18.mjs --until=victory > "$logfile" 2>&1; then
             tail -n 30 "$logfile"
           else
             tail -n 110 "$logfile"

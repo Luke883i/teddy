@@ -76,6 +76,8 @@ try{
     window.addEventListener('teddy:implicit-skin-error',e=>{window.__teddySkinV16={active:false,error:e.detail.message}});
   `});
   await cdp.send('Page.navigate',{url:`http://127.0.0.1:${sitePort}/`});
+  const until=(process.argv.find(x=>x.startsWith('--until='))||'--until=victory').split('=')[1];
+  if(!['ready','greet','bolt','victory'].includes(until))throw Error('Invalid browser stage: '+until);
   const capabilityProbe=process.argv.includes('--probe-capability');
   const activationProbe=process.argv.includes('--probe-activation');
   const expression=capabilityProbe?`(async()=>{
@@ -133,7 +135,7 @@ try{
   if(result.exceptionDetails)throw Error('Browser JavaScript exception: '+result.exceptionDetails.text);
   const value=result.result?.value;
   if(!value?.success)throw Error('Teddy WebGL2 fused skin not ready: '+JSON.stringify(value));
-  if(!capabilityProbe&&!activationProbe){
+  if(!capabilityProbe&&!activationProbe&&until!=='ready'){
     fs.mkdirSync(evidenceDir,{recursive:true});
     const before=await cdp.send('Page.captureScreenshot',{format:'png',clip:value.clip,captureBeyondViewport:false});
     fs.writeFileSync(path.join(evidenceDir,'neutral.png'),Buffer.from(before.data,'base64'));
@@ -152,6 +154,7 @@ try{
     const pixelsChanged=before.data!==after.data,frames=action.result?.value?.frames||0;
     if(!pixelsChanged||frames<5)throw Error('WebGL2 body motion invisible: '+JSON.stringify({pixelsChanged,frames,skin:value.skin}));
     value.pixelsChanged=pixelsChanged;value.motionFrames=frames;
+    if(until!=='greet'){
     const bolt=await cdp.send('Runtime.evaluate',{expression:`(async()=>{
       document.querySelector('.motion-tabs button:nth-child(2)')?.click();
       const key=document.querySelector('button[data-routine="lightningBolt"]');
@@ -165,6 +168,7 @@ try{
     fs.writeFileSync(path.join(evidenceDir,'lightningBolt.png'),Buffer.from(third.data,'base64'));
     if(after.data===third.data)throw Error('Lightning Bolt produced no new compositor image');
     value.thirdPoseChanged=true;
+    if(until!=='bolt'){
     // V20 regression pose: both arms elevated, reproducing the user-reported
     // accordion geometry more directly than the asymmetrical Lightning Bolt.
     const raised=await cdp.send('Runtime.evaluate',{expression:`(async()=>{
@@ -184,6 +188,8 @@ try{
     fs.writeFileSync(path.join(evidenceDir,'victory-raised-arms.png'),Buffer.from(raisedFrame.data,'base64'));
     if(raisedFrame.data===third.data)throw Error('Raised-arms gesture rendered no visible change');
     value.raisedArms={pixelsChanged:true,seam:raisedState.seam};
+    }
+    }
   }
   console.log(capabilityProbe?'TEDDY_WEBGL2_CAPABILITY_PASS':activationProbe?'TEDDY_WEBGL2_SKIN_ACTIVATION_PASS':'TEDDY_V18_BROWSER_UI_AND_VISUAL_PASS',JSON.stringify(value));
 }finally{
