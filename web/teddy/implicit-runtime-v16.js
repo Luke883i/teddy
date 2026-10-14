@@ -132,3 +132,5 @@ export function installImplicitSkinV16(){
       fallbackReason:this.__implicitSkinError||null};
   };
 }
+
+export {gpuMesh};
