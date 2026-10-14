@@ -58,6 +58,8 @@ jobs:
         run: node tools/browser-text-v17.mjs --mobile --probe-chat
       - name: Mobile balloon
         run: node tools/browser-text-v17.mjs --mobile --probe-balloon
+      - name: Mobile history visibility
+        run: node tools/browser-text-v17.mjs --mobile --probe-history
       - name: Mobile geometry
         run: node tools/browser-text-v17.mjs --mobile --probe-geometry
       - name: Mobile controls

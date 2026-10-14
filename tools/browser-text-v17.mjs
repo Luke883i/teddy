@@ -52,6 +52,7 @@ try{
   if(process.argv.includes('--probe-dom')){const r=await command('Runtime.evaluate',{expression:'JSON.stringify({readyState:document.readyState,html:!!document.querySelector(\'#chatForm\'),hint:document.querySelector(\'#chatHint\')?.textContent||\'\'})',returnByValue:true});console.log('TEDDY_CHROME_DOM_PASS',r.result?.value);await completeProbe();}
   const probeBootstrap=process.argv.includes('--probe-bootstrap'),probeChat=process.argv.includes('--probe-chat');
   const probeBalloon=process.argv.includes('--probe-balloon'),probeGeometry=process.argv.includes('--probe-geometry'),probeControls=process.argv.includes('--probe-controls');
+  const probeHistory=process.argv.includes('--probe-history');
   const expression=`(async()=>{
     const sleep=ms=>new Promise(r=>setTimeout(r,ms));
     for(let i=0;i<150&&document.querySelector('#chatForm')?.dataset.wired!=='true';i++)await sleep(75);
@@ -72,9 +73,10 @@ try{
     if(!document.querySelector('#teddyBubbleText').textContent.includes('Ho sentito'))throw Error('balloon is not wired to real reply');
     if(${probeBalloon})return {success:true,chatInputVisible:true,stage:'balloon'};
     const compact=innerWidth<900;
-    if(compact===(!history.classList.contains('hidden')))throw Error('history default visibility mismatch');
+    if(compact===(!history.classList.contains('hidden')))throw Error('history default visibility mismatch: '+JSON.stringify({width:innerWidth,compact,historyHidden:history.classList.contains('hidden'),expanded:document.querySelector('#historyToggle')?.getAttribute('aria-expanded')}));
+    if(${"${probeHistory}"})return {success:true,chatInputVisible:true,stage:'history'};
     const balloonRect=bubble.getBoundingClientRect(),composerRect=document.querySelector('#chatPanel').getBoundingClientRect();
-    if(balloonRect.right>innerWidth+1||balloonRect.left<0||composerRect.right>innerWidth+1||composerRect.left<0)throw Error('reflow outside viewport');
+    if(balloonRect.right>innerWidth+1||balloonRect.left<0||composerRect.right>innerWidth+1||composerRect.left<0)throw Error('reflow outside viewport: '+JSON.stringify({width:innerWidth,device:screen.width,visual:visualViewport?.width,balloon:{left:balloonRect.left,right:balloonRect.right,width:balloonRect.width},composer:{left:composerRect.left,right:composerRect.right,width:composerRect.width},styles:{bubble:getComputedStyle(bubble).width,composer:getComputedStyle(document.querySelector('#chatPanel')).width}}));
     if(!compact&&history.getBoundingClientRect().right>=balloonRect.left)throw Error('Teddy center corridor obscured');
     if(${probeGeometry})return {success:true,chatInputVisible:true,stage:'geometry'};
     if(composerRect.height>Math.max(125,innerHeight*.3))throw Error('composer became a giant transcript');
