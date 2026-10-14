@@ -102,15 +102,12 @@ try{
     if(!skin?.active)throw Error('WebGL2 implicit skin did not activate: '+JSON.stringify(skin));
     if(skin.components!==1||skin.openEdges!==0||skin.nonmanifoldEdges!==0||!skin.closed)
       throw Error('Non-watertight browser mesh: '+JSON.stringify(skin));
-    const canvas=document.querySelector('#scene'),before=canvas.toDataURL('image/png');
     nav.click();
-    const button=document.querySelector('button[data-routine="greet"]');
-    if(!button)throw Error('missing real UI motion control');
-    button.click();
-    await sleep(950);
-    const after=canvas.toDataURL('image/png');
-    return {success:before!==after&&skin.closed&&skin.components===1,pixelChanged:before!==after,
-      backend:'webgl2',skin,feedback:document.querySelector('#motionFeedback')?.textContent};
+    await sleep(180);
+    const rect=document.querySelector('#scene').getBoundingClientRect();
+    const clip={x:Math.round(rect.left+rect.width*.25),y:Math.round(rect.top+rect.height*.20),
+      width:Math.round(rect.width*.50),height:Math.round(rect.height*.62),scale:1};
+    return {success:true,backend:'webgl2',skin,clip};
   })()`;
   const result=await Promise.race([
     cdp.send('Runtime.evaluate',{expression,awaitPromise:true,returnByValue:true}),
@@ -118,7 +115,24 @@ try{
   ]);
   if(result.exceptionDetails)throw Error('Browser JavaScript exception: '+result.exceptionDetails.text);
   const value=result.result?.value;
-  if(!value?.success)throw Error('Teddy WebGL2 fused skin not visibly working: '+JSON.stringify(value));
+  if(!value?.success)throw Error('Teddy WebGL2 fused skin not ready: '+JSON.stringify(value));
+  if(!capabilityProbe&&!activationProbe){
+    const before=await cdp.send('Page.captureScreenshot',{format:'png',clip:value.clip,captureBeyondViewport:false});
+    const action=await cdp.send('Runtime.evaluate',{expression:`(async()=>{
+      const samples=[];
+      window.addEventListener('teddy:motion-frame',e=>{if(e.detail?.routine?.name==='greet')samples.push(e.detail.routine.phase)});
+      const button=document.querySelector('button[data-routine="greet"]');
+      if(!button)throw Error('missing real greet button');
+      button.click();
+      await new Promise(r=>setTimeout(r,980));
+      return {frames:samples.length,feedback:document.querySelector('#motionFeedback')?.textContent||''};
+    })()`,awaitPromise:true,returnByValue:true});
+    if(action.exceptionDetails)throw Error('Motion click failed: '+action.exceptionDetails.text);
+    const after=await cdp.send('Page.captureScreenshot',{format:'png',clip:value.clip,captureBeyondViewport:false});
+    const pixelsChanged=before.data!==after.data,frames=action.result?.value?.frames||0;
+    if(!pixelsChanged||frames<5)throw Error('WebGL2 body motion invisible: '+JSON.stringify({pixelsChanged,frames,skin:value.skin}));
+    value.pixelsChanged=pixelsChanged;value.motionFrames=frames;
+  }
   console.log(capabilityProbe?'TEDDY_WEBGL2_CAPABILITY_PASS':activationProbe?'TEDDY_WEBGL2_SKIN_ACTIVATION_PASS':'TEDDY_BROWSER_WATERTIGHT_SKIN_PASS',JSON.stringify(value));
 }finally{
   cdp?.ws?.close();
