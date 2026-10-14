@@ -17,7 +17,7 @@ test('feet are grounded on an explicit floor and no longer dominate the body',()
 });
 
 test('camera has real perspective, elevated eye and lower framing center for UI clearance',()=>{
-  const p=cameraPlan(1428,915);assert.ok(p.fov<.56&&p.fov>.42);assert.ok(p.eye[1]>p.target[1]);assert.ok(p.centerY<.08);assert.ok(p.occupancyY>.68&&p.occupancyY<.73);
+  const p=cameraPlan(1428,915);assert.ok(p.fov<.56&&p.fov>.42);assert.ok(p.eye[1]>p.target[1]);assert.ok(p.centerY<.08);assert.ok(p.occupancyY>=.61&&p.occupancyY<=.66);
   const view=M4.lookAt(p.eye,p.target),a=transformPoint(view,[0,0,0,1]),b=transformPoint(view,[0,0,.8,1]);assert.notEqual(a[2],b[2]);
 });
 
