@@ -17,7 +17,7 @@ for(let i=0;i<N;i++){
   if(valid!==good)survivors++;
   if(valid){
     accepted++;
-    const width=candidate,y=(seed>>>12)/65535-.5;
+    const width=candidate,y=((seed>>>12)&65535)/65535-.5;
     const slot={x:.43,top:.22,bottom:-.72,z:0,halfWidth:width,halfDepth:.85,rounding:.018};
     if(roundedSlotDistance([slot.x,-.2,y*.3],slot)>=0)survivors++;
     slotChecks++;
