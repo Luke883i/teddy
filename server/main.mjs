@@ -9,6 +9,7 @@ import { json, readBody, readJson, requireContentType, serveStatic } from './lib
 import { deploymentPolicy, guardRequest, SECURITY_HEADERS } from './lib/security.mjs';
 import { normalizeProvider, providerCapabilities } from './lib/provider.mjs';
 import { createLocalService } from './lib/local-service.mjs';
+import {openAITextTurn,normalizeUserText} from './lib/text-service.mjs';
 import { createRuntimeManager } from './lib/runtime-manager.mjs';
 import { recoverManagedRuntime, recoveryCooldown, shouldAttemptRuntimeRecovery } from './lib/runtime-recovery.mjs';
 
@@ -23,7 +24,7 @@ const policy=deploymentPolicy({listenHost:HOST,publicOrigin:PUBLIC_ORIGIN,authPa
 if(!policy.ok)throw new Error(`unsafe_deployment:${policy.error}`);
 const REALTIME_URL=validateRealtimeEndpoint(process.env.TEDDY_OPENAI_REALTIME_URL||'https://api.openai.com/v1/realtime/calls');
 const secrets=new SecretStore(HOME,{externalMasterKey:MASTER_KEY}),state=new StateStore(HOME),defaults=readDefaultConfig(ROOT);let config=mergeConfig(defaults,state.getSetting('config')||{});
-const realtimeGate=new RealtimeBackoff();let closing=false,runtime=createRuntimeManager({home:HOME}),localService=createLocalService({runtime});
+const realtimeGate=new RealtimeBackoff();let closing=false,runtime=createRuntimeManager({home:HOME}),localService=createLocalService({runtime}),textBusy=false;
 let runtimeWasReady=false,runtimeRecovery=null,recoveryCycles=0,nextRecoveryAt=0;
 if(PROVIDER==='local')runtime.start().catch(e=>console.error('local runtime:',e?.code||e?.message||e));
 const localAvailability=()=>runtime.status();
@@ -75,6 +76,38 @@ async function route(req,res){
     req.once('aborted',abort);res.once('close',()=>{if(!res.writableEnded)abort()});
     const audio=await readBody(req,2_000_000);if(audio.length<44||audio.subarray(0,4).toString()!=='RIFF'||audio.subarray(8,12).toString()!=='WAVE')return json(res,400,{error:'invalid_wav'});
     return localService.stream(audio,res,{signal:controller.signal});
+  }
+  if(req.method==='POST'&&u.pathname==='/api/text/turn'){
+    requireContentType(req,'application/json');
+    const body=await readJson(req,8_000);
+    let text;try{text=normalizeUserText(body?.text)}catch{return json(res,400,{error:'text_input_invalid'})}
+    if(textBusy)return json(res,429,{error:'text_turn_in_progress'});
+    if(PROVIDER==='local'&&!localService.status().textReady)return json(res,503,{error:'local_text_not_ready'});
+    let apiKey;
+    if(PROVIDER==='openai'){
+      try{apiKey=secrets.getOpenAI()}catch{return json(res,409,{error:'openai_key_corrupt'})}
+      if(!apiKey)return json(res,409,{error:'openai_key_missing'});
+    }
+    const controller=new AbortController(),abort=()=>controller.abort();
+    req.once('aborted',abort);res.once('close',()=>{if(!res.writableEnded)abort()});
+    textBusy=true;
+    try{
+      const existing=typeof body?.conversationId==='string'?body.conversationId:'';
+      const history=existing?state.history(100).filter(t=>t.conversation_id===existing).slice(-10):[];
+      const reply=PROVIDER==='local'
+        ?await localService.text(text,{signal:controller.signal})
+        :await openAITextTurn({apiKey,text,config,memories:state.listMemories(),history,signal:controller.signal,model:process.env.TEDDY_OPENAI_TEXT_MODEL||'gpt-4.1-mini'});
+      if(controller.signal.aborted)return;
+      if(!reply?.trim())return json(res,502,{error:'text_reply_empty'});
+      const conversationId=existing||state.startConversation();
+      state.addTurn(conversationId,'user',text);
+      state.addTurn(conversationId,'assistant',reply);
+      return json(res,200,{conversationId,reply,provider:PROVIDER});
+    }catch(e){
+      if(controller.signal.aborted)return;
+      const code=e?.code||'text_turn_failed';
+      return json(res,e?.status>=400&&e?.status<600?e.status:502,{error:code});
+    }finally{textBusy=false;req.off('aborted',abort)}
   }
   if(req.method==='PUT'&&u.pathname==='/api/config'){const patch=await readJson(req,64_000);config=mergeConfig(defaults,patch);state.setSetting('config',config);return json(res,200,{config})}
   if(req.method==='POST'&&u.pathname==='/api/secrets/openai'){const body=await readJson(req,4_000);try{const secret=secrets.saveOpenAI(body.key);realtimeGate.clear();return json(res,200,{secret})}catch{return json(res,400,{error:'invalid_api_key'})}}
