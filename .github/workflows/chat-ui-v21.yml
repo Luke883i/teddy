@@ -54,6 +54,14 @@ jobs:
         run: |
           tail -c 2300 /tmp/teddy-chat-desktop.log > /tmp/teddy-chat-diagnostic.txt
           gh issue comment ${{ github.event.pull_request.number }} --repo "$GITHUB_REPOSITORY" --body-file /tmp/teddy-chat-diagnostic.txt
+      - name: Mobile HTTP baseline
+        run: node tools/browser-text-v17.mjs --mobile --probe-chat
+      - name: Mobile balloon
+        run: node tools/browser-text-v17.mjs --mobile --probe-balloon
+      - name: Mobile geometry
+        run: node tools/browser-text-v17.mjs --mobile --probe-geometry
+      - name: Mobile controls
+        run: node tools/browser-text-v17.mjs --mobile --probe-controls
       - name: Actual Chromium mobile UI
         run: |
           set -o pipefail
