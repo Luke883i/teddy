@@ -5,6 +5,7 @@ on:
     branches: [main]
 permissions:
   contents: read
+  issues: write
 concurrency:
   group: teddy-ci-${{ github.ref }}
   cancel-in-progress: true
@@ -29,7 +30,18 @@ jobs:
           find server web tools tests -type f \( -name '*.mjs' -o -name '*.js' \) -print0 | sort -z | xargs -0 -n1 node --check
           npm run doctor
       - name: diagnose language v17 test contract
-        run: node --test tests/text-turn-v17.test.mjs
+        run: |
+          set -o pipefail
+          node --test tests/text-turn-v17.test.mjs 2>&1 | tee "$RUNNER_TEMP/teddy-text-diag.log"
+      - name: report forensic gate result to PR
+        if: ${{ failure() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if test -f "$RUNNER_TEMP/teddy-text-diag.log"; then
+            { echo '### Node language test diagnostic'; echo; echo '~~~'; tail -c 5200 "$RUNNER_TEMP/teddy-text-diag.log"; echo; echo '~~~'; } > "$RUNNER_TEMP/teddy-pr-diagnostic.md"
+            gh issue comment "${{ github.event.pull_request.number }}" --repo "$GITHUB_REPOSITORY" --body-file "$RUNNER_TEMP/teddy-pr-diagnostic.md"
+          fi
       - name: diagnose compact Qwen catalog contract
         run: node --test tests/voice-runtime-catalog.test.mjs
       - name: tests

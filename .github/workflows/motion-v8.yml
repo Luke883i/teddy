@@ -5,6 +5,7 @@ on:
     branches: [main]
 permissions:
   contents: read
+  issues: write
 concurrency:
   group: teddy-motion-v8-${{ github.ref }}
   cancel-in-progress: true
@@ -72,7 +73,18 @@ jobs:
       - name: test inherited motion contracts
         run: node --test tests/motion-contract-v8.test.mjs tests/motion-world-v8.test.mjs tests/motion-routing-v8.test.mjs
       - name: prove language UI boots in Chrome
-        run: node tools/browser-text-v17.mjs --probe-bootstrap
+        run: |
+          set -o pipefail
+          node tools/browser-text-v17.mjs --probe-bootstrap 2>&1 | tee "$RUNNER_TEMP/teddy-browser-diag.log"
+      - name: report forensic gate result to PR
+        if: ${{ failure() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if test -f "$RUNNER_TEMP/teddy-browser-diag.log"; then
+            { echo '### Chrome language bootstrap diagnostic'; echo; echo '~~~'; tail -c 5200 "$RUNNER_TEMP/teddy-browser-diag.log"; echo; echo '~~~'; } > "$RUNNER_TEMP/teddy-pr-diagnostic.md"
+            gh issue comment "${{ github.event.pull_request.number }}" --repo "$GITHUB_REPOSITORY" --body-file "$RUNNER_TEMP/teddy-pr-diagnostic.md"
+          fi
       - name: prove text reply and SQLite via Chrome
         run: node tools/browser-text-v17.mjs --probe-chat
       - name: prove real text chat, SQLite and closeable UI in Chrome
