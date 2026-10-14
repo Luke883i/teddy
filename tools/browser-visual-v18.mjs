@@ -69,6 +69,8 @@ try{
   cdp=await connectCDP(tab.webSocketDebuggerUrl);
   await cdp.send('Page.enable');await cdp.send('Runtime.enable');
   await cdp.send('Page.addScriptToEvaluateOnNewDocument',{source:`
+    window.__teddySeamQuality=null;
+    window.addEventListener('teddy:visual-quality',e=>{window.__teddySeamQuality=e.detail?.seam||null});
     window.__teddySkinV16=null;
     window.addEventListener('teddy:implicit-skin-ready',e=>{window.__teddySkinV16=e.detail});
     window.addEventListener('teddy:implicit-skin-error',e=>{window.__teddySkinV16={active:false,error:e.detail.message}});
@@ -104,6 +106,12 @@ try{
     if(!skin.underarms?.pass||skin.underarms.cutters!==2||
       skin.underarms.samples.some(s=>s.gap<=.012||s.torso>=0||s.arm>=0))
       throw Error('WebGL2 still has underarm skin webbing: '+JSON.stringify(skin.underarms));
+    if(!skin.seamEdges||skin.seamEdges<80||!skin.seamWeights||skin.seamWeights.affected<100)
+      throw Error('No V20 connected collar bound in actual GPU path: '+JSON.stringify(skin));
+    for(let i=0;i<50&&!window.__teddySeamQuality;i++)await sleep(80);
+    const quality=window.__teddySeamQuality;
+    if(!quality?.finite||quality.after>quality.before)
+      throw Error('Pose-space seam strain still unguarded in Chrome: '+JSON.stringify(quality));
     if(skin.components!==1||skin.openEdges!==0||skin.nonmanifoldEdges!==0||!skin.closed)
       throw Error('Non-watertight browser mesh: '+JSON.stringify(skin));
     const badge=document.querySelector('#visualBackend');
@@ -116,7 +124,7 @@ try{
     const rect=document.querySelector('#scene').getBoundingClientRect();
     const clip={x:Math.round(rect.left+rect.width*.08),y:Math.round(rect.top+rect.height*.02),
       width:Math.round(rect.width*.84),height:Math.round(rect.height*.94),scale:1};
-    return {success:true,backend:'webgl2',skin,clip};
+    return {success:true,backend:'webgl2',skin,clip,seamQuality:quality};
   })()`;
   const result=await Promise.race([
     cdp.send('Runtime.evaluate',{expression,awaitPromise:true,returnByValue:true}),
