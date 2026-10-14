@@ -1,0 +1,24 @@
+name: chat-ui-v21
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  chat:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: SQLite history and UX contracts
+        run: node --test tests/chat-history-v21.test.mjs tests/chat-layout-v21.test.mjs
+      - name: Adversarial 10m viewport mutation
+        run: node tools/mutate-chat-layout-v21.mjs
+      - name: Actual Chromium desktop UI
+        run: node tools/browser-text-v17.mjs --desktop
+      - name: Actual Chromium mobile UI
+        run: node tools/browser-text-v17.mjs --mobile
