@@ -12,6 +12,8 @@ const $=s=>document.querySelector(s),drawer=$('#drawer'),onboarding=$('#onboardi
 const notice=$('#connectionNotice'),noticeTitle=$('#connectionTitle'),noticeBody=$('#connectionBody'),noticePrimary=$('#connectionPrimary'),noticeDiag=$('#connectionDiagnostics');
 let boot,config,rt=null,conversationId=null,busy=false,localAbort=null,lastConnectionProblem=null,lastLocalMetrics=null,availability=null,turnGeneration=0,runtimeRetryBusy=false,textChat=null;
 try{const r=await fetch('/api/bootstrap');if(!r.ok)throw Error(`bootstrap ${r.status}`);boot=await r.json();config=boot.config;availability=boot.availability||null}catch(e){$('#health').textContent='offline';stateText.textContent='server non disponibile';throw e}
+// Language interaction must be available independently of the graphical scene lifecycle.
+textChat=installTextChat({boot,getAvailability:()=>availability,getConversationId:()=>conversationId,setConversationId:id=>{conversationId=id},showProblem,showKeyDialog:()=>showKeyDialog(),setState:value=>{stateText.textContent=value}});
 const renderer=new TeddyRenderer($('#scene'),config);renderer.start();
 const visualBadge=$('#visualBackend');
 let latestVisualQuality=null;
@@ -121,7 +123,7 @@ function consumeCloudEvent(e){const t=e?.type||'';if(t.includes('speech_started'
 async function startCloud(){if(!boot.secret.configured){showKeyDialog();return}if(rt){rt.close();rt=null;presence.stop();await endConversation();talkBtn.textContent='Parla con Teddy';return}await ensureConversation();const candidate=new TeddyRealtime(config);rt=candidate;candidate.addEventListener('remote',e=>presence.attach(e.detail,config.audio.outputGain));candidate.addEventListener('event',e=>consumeCloudEvent(e.detail));await candidate.connect();talkBtn.textContent='Chiudi conversazione';talkBtn.classList.add('live')}
 async function startTalk(){if(localMode()&&localAbort){cancelLocalTurn();return}if(busy)return;if(localMode()&&!runtimeReady()){showProblem({error:'local_runtime_not_ready',kind:'local'});return}busy=true;if(!localMode())talkBtn.disabled=true;try{if(localMode())await startLocalTurn();else await startCloud()}catch(e){showProblem(e?.problem||{error:e.code||'connection_failed',kind:'client'})}finally{busy=false;if(!localMode())talkBtn.disabled=false;else if(!localAbort)talkBtn.disabled=!runtimeReady()}}
 talkBtn.onclick=startTalk;
-textChat=installTextChat({boot,getAvailability:()=>availability,getConversationId:()=>conversationId,setConversationId:id=>{conversationId=id},showProblem,showKeyDialog:()=>showKeyDialog(),setState:value=>{stateText.textContent=value}});
+
 
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function closeMenu(){document.querySelector('#secondaryNav').classList.add('hidden');$('#settingsBtn').setAttribute('aria-expanded','false')}
