@@ -27,6 +27,14 @@ jobs:
         run: node --test tests/[n-r]*.test.mjs
       - name: Node tests S-Z
         run: node --test tests/[s-z]*.test.mjs
+      - name: Chromium server control-plane boot
+        run: node tools/browser-text-v17.mjs --probe-server
+      - name: Chromium CDP availability
+        run: node tools/browser-text-v17.mjs --probe-chrome
+      - name: Chromium actual DOM shell
+        run: node tools/browser-text-v17.mjs --probe-dom
+      - name: Chromium JS composer wiring and readiness
+        run: node tools/browser-text-v17.mjs --probe-bootstrap
       - name: Chromium HTTP baseline
         run: node tools/browser-text-v17.mjs --desktop --probe-chat
       - name: Chromium real balloon
