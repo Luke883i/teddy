@@ -1,3 +1,4 @@
+import {anatomicalInfluences,bindingSafety,deformationQuality} from './skin-quality-v18.js';
 // V16 runtime bridge: one bind-pose implicit plush surface, skinned by the existing
 // anatomical group hierarchy, not by a new animation engine. No per-frame remeshing.
 import {TeddyRenderer} from './render.js';
@@ -15,23 +16,15 @@ export function skinBindings(mesh,primitives,groups){
   const groupIds=new Uint16Array(mesh.p.length/3*4),weights=new Float32Array(groupIds.length);
   const bindInverse=groupNames.map(name=>inverseRigid(groups[name]));
   for(let v=0;v<mesh.p.length/3;v++){
-    const point=[mesh.p[v*3],mesh.p[v*3+1],mesh.p[v*3+2]],closest=[];
-    for(const part of primitives){
-      const d=primitiveDistance(point,part),group=groupIndex.get(part.parent);
-      if(group===undefined)continue;
-      const score=Math.max(0,d+.07);
-      if(closest.length<4){closest.push({score,group});closest.sort((a,b)=>a.score-b.score)}
-      else if(score<closest[3].score){closest[3]={score,group};closest.sort((a,b)=>a.score-b.score)}
+    const point=[mesh.p[v*3],mesh.p[v*3+1],mesh.p[v*3+2]];
+    const influences=anatomicalInfluences(point,primitives,groupIndex);
+    for(let k=0;k<influences.length;k++){
+      groupIds[v*4+k]=groupIndex.get(influences[k].group);
+      weights[v*4+k]=influences[k].weight;
     }
-    if(!closest.length)throw Error('implicit skin missing anatomical binding');
-    let sum=0;
-    for(let k=0;k<closest.length;k++){
-      // Broad overlapping influences preserve softness across welded joints.
-      const w=1/(.09+closest[k].score)**3;
-      groupIds[v*4+k]=closest[k].group;weights[v*4+k]=w;sum+=w;
-    }
-    for(let k=0;k<4;k++)weights[v*4+k]/=sum;
   }
+  const safety=bindingSafety({groupNames,groupIds,weights});
+  if(!safety.pass)throw Error('unsafe anatomical skin weights '+JSON.stringify(safety));
   return {groupNames,groupIds,weights,bindInverse};
 }
 export function deformImplicitMesh(mesh,bind,groups,target=new Float32Array(mesh.p.length)){
@@ -74,13 +67,15 @@ function drawImplicit(renderer,groups,seconds,projection,view,camera){
   if(renderer.__implicitSkinError)return false;
   try{
     if(!renderer.__implicitSkin){
+      const startup=typeof performance!=='undefined'?performance.now():0;
       const primitives=renderer.model.parts.filter(p=>p.material==='fur')
         .map(part=>furPrimitive(part,renderer.partTransform(part,groups,seconds,renderer.pose))).filter(Boolean);
       const mesh=extractImplicitMesh(primitives);
       const topology=meshTopology(mesh);
       if(!topology.closed||topology.components!==1)throw Error('non-watertight/disconnected implicit mesh: '+JSON.stringify(topology));
       const bindings=skinBindings(mesh,primitives,groups),gpu=gpuMesh(renderer,mesh);
-      renderer.__implicitSkin={mesh,topology,bindings,gpu,
+      renderer.__implicitSkin={mesh,topology,bindings,gpu,quality:null,frameCount:0,
+        startupMs:(typeof performance!=='undefined'?performance.now():0)-startup,
         positions:new Float32Array(mesh.p.length),normals:new Float32Array(mesh.p.length)};
       renderer.meshes.implicitSkin=gpu;
       if(typeof window!=='undefined'&&typeof window.dispatchEvent==='function'&&typeof CustomEvent==='function')window.dispatchEvent(new CustomEvent('teddy:implicit-skin-ready',{detail:{...topology,active:true}}));
@@ -89,6 +84,13 @@ function drawImplicit(renderer,groups,seconds,projection,view,camera){
     deformImplicitMesh(state.mesh,state.bindings,groups,state.positions);
     // Face micro-deformation is in the SAME watertight indexed skin, not detached cheeks.
     renderer.morphImplicitFace?.(state.positions,groups,seconds,renderer.pose);
+    // Sample animated surface health without expensive full scans each frame.
+    if((state.frameCount++%45)===0){
+      state.quality=deformationQuality(state.mesh.p,state.positions,state.mesh.i);
+      if(!state.quality.finite)throw Error('nonfinite skinned fur surface');
+      if(typeof window!=='undefined'&&typeof window.dispatchEvent==='function'&&typeof CustomEvent==='function')
+        window.dispatchEvent(new CustomEvent('teddy:visual-quality',{detail:{...state.quality,skin:'fused'}}));
+    }
     state.normals.set(vertexNormals(state.positions,state.mesh.i));
     gl.bindBuffer(gl.ARRAY_BUFFER,state.gpu.positionBuffer);
     gl.bufferSubData(gl.ARRAY_BUFFER,0,state.positions);
@@ -111,6 +113,8 @@ export function installImplicitSkinV16(){
   TeddyRenderer.prototype.implicitSkinStatus=function(){
     return {active:!!this.__implicitSkin,backend:this.backend,
       topology:this.__implicitSkin?.topology||null,
+      quality:this.__implicitSkin?.quality||null,
+      startupMs:this.__implicitSkin?.startupMs??null,
       fallbackReason:this.__implicitSkinError||null};
   };
 }
