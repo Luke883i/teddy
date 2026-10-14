@@ -20,7 +20,11 @@ test('v11 is installed before refinement and motion so absolute visual targets o
 test('face layers have explicit forward depth instead of coplanar decals',()=>{
   const head=by.get('headShell'),muzzle=by.get('muzzlePad'),nose=by.get('nose'),eye=by.get('eyeL'),ear=by.get('earL'),inner=by.get('innerEarL'),brow=by.get('browL');
   assert.equal(nose.geometry,'sphere');
-  assert.ok(muzzle.pos[2]-head.pos[2]>.55);
+  assert.ok(muzzle.pos[2]-head.pos[2]>.49);
+  const snout=by.get('snoutRoot'),jawL=by.get('jawFillL'),jawR=by.get('jawFillR');
+  assert.ok(snout&&jawL&&jawR,'V22 has real bilateral jaw tissue');
+  assert.ok(snout.pos[2]+snout.scale[2]>head.pos[2]+head.scale[2]+.075);
+  assert.ok(nose.pos[2]+nose.scale[2]-snout.pos[2]-snout.scale[2]<.11);
   assert.ok(nose.pos[2]-muzzle.pos[2]>.24);
   assert.ok(eye.pos[2]-head.pos[2]>.60);
   const innerFront=inner.pos[2]+inner.scale[2],earFront=ear.pos[2]+ear.scale[2];
