@@ -1,3 +1,4 @@
+import {underarmCutters,applyUnderarmRelief} from './underarm-relief-v19.js';
 // V16: closed indexed isosurface from smooth union of the actual posed plush volumes.
 // Extract once in the bind pose. Vertex topology stays identical during skeleton skinning.
 const finite=v=>Number.isFinite(v);
@@ -26,13 +27,13 @@ export function smoothUnion(a,b,k){
   const h=clamp(.5+.5*(b-a)/k,0,1);
   return b+(a-b)*h-k*h*(1-h);
 }
-export function skinField(p,primitives,smoothing=IMPLICIT_SKIN_V16.smoothness){
+export function skinField(p,primitives,smoothing=IMPLICIT_SKIN_V16.smoothness,cutters=null){
   let result=Infinity;
   for(const part of primitives){
     const v=primitiveDistance(p,part);
     result=finite(result)?smoothUnion(result,v,smoothing):v;
   }
-  return result;
+  return applyUnderarmRelief(p,result,cutters??underarmCutters(primitives));
 }
 function bounds(primitives,k){
   const lo=[Infinity,Infinity,Infinity],hi=[-Infinity,-Infinity,-Infinity];
@@ -55,9 +56,10 @@ export function extractImplicitMesh(primitives,options={}){
   if(cells>IMPLICIT_SKIN_V16.maxCells)throw Error('implicit skin cell budget exceeded');
   const id=(x,y,z)=>(z*ny+y)*nx+x,nodes=nx*ny*nz;
   const field=new Float32Array(nodes),positions=new Float32Array(nodes*3);
+  const cutters=options.underarmRelief===false?[]:underarmCutters(primitives,options);
   for(let z=0;z<nz;z++)for(let y=0;y<ny;y++)for(let x=0;x<nx;x++){
     const i=id(x,y,z),p=[lo[0]+x*voxel,lo[1]+y*voxel,lo[2]+z*voxel];
-    positions.set(p,i*3);field[i]=skinField(p,primitives,smoothing);
+    positions.set(p,i*3);field[i]=skinField(p,primitives,smoothing,cutters);
   }
   // Shared lattice edge IDs: no neighboring tetra may create duplicate seam vertices.
   const edgeMap=new Map(),verts=[],faces=[];
