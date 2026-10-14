@@ -76,6 +76,12 @@ jobs:
         run: node --test tests/model-v5.test.mjs
       - name: tests / cinematic v11
         run: node --test tests/cinematic-v11.test.mjs
+      - name: visual regression / baseline anatomy and optics
+        run: node --test tests/archetype.test.mjs tests/realism-v71.test.mjs tests/facial-v17.test.mjs tests/render-v5.test.mjs tests/render-contract-v4.test.mjs
+      - name: visual regression / V16 through V22 mesh and shader
+        run: node --test tests/implicit-skin-v16.test.mjs tests/underarm-relief-v19.test.mjs tests/skin-seam-v20.test.mjs tests/anatomical-pelt-v21.test.mjs tests/facial-volume-v22.test.mjs
+      - name: visual regression / UI movement and CSP contracts
+        run: node --test tests/motion-ui-v12.test.mjs tests/visible-motion-v13.test.mjs tests/motion-silhouette-v15.test.mjs tests/browser-smoke-contract-v21.test.mjs
       - name: tests
         run: |
           set -o pipefail
