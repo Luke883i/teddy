@@ -95,7 +95,7 @@ export function bindPeltRegions(composite,groups,M4){
       }
       const ranked=[...byJoint.entries()].sort((a,b)=>a[1]-b[1]).slice(0,4);
       const nearest=ranked[0][1],band=.17;
-      const scores=ranked.map(([_,distance])=>Math.exp(-((distance-nearest)/band)**2));
+      const scores=ranked.map(([_,distance])=>Math.exp(-(((distance-nearest)/band)**2)));
       const norm=scores.reduce((a,b)=>a+b,0);
       const index=4*v;
       let total=0;
