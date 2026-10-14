@@ -1,3 +1,4 @@
+import {chatLayout} from './chat-layout-v21.js';
 // Teddy v21: HTTP-backed conversation, persistent paginated history, comic reply placement.
 // No synthetic dialogue. The bubble displays only text returned from /api/text/turn or /api/history.
 export function installTextChat({boot,getAvailability,getConversationId,setConversationId,showProblem,showKeyDialog,setState}){
@@ -8,6 +9,9 @@ export function installTextChat({boot,getAvailability,getConversationId,setConve
   if([form,input,send,log,hint,history,toggle,historyClose,historyEmpty,bubble,bubbleText,bubbleClose].some(el=>!el))throw Error('text_chat_surface_missing');
   const local=boot.ai.provider==='local';
   let busy=false,controller=null,historyOpen=false,closed=false;
+  function applyGeometry(){const g=chatLayout(window.innerWidth,window.innerHeight);document.documentElement.style.setProperty('--teddy-history-width',g.historyWidth+'px');document.documentElement.style.setProperty('--teddy-bubble-width',g.bubbleWidth+'px');document.documentElement.style.setProperty('--teddy-composer-width',g.composerWidth+'px');return g}
+  const geometry=applyGeometry();
+  window.addEventListener('resize',applyGeometry);
   const seenIds=new Set();
   const ready=()=>local?Boolean(boot.ai.mock||getAvailability()?.textReady===true):Boolean(boot.secret?.configured);
   function update(){
@@ -62,9 +66,7 @@ export function installTextChat({boot,getAvailability,getConversationId,setConve
       for(let i=pages.length-1;i>=0;i--)for(const turn of pages[i])append(turn.role,turn.text,turn.id);
       const latest=pages[0]?.at(-1);
       if(latest?.conversation_id&&!getConversationId())setConversationId(latest.conversation_id);
-      const mostRecentAssistant=pages.flat().filter(t=>t.role==='assistant').at(-1);
-      // Do not automatically show yesterday's answer as if Teddy just spoke now.
-      void mostRecentAssistant;
+      // Do not auto-display a stored answer as if Teddy had just replied.
       return pageCount;
     }catch(error){
       historyEmpty.textContent='Cronologia non disponibile. Riapri per riprovare.';
@@ -105,7 +107,7 @@ export function installTextChat({boot,getAvailability,getConversationId,setConve
   document.addEventListener('keydown',onKeydown);
   form.addEventListener('submit',submit);form.dataset.wired='true';
   // Keep Teddy unobstructed: a left dock on wide screens, closed by default on mobile.
-  setHistory(!window.matchMedia('(max-width: 899px)').matches);
+  setHistory(geometry.initialHistoryOpen&&ready());
   update();
   const hydrated=restoreHistory();
   return {
@@ -113,6 +115,6 @@ export function installTextChat({boot,getAvailability,getConversationId,setConve
     openHistory:()=>setHistory(true,{focus:true}),
     closeHistory:()=>setHistory(false),
     hydrated,
-    close:()=>{if(closed)return;closed=true;controller?.abort();form.removeEventListener('submit',submit);document.removeEventListener('keydown',onKeydown)}
+    close:()=>{if(closed)return;closed=true;controller?.abort();form.removeEventListener('submit',submit);document.removeEventListener('keydown',onKeydown);window.removeEventListener('resize',applyGeometry)}
   };
 }

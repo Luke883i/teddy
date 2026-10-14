@@ -95,3 +95,8 @@ header .icon{margin-left:0}
 .chat-history-panel .chat-message{display:block;width:fit-content;color:#fff6eb;font:inherit;text-align:left}
 .chat-history-panel .chat-message.assistant{appearance:none;max-width:98%;cursor:pointer}
 .chat-history-panel .chat-message.assistant:focus-visible{outline:2px solid #ecc4a4;outline-offset:2px}
+
+/* v21 shared geometry policy: these dimensions are runtime-computed and mutation-tested. */
+.chat-history-panel{width:var(--teddy-history-width,252px)}
+.teddy-bubble{width:var(--teddy-bubble-width,253px)}
+.chat-panel{width:var(--teddy-composer-width,535px)}
