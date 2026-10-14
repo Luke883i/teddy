@@ -12,8 +12,8 @@ const SHERPA_VERSION='1.13.3';
 const LLAMA_BUILD='b10218';
 const ASR_MODEL='sherpa-onnx-whisper-tiny.tar.bz2';
 const TTS_MODEL='vits-piper-it_IT-riccardo-x_low.tar.bz2';
-const QWEN_MODEL='Qwen3-0.6B-Q8_0.gguf';
-const QWEN_URL=`https://huggingface.co/Qwen/Qwen3-0.6B-GGUF/resolve/main/${QWEN_MODEL}?download=true`;
+const QWEN_MODEL='Qwen3-0.6B.Q4_K_M.gguf';
+const QWEN_URL=`https://huggingface.co/QuantFactory/Qwen3-0.6B-GGUF/resolve/main/${QWEN_MODEL}?download=true`;
 const now=()=>new Date().toISOString();
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const terminationPromises=new WeakMap();
@@ -94,7 +94,7 @@ export function createRuntimeManager({home,env=process.env,fetchImpl=fetch,spawn
       {id:'asr-whisper-tiny',role:'asr',version:'tiny-multilingual',publisher:'k2-fsa',...asr},
       {id:'tts-riccardo',role:'tts',version:'it_IT-riccardo-x_low',publisher:'k2-fsa',...tts},
       {id:'llama-runtime',role:'runtime',version:LLAMA_BUILD,publisher:'ggml-org',...llamaMeta},
-      {id:'qwen3-0.6b',role:'llm',version:'Q8_0',publisher:'Qwen',...qwen}
+      {id:'qwen3-0.6b',role:'llm',version:'Q4_K_M',publisher:'QuantFactory',...qwen}
     ].map(a=>({...a,phase:'pending',downloadedBytes:0,verified:false,catalogSource:'live'}));
   }
   async function buildCatalog(){
