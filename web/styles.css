@@ -105,3 +105,8 @@ header .icon{margin-left:0}
 .teddy-bubble{overflow:visible}
 .teddy-bubble p{max-height:calc(min(43vh,340px) - 65px);overflow-y:auto;scrollbar-width:thin}
 @media(max-width:560px){.teddy-bubble p{max-height:calc(34vh - 65px)}}
+
+/* v21 mobile viewport contract: late viewport changes cannot clip the chat. */
+.chat-panel{max-width:calc(100vw - 24px)}
+.teddy-bubble{max-width:calc(100vw - 24px)}
+.chat-history-panel{max-width:calc(100vw - 24px)}

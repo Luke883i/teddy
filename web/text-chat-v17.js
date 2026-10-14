@@ -8,10 +8,21 @@ export function installTextChat({boot,getAvailability,getConversationId,setConve
   const bubble=$('#teddyBubble'),bubbleText=$('#teddyBubbleText'),bubbleClose=$('#bubbleClose');
   if([form,input,send,log,hint,history,toggle,historyClose,historyEmpty,bubble,bubbleText,bubbleClose].some(el=>!el))throw Error('text_chat_surface_missing');
   const local=boot.ai.provider==='local';
-  let busy=false,controller=null,historyOpen=false,closed=false;
-  function applyGeometry(){const g=chatLayout(window.innerWidth,window.innerHeight);document.documentElement.style.setProperty('--teddy-history-width',g.historyWidth+'px');document.documentElement.style.setProperty('--teddy-bubble-width',g.bubbleWidth+'px');document.documentElement.style.setProperty('--teddy-composer-width',g.composerWidth+'px');return g}
+  let busy=false,controller=null,historyOpen=false,closed=false,lastCompact=null;
+  function applyGeometry(){
+    const g=chatLayout(window.innerWidth,window.innerHeight);
+    document.documentElement.style.setProperty('--teddy-history-width',g.historyWidth+'px');
+    document.documentElement.style.setProperty('--teddy-bubble-width',g.bubbleWidth+'px');
+    document.documentElement.style.setProperty('--teddy-composer-width',g.composerWidth+'px');
+    // When a browser applies its mobile viewport after module initialization,
+    // or a device rotates, never let a formerly desktop sidebar cover Teddy.
+    if(g.compact && lastCompact===false && historyOpen)setHistory(false);
+    lastCompact=g.compact;
+    return g;
+  }
   const geometry=applyGeometry();
   window.addEventListener('resize',applyGeometry);
+  window.visualViewport?.addEventListener('resize',applyGeometry);
   const seenIds=new Set();
   const ready=()=>local?Boolean(boot.ai.mock||getAvailability()?.textReady===true):Boolean(boot.secret?.configured);
   function update(){
@@ -111,6 +122,11 @@ export function installTextChat({boot,getAvailability,getConversationId,setConve
   form.addEventListener('submit',submit);form.dataset.wired='true';
   // Keep Teddy unobstructed: a left dock on wide screens, closed by default on mobile.
   setHistory(geometry.initialHistoryOpen&&ready());
+  // A second layout read after CSS/media viewport settling is intentional.
+  requestAnimationFrame(()=>{
+    const settled=applyGeometry();
+    if(settled.compact && historyOpen)setHistory(false);
+  });
   update();
   const hydrated=restoreHistory();
   return {
@@ -118,6 +134,6 @@ export function installTextChat({boot,getAvailability,getConversationId,setConve
     openHistory:()=>setHistory(true,{focus:true}),
     closeHistory:()=>setHistory(false),
     hydrated,
-    close:()=>{if(closed)return;closed=true;controller?.abort();form.removeEventListener('submit',submit);document.removeEventListener('keydown',onKeydown);window.removeEventListener('resize',applyGeometry)}
+    close:()=>{if(closed)return;closed=true;controller?.abort();form.removeEventListener('submit',submit);document.removeEventListener('keydown',onKeydown);window.removeEventListener('resize',applyGeometry);window.visualViewport?.removeEventListener('resize',applyGeometry)}
   };
 }

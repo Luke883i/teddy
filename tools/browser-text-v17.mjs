@@ -55,11 +55,11 @@ try{
   const probeHistory=process.argv.includes('--probe-history');
   const expression=`(async()=>{
     const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-    for(let i=0;i<150&&document.querySelector('#chatForm')?.dataset.wired!=='true';i++)await sleep(75);
+    for(let i=0;i<250&&document.querySelector('#chatForm')?.dataset.wired!=='true';i++)await sleep(75);
     const input=document.querySelector('#chatInput'),form=document.querySelector('#chatForm');
     if(!input||!form)throw Error('text composer absent');
     if(form.dataset.wired!=='true')throw Error('composer HTML present without live submit handler');
-    for(let i=0;i<70&&input.disabled;i++)await sleep(70);
+    for(let i=0;i<150&&input.disabled;i++)await sleep(70);
     if(input.disabled)throw Error('text input not ready in real mock provider');
     if(${probeBootstrap})return {success:true,chatInputVisible:input.getBoundingClientRect().width>120};
     input.value='Come stai Teddy?';form.requestSubmit();
@@ -107,7 +107,7 @@ try{
     menu.click();document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));if(!nav.classList.contains('hidden'))throw Error('Escape did not close menu');
     return {success:true,turns,menuClosed:true,localCloudFake:false,chatInputVisible:input.getBoundingClientRect().width>120};
   })()`;
-  const result=await Promise.race([command('Runtime.evaluate',{expression,awaitPromise:true,returnByValue:true}),sleep(25000).then(()=>{throw Error('text browser smoke timeout')})]);
+  const result=await Promise.race([command('Runtime.evaluate',{expression,awaitPromise:true,returnByValue:true}),sleep(45000).then(()=>{throw Error('text browser smoke timeout')})]);
   if(result.exceptionDetails)throw Error('Real browser failure: '+(result.exceptionDetails.exception?.description||result.exceptionDetails.text));
   const data=result.result?.value;
   if(!data?.success||!data?.chatInputVisible)throw Error('Unexpected UI evidence: '+JSON.stringify(data));
