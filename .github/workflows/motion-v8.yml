@@ -34,6 +34,8 @@ jobs:
           node --check tools/mutate-underarm-v19.mjs
           node --check web/teddy/implicit-runtime-v16.js
           node --check web/teddy/skin-quality-v18.js
+          node --check web/teddy/skin-seam-v20.js
+          node --check tools/mutate-shoulder-v20.mjs
           node --check tools/browser-visual-v18.mjs
           node --check web/teddy/facial-contract-v17.js
           node --check web/teddy/facial-runtime-v17.js
@@ -62,6 +64,10 @@ jobs:
         run: node --test tests/visual-hardening-v18.test.mjs
       - name: mutate 1 million adversarial anatomical influence pairs
         run: node tools/mutate-anatomy-v18.mjs
+      - name: V20 test real Teddy animated shoulder collar, edge strain and accordion falsifier
+        run: node --test tests/skin-seam-v20.test.mjs
+      - name: V20 mutate one million continuous shoulder-collar parameters
+        run: node tools/mutate-shoulder-v20.mjs
       - name: V19 prove real bilateral underarm negative-space and full-body watertight skin
         run: node --test tests/underarm-relief-v19.test.mjs
       - name: V19 falsify one million underarm field mutants and twelve real Teddy meshes
