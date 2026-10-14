@@ -5,7 +5,7 @@ import {extractImplicitMesh,meshTopology,primitiveDistance,vertexNormals} from '
 import {buildTeddyArchetype} from './model.js';
 const PELT=Object.freeze({
   trunk:['pelvisMass','torso','chest','neckRoll','tail'],
-  head:['headShell','browPadL','browPadR','cheekL','cheekR','earL','earR'],
+  head:['headShell','browPadL','browPadR','cheekL','cheekR','jawFillL','jawFillR','snoutRoot','earL','earR'],
   armL:['shoulderSocketL','upperArmL','elbowPadL','forearmL','wristPadL','pawL'],
   armR:['shoulderSocketR','upperArmR','elbowPadR','forearmR','wristPadR','pawR'],
   legL:['hipSocketL','thighL','kneePadL','shinL','anklePadL','footL'],

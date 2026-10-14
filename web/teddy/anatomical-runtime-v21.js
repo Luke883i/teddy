@@ -1,3 +1,5 @@
+import {restFacialCoordinates,facialAnatomyReport} from './facial-volume-v22.js';
+import {cinematicPart} from './cinematic-v11.js';
 // V21 live compositor: anatomical independent closed pelts, batched as one WebGL2 draw.
 // V16 extractor/legacy tests remain accessible; production path explicitly opts into V21.
 import {TeddyRenderer} from './render.js';
@@ -16,9 +18,12 @@ export function installAnatomicalPeltV21(){
         const parts=this.model.parts.filter(part=>part.material==='fur')
           .map(part=>furPrimitive(part,this.partTransform(part,groups,seconds,this.pose))).filter(Boolean);
         const composite=assemblePeltRegions(parts),bindings=bindPeltRegions(composite,groups,M4);
+        const faceGeometry=facialAnatomyReport(this.model.parts.map(cinematicPart));
+        if(!faceGeometry.pass)throw Error('unphysical muzzle geometry: '+JSON.stringify(faceGeometry));
+        composite.mesh.face=restFacialCoordinates(composite,groups);
         if(crossingTriangles(composite)!==0)throw Error('arm-to-body triangles not eliminated');
         const gpu=gpuMesh(this,composite.mesh);
-        this.__anatomicalPelt={composite,bindings,gpu,
+        this.__anatomicalPelt={composite,bindings,gpu,faceGeometry,
           positions:new Float32Array(composite.mesh.p.length),normals:new Float32Array(composite.mesh.p.length),
           quality:null,frames:0,startupMs:(typeof performance!=='undefined'?performance.now():0)-start};
         this.meshes.implicitSkin=gpu;
@@ -26,7 +31,7 @@ export function installAnatomicalPeltV21(){
           window.dispatchEvent(new CustomEvent('teddy:implicit-skin-ready',{detail:{
             ...composite.topology,active:true,mode:composite.mode,regions:composite.regions,
             zeroCrossRegionTriangles:crossingTriangles(composite)===0,
-            crossRegionWeights:bindings.audit.crossRegionLinks,skinVersion:21
+            crossRegionWeights:bindings.audit.crossRegionLinks,faceGeometry,skinVersion:22
           }}));
       }
       const state=this.__anatomicalPelt,gl=this.gl;
@@ -65,7 +70,7 @@ export function installAnatomicalPeltV21(){
       topology:a?.composite.topology||null,regions:a?.composite.regions||[],
       crossRegionTriangles:a?crossingTriangles(a.composite):null,
       crossRegionWeights:a?.bindings.audit.crossRegionLinks??null,
-      quality:a?.quality||null,startupMs:a?.startupMs??null,
+      quality:a?.quality||null,faceGeometry:a?.faceGeometry||null,startupMs:a?.startupMs??null,
       fallbackReason:this.__anatomicalPeltError||null};
   };
 }

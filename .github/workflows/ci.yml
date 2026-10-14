@@ -76,6 +76,20 @@ jobs:
         run: node --test tests/model-v5.test.mjs
       - name: tests / cinematic v11
         run: node --test tests/cinematic-v11.test.mjs
+      - name: visual regression / base archetype
+        run: node --test tests/archetype.test.mjs
+      - name: visual regression / facial realism v71
+        run: node --test tests/realism-v71.test.mjs
+      - name: visual regression / microexpressions v17
+        run: node --test tests/facial-v17.test.mjs
+      - name: visual regression / renderer v5
+        run: node --test tests/render-v5.test.mjs
+      - name: visual regression / renderer contract v4
+        run: node --test tests/render-contract-v4.test.mjs
+      - name: visual regression / V16 through V22 mesh and shader
+        run: node --test tests/implicit-skin-v16.test.mjs tests/underarm-relief-v19.test.mjs tests/skin-seam-v20.test.mjs tests/anatomical-pelt-v21.test.mjs tests/facial-volume-v22.test.mjs
+      - name: visual regression / UI movement and CSP contracts
+        run: node --test tests/motion-ui-v12.test.mjs tests/visible-motion-v13.test.mjs tests/motion-silhouette-v15.test.mjs tests/browser-smoke-contract-v21.test.mjs
       - name: tests
         run: |
           set -o pipefail
@@ -85,8 +99,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          tail -c 3200 "$RUNNER_TEMP/teddy-full-test.log" > "$RUNNER_TEMP/teddy-full-test-excerpt.txt"
-          gh issue comment ${{ github.event.pull_request.number }} --repo "$GITHUB_REPOSITORY" --body-file "$RUNNER_TEMP/teddy-full-test-excerpt.txt"
+          if test -s "$RUNNER_TEMP/teddy-full-test.log"; then
+            tail -c 3200 "$RUNNER_TEMP/teddy-full-test.log" > "$RUNNER_TEMP/teddy-full-test-excerpt.txt"
+            gh issue comment ${{ github.event.pull_request.number }} --repo "$GITHUB_REPOSITORY" --body-file "$RUNNER_TEMP/teddy-full-test-excerpt.txt" || true
+          fi
       - name: authenticated deployment smoke
         run: node tests/security-http-smoke.mjs
       - name: realtime 429 classification and cooldown smoke

@@ -60,6 +60,7 @@ function gpuMesh(renderer,surface){
   const positionBuffer=attribute('aPos',surface.p,gl.DYNAMIC_DRAW);
   const normalBuffer=attribute('aNormal',surface.n,gl.DYNAMIC_DRAW);
   attribute('aRest',surface.p,gl.STATIC_DRAW);
+  if(surface.face)attribute('aFace',surface.face,gl.STATIC_DRAW);
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,gl.createBuffer());
   gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,surface.i,gl.STATIC_DRAW);
   gl.bindVertexArray(null);
