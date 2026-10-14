@@ -1,3 +1,4 @@
+import {fairAnatomicalPelt} from './pelt-fairing-v23.js';
 // V21 anatomical pelt: independently CLOSED plush regions in one GPU indexed draw.
 // This intentionally replaces V19 boolean underarm slots and V20 shoulder cross-body
 // constraints in the VISUAL path. It does not remove the legacy proof surfaces.
@@ -57,11 +58,16 @@ export function assemblePeltRegions(primitives,{voxel=ANATOMICAL_PELT_V21.voxel,
     for(const n of b.mesh.i)i[ix++]=n+at;
     at+=b.count;
   }
-  const combined={p,i,n:vertexNormals(p,i)};
+  const combined={p,i,n:null};
+  // Bind-pose geometry is fairer before skin weights are built. Never connect
+  // different closed anatomical pelts or smooth the delicate V22 facial volume.
+  const fairing=fairAnatomicalPelt({mesh:combined,blocks});
+  if(!fairing.pass)throw Error('V23 surface fairness failed '+JSON.stringify(fairing));
+  combined.n=vertexNormals(combined.p,combined.i);
   const topology=meshTopology(combined);
   if(!topology.closed||topology.components!==blocks.length)
     throw Error('composite pelt topology unsafe '+JSON.stringify(topology));
-  return {mesh:combined,blocks,topology,regions:summaries,mode:'anatomical-pelt-v21'};
+  return {mesh:combined,blocks,topology,regions:summaries,fairing,mode:'anatomical-pelt-v21'};
 }
 function invRigid(m,M4){
   const out=M4.identity();

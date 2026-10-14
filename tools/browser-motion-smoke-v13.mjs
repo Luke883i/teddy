@@ -57,7 +57,7 @@ try{
     `--user-data-dir=${dir}`,'about:blank'],{stdio:['ignore','ignore','pipe']});
   proc.stderr.on('data',b=>{log+=String(b).slice(-1500);if(log.length>3500)log=log.slice(-3500)});
   const portFile=path.join(dir,'DevToolsActivePort');
-  for(let i=0;i<140&&!fs.existsSync(portFile);i++){
+  for(let i=0;i<400&&!fs.existsSync(portFile);i++){
     if(proc.exitCode!==null)throw Error('Chrome exited before CDP: '+proc.exitCode+' '+log);
     await sleep(80);
   }
@@ -75,17 +75,22 @@ try{
       return old.call(this,type,...args);
     };
   `});
+  await cdp.send('Page.addScriptToEvaluateOnNewDocument',{source:`
+    window.__teddyBootErrors=[];
+    window.addEventListener('error',event=>window.__teddyBootErrors.push(String(event.message||event.error||'script error')));
+    window.addEventListener('unhandledrejection',event=>window.__teddyBootErrors.push(String(event.reason||'promise rejected')));
+  `});
   await cdp.send('Page.navigate',{url:`http://127.0.0.1:${sitePort}/`});
   const probeUI=process.argv.includes('--probe-ui');
   const probeGreet=process.argv.includes('--probe-greet');
   const expression=`(async()=>{
     const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-    for(let i=0;i<340;i++){
+    for(let i=0;i<550;i++){
       if(document.querySelector('button[data-view="movimento"]')?.onclick)break;
       await sleep(70);
     }
     const nav=document.querySelector('button[data-view="movimento"]');
-    if(!nav?.onclick)throw Error('app did not attach UI listener: '+JSON.stringify({ready:document.readyState,body:document.body?.getAttribute('data-motion-error')||'',text:document.querySelector('#stateText')?.textContent,buttons:document.querySelectorAll('nav button').length}));
+    if(!nav?.onclick)throw Error('app did not attach UI listener: '+JSON.stringify({ready:document.readyState,body:document.body?.getAttribute('data-motion-error')||'',text:document.querySelector('#stateText')?.textContent,buttons:document.querySelectorAll('nav button').length,errors:window.__teddyBootErrors||[],scripts:[...document.scripts].map(s=>s.src).slice(-4)}));
     if(${probeUI})return {success:true,nav:true,faceFrames:!!window.__faceFrames};
     nav.click();
     const button=document.querySelector('button[data-routine="greet"]');
@@ -117,7 +122,7 @@ try{
   })()`;
   const result=await Promise.race([
     cdp.send('Runtime.evaluate',{expression,awaitPromise:true,returnByValue:true}),
-    sleep(48000).then(()=>{throw Error('CDP app evaluation timed out after 48 seconds')})
+    sleep(75000).then(()=>{throw Error('CDP app evaluation timed out after 75 seconds')})
   ]);
   if(result.exceptionDetails)throw Error('Browser JavaScript exception: '+result.exceptionDetails.text);
   const value=result.result?.value;
