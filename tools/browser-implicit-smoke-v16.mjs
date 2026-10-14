@@ -52,7 +52,7 @@ await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
 const sitePort=server.address().port;
 let proc=null,cdp=null,log='';
 try{
-  proc=spawn(chrome,['--headless=new','--no-sandbox','--use-angle=swiftshader','--enable-unsafe-swiftshader','--disable-dev-shm-usage',
+  proc=spawn(chrome,['--headless=new','--no-sandbox','--use-gl=angle','--use-angle=swiftshader-webgl','--enable-unsafe-swiftshader','--ignore-gpu-blocklist','--disable-dev-shm-usage',
     '--no-first-run','--no-default-browser-check','--remote-debugging-port=0',
     `--user-data-dir=${dir}`,'about:blank'],{stdio:['ignore','ignore','pipe']});
   proc.stderr.on('data',b=>{log+=String(b).slice(-1500);if(log.length>3500)log=log.slice(-3500)});
@@ -73,7 +73,15 @@ try{
     window.addEventListener('teddy:implicit-skin-error',e=>{window.__teddySkinV16={active:false,error:e.detail.message}});
   `});
   await cdp.send('Page.navigate',{url:`http://127.0.0.1:${sitePort}/`});
-  const expression=`(async()=>{
+  const capabilityProbe=process.argv.includes('--probe-capability');
+  const expression=capabilityProbe?`(async()=>{
+    let context=null;
+    for(let i=0;i<50&&!context;i++){
+      context=document.createElement('canvas').getContext('webgl2');
+      if(!context)await new Promise(r=>setTimeout(r,100));
+    }
+    return {success:!!context,backend:context?'webgl2':'unavailable',capabilityProbe:true};
+  })()`:`(async()=>{
     const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
     for(let i=0;i<220;i++){
       if(window.__teddySkinV16||document.querySelector('button[data-view="movimento"]')?.onclick)break;
@@ -103,7 +111,7 @@ try{
   if(result.exceptionDetails)throw Error('Browser JavaScript exception: '+result.exceptionDetails.text);
   const value=result.result?.value;
   if(!value?.success)throw Error('Teddy WebGL2 fused skin not visibly working: '+JSON.stringify(value));
-  console.log('TEDDY_BROWSER_WATERTIGHT_SKIN_PASS',JSON.stringify(value));
+  console.log(capabilityProbe?'TEDDY_WEBGL2_CAPABILITY_PASS':'TEDDY_BROWSER_WATERTIGHT_SKIN_PASS',JSON.stringify(value));
 }finally{
   cdp?.ws?.close();
   proc?.kill('SIGKILL');
