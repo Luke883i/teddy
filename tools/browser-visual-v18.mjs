@@ -165,6 +165,25 @@ try{
     fs.writeFileSync(path.join(evidenceDir,'lightningBolt.png'),Buffer.from(third.data,'base64'));
     if(after.data===third.data)throw Error('Lightning Bolt produced no new compositor image');
     value.thirdPoseChanged=true;
+    // V20 regression pose: both arms elevated, reproducing the user-reported
+    // accordion geometry more directly than the asymmetrical Lightning Bolt.
+    const raised=await cdp.send('Runtime.evaluate',{expression:`(async()=>{
+      const key=document.querySelector('button[data-routine="victory"]');
+      if(!key)throw Error('Victory raised-arms UI control missing');
+      key.click();
+      await new Promise(r=>setTimeout(r,790));
+      const q=window.__teddySeamQuality;
+      return {clicked:true,seam:q};
+    })()`,awaitPromise:true,returnByValue:true});
+    if(raised.exceptionDetails)throw Error('Raised-arms browser exception: '+raised.exceptionDetails.text);
+    const raisedState=raised.result?.value;
+    if(!raisedState?.clicked||!raisedState.seam?.finite||
+      raisedState.seam.after>raisedState.seam.before)
+      throw Error('Raised-arms seam regression: '+JSON.stringify(raisedState));
+    const raisedFrame=await cdp.send('Page.captureScreenshot',{format:'png',clip:value.clip,captureBeyondViewport:false});
+    fs.writeFileSync(path.join(evidenceDir,'victory-raised-arms.png'),Buffer.from(raisedFrame.data,'base64'));
+    if(raisedFrame.data===third.data)throw Error('Raised-arms gesture rendered no visible change');
+    value.raisedArms={pixelsChanged:true,seam:raisedState.seam};
   }
   console.log(capabilityProbe?'TEDDY_WEBGL2_CAPABILITY_PASS':activationProbe?'TEDDY_WEBGL2_SKIN_ACTIVATION_PASS':'TEDDY_V18_BROWSER_UI_AND_VISUAL_PASS',JSON.stringify(value));
 }finally{

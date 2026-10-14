@@ -41,3 +41,6 @@ Normalized blended bind weights and inverse bind matrices follow the established
 
 ## Acceptance boundary
 CI topology and deformation contracts plus Chrome compositor frames can demonstrate that the new code is wired, movements persist and extreme **sampled edge stretch** is reduced/not worsened. They do not establish that the user's two photos are aesthetically corrected. Visual acceptance requires new screenshots matching arm positions and a human review of the actual result. The full subjective visual DoD remains explicitly open until that review.
+
+## Post-CI visual acceptance hardening
+The original user screenshots specifically failed in (a) arms lowered, showing square black axillary voids, and (b) arms opened, showing stretched fan-like torso/arm surfaces. The real-browser acceptance suite now also captures **victory-raised-arms.png** from the actual Victory UI button and requires a finite, nonworsening measured seam state in the browser plus changed compositor pixels. The four PNG artifacts constitute reproducible visual samples for **human assessment**, not an autonomous claim that the original visual failure is gone. Stage the two user images against the new neutral and raised-arms frames to decide visual P0 sign-off.
