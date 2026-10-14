@@ -10,7 +10,7 @@ export function installTextChat({boot,getAvailability,getConversationId,setConve
     input.disabled=!available||busy;
     send.disabled=!available&&!busy;
     send.textContent=busy?'Annulla':'Invia';
-    hint.textContent=busy?'Teddy sta rispondendo…':local?(available?'Modello locale pronto':'Modello locale non pronto'):(available?'OpenAI API collegata':'Chiave OpenAI richiesta');
+    hint.textContent=busy?'Teddy sta rispondendo…':local?(boot.ai.mock?'Modalità di prova · nessun modello reale':(available?'Modello locale pronto':'Modello locale non pronto')):(available?'OpenAI API collegata':'Chiave OpenAI richiesta');
   };
   function append(role,text){
     const item=document.createElement('article');item.className='chat-message '+role;
