@@ -70,7 +70,11 @@ export function deformFacialSkinV17(positions,headMatrix,state){
       return [puff*.28*side,puff*.48,puff];
     };
     const a=cheek(-1,state.cheekLiftL),b=cheek(1,state.cheekLiftR);
-    const local=[a[0]+b[0],a[1]+b[1],a[2]+b[2]];
+    // V22: the integrated muzzle remains softly expressive as skin rather than
+    // pushing three independent cream ellipsoids through the side profile.
+    const dx=lx/.32,dy=(ly+.205)/.235,dz=(lz-.64)/.26;
+    const snoutWeight=Math.exp(-2.6*(dx*dx+dy*dy+dz*dz));
+    const local=[a[0]+b[0],a[1]+b[1],a[2]+b[2]+state.muzzlePuff*.65*snoutWeight];
     positions[i]+=m[0]*local[0]+m[4]*local[1]+m[8]*local[2];
     positions[i+1]+=m[1]*local[0]+m[5]*local[1]+m[9]*local[2];
     positions[i+2]+=m[2]*local[0]+m[6]*local[1]+m[10]*local[2];
