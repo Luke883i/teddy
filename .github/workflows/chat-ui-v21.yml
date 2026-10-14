@@ -41,7 +41,7 @@ jobs:
         if: failure()
         id: bootstrap_failure
         run: |
-          node -e 'const fs=require("fs");const s=fs.existsSync("/tmp/teddy-v21-bootstrap.log")?fs.readFileSync("/tmp/teddy-v21-bootstrap.log","utf8"):"empty-log";const lines=s.split("\n").filter(x=>/Error:|TypeError:|SyntaxError:|not ready|timeout|Failed|failure/i.test(x));let v=(lines[0]||"no-error-line").replace(/[^a-z0-9-]/gi,"-").slice(0,110);fs.appendFileSync(process.env.GITHUB_OUTPUT,"slug="+v+"\n");'
+          node -e 'const fs=require("fs");const s=fs.existsSync("/tmp/teddy-v21-bootstrap.log")?fs.readFileSync("/tmp/teddy-v21-bootstrap.log","utf8"):"empty-log";const lines=s.split("\n").filter(x=>/^(?:Error|TypeError|SyntaxError|ReferenceError):|^TEDDY_/i.test(x));let v=(lines.at(-1)||"no-error-line").replace(/[^a-z0-9-]/gi,"-").slice(0,130);fs.appendFileSync(process.env.GITHUB_OUTPUT,"slug="+v+"\n");'
       - name: publish bootstrap failure fingerprint
         if: failure()
         uses: actions/upload-artifact@v4
