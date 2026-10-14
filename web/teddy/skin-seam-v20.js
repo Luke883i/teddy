@@ -78,11 +78,15 @@ export function seamStretch(positions,edges,limit=SHOULDER_SEAM_V20.stretchLimit
   return {edges:edges.length,high,maxStretch:max,finite};
 }
 export function constrainShoulderStretch(positions,edges,{passes=SHOULDER_SEAM_V20.passes,maxStep=SHOULDER_SEAM_V20.maxStep}={}){
-  if(!edges.length)return {edges:0,corrected:0,before:0,after:0};
+  if(!edges.length)return {edges:0,corrected:0,before:0,after:0,peakBefore:0,peakAfter:0,finite:true};
   const before=seamStretch(positions,edges),delta=new Float32Array(positions.length),
-    count=new Float32Array(positions.length/3);let corrected=0;
+    count=new Float32Array(positions.length/3),original=new Float32Array(positions.length);
+  let corrected=0,acceptedPasses=0,rejectedPasses=0;
   for(let pass=0;pass<passes;pass++){
     delta.fill(0);count.fill(0);
+    const current=seamStretch(positions,edges);
+    if(!current.finite)break;
+    let candidates=0;
     for(const {a,b,rest,band} of edges){
       const ia=3*a,ib=3*b,x=positions[ib]-positions[ia],y=positions[ib+1]-positions[ia+1],z=positions[ib+2]-positions[ia+2],
         len=Math.hypot(x,y,z),allowed=rest*SHOULDER_SEAM_V20.stretchLimit;
@@ -92,12 +96,29 @@ export function constrainShoulderStretch(positions,edges,{passes=SHOULDER_SEAM_V
         const d=amplitude*(k===0?x:k===1?y:z);
         delta[ia+k]+=d;delta[ib+k]-=d;
       }
-      count[a]++;count[b]++;corrected++;
+      count[a]++;count[b]++;candidates++;
     }
-    for(let v=0;v<count.length;v++)if(count[v]){
-      for(let k=0;k<3;k++)positions[3*v+k]+=delta[3*v+k]/count[v];
+    if(!candidates)break;
+    original.set(positions);
+    // Global monotone line search: NEVER trade a better worst edge for more bad
+    // edges elsewhere in the same connected axillary collar.
+    let applied=false;
+    for(let attempt=0;attempt<6;attempt++){
+      const factor=2**(-attempt);
+      for(let v=0;v<count.length;v++)if(count[v])
+        for(let k=0;k<3;k++)positions[3*v+k]=original[3*v+k]+factor*delta[3*v+k]/count[v];
+      const proposal=seamStretch(positions,edges);
+      if(proposal.finite&&proposal.high<=current.high&&
+          proposal.maxStretch<=current.maxStretch+1e-7){
+        applied=true;acceptedPasses++;corrected+=candidates;break;
+      }
+      positions.set(original);
+      rejectedPasses++;
     }
+    if(!applied)break;
   }
   const after=seamStretch(positions,edges);
-  return {edges:edges.length,corrected,before:before.high,after:after.high,peakBefore:before.maxStretch,peakAfter:after.maxStretch,finite:after.finite};
+  return {edges:edges.length,corrected,before:before.high,after:after.high,
+    peakBefore:before.maxStretch,peakAfter:after.maxStretch,finite:after.finite,
+    acceptedPasses,rejectedPasses};
 }
