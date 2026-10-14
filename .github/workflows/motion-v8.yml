@@ -30,6 +30,8 @@ jobs:
           node --check web/teddy/expressive-v14.js
           node --check web/teddy/implicit-skin-v16.js
           node --check web/teddy/implicit-runtime-v16.js
+          node --check web/teddy/skin-quality-v18.js
+          node --check tools/browser-visual-v18.mjs
           node --check web/teddy/facial-contract-v17.js
           node --check web/teddy/facial-runtime-v17.js
           node --check tools/browser-face-v17.mjs
@@ -53,6 +55,10 @@ jobs:
         run: node --test tests/facial-v17.test.mjs
       - name: mutate one million facial speech and behavior states
         run: node tools/mutate-face-v17.mjs
+      - name: prove V18 anatomical weights, deformation diagnostics, framing, and material safety
+        run: node --test tests/visual-hardening-v18.test.mjs
+      - name: mutate 1 million adversarial anatomical influence pairs
+        run: node tools/mutate-anatomy-v18.mjs
       - name: prove watertight unified Teddy mesh and animated GPU binding
         run: node --test tests/implicit-skin-v16.test.mjs
       - name: test expressive 32-profile movement and reset
@@ -87,6 +93,16 @@ jobs:
         run: node tools/browser-implicit-smoke-v16.mjs --probe-activation
       - name: prove real WebGL2 welded skin under production CSP
         run: node tools/browser-implicit-smoke-v16.mjs
+      - name: capture three actual WebGL2 compositor views and verify visible quality state
+        run: node tools/browser-visual-v18.mjs
+      - name: upload V18 visual regression evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: teddy-v18-visual-snapshots
+          path: artifacts/visual-v18/*.png
+          if-no-files-found: ignore
+          retention-days: 14
       - name: prove expressive face in real WebGL2 Chrome under production CSP
         run: node tools/browser-face-v17.mjs
       - name: mutate 100 million semantic kinematic parameters
