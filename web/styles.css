@@ -100,3 +100,8 @@ header .icon{margin-left:0}
 .chat-history-panel{width:var(--teddy-history-width,252px)}
 .teddy-bubble{width:var(--teddy-bubble-width,253px)}
 .chat-panel{width:var(--teddy-composer-width,535px)}
+
+/* Balloon tail must remain outside the card's clip; only text content scrolls. */
+.teddy-bubble{overflow:visible}
+.teddy-bubble p{max-height:calc(min(43vh,340px) - 65px);overflow-y:auto;scrollbar-width:thin}
+@media(max-width:560px){.teddy-bubble p{max-height:calc(34vh - 65px)}}
