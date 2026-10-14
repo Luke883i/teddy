@@ -71,6 +71,8 @@ test('text-only managed install, promoted GGUF paths, actual loopback HTTP and n
    offline=createRuntimeManager({home,env:{...env,TEDDY_RUNTIME_AUTOINSTALL:'0'},fetchImpl:prohibited,modelSha256:ggufHash});
    const restarted=await offline.start();
    assert.equal(restarted.textReady,true);assert.equal(restarted.ready,true);
+   assert.equal(restarted.artifacts.length,2,'origin manifest survives restart');
+   assert.ok(restarted.artifacts.every(a=>a.phase==='installed'&&a.verified&&a.source));
    assert.match(await createLocalService({runtime:offline,env}).text('Senza rete?',{context:{turns:[],memories:[]}}),/Senza rete/);
  }finally{offline?.stop();runtime?.stop();await new Promise(r=>setTimeout(r,150));fs.rmSync(root,{recursive:true,force:true})}
 });

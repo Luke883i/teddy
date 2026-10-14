@@ -116,7 +116,7 @@ async function route(req,res){
   if(req.method==='POST'&&u.pathname==='/api/conversations')return json(res,201,{id:state.startConversation()});
   if(req.method==='POST'&&/^\/api\/conversations\/[^/]+\/end$/.test(u.pathname)){state.endConversation(u.pathname.split('/')[3]);return json(res,200,{ok:true})}
   if(req.method==='POST'&&u.pathname==='/api/turns'){const b=await readJson(req,64_000);if(!b.conversationId||!['user','assistant'].includes(b.role)||!b.text?.trim())return json(res,400,{error:'invalid_turn'});try{state.addTurn(b.conversationId,b.role,b.text)}catch{return json(res,409,{error:'conversation_missing'})}return json(res,201,{ok:true})}
-  if(req.method==='GET'&&u.pathname==='/api/history')return json(res,200,{turns:state.history(Number(u.searchParams.get('limit')||100))});
+  if(req.method==='GET'&&u.pathname==='/api/history')return json(res,200,{turns:state.history(Number(u.searchParams.get('limit')||100),u.searchParams.get('before'))});
   if(req.method==='GET'&&u.pathname==='/api/memories')return json(res,200,{memories:state.listMemories()});
   if(req.method==='POST'&&u.pathname==='/api/memories'){const b=await readJson(req,8_000);if(!b.text?.trim())return json(res,400,{error:'text_required'});return json(res,201,{id:state.addMemory(b.text,b.salience)})}
   if(req.method==='DELETE'&&/^\/api\/memories\/\d+$/.test(u.pathname)){state.deleteMemory(u.pathname.split('/').pop());return json(res,200,{ok:true})}
