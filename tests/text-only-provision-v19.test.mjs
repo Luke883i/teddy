@@ -41,7 +41,7 @@ test('text-only managed install, promoted GGUF paths, actual loopback HTTP and n
    network++;
    if(name.includes('api.github.com/repos/ggml-org/llama.cpp/releases/tags/b10218'))return Response.json({assets:[asset]});
    if(name.includes('huggingface.co/QuantFactory/Qwen3-0.6B-GGUF')){
-     if(options.method==='HEAD')return new Response(null,{headers:{'x-linked-etag':ggufHash,'content-length':String(gguf.length)}});
+     if(options.method==='HEAD')throw Error('Xet HEAD hash is not a model SHA-256');
      return new Response(gguf);
    }
    if(name==='https://github.com/fixtures/teddy-llama')return new Response(tar);
