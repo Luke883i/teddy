@@ -18,5 +18,6 @@ test('failed local availability exposes a retry affordance wired to the runtime 
   assert.match(app,/async function retryLocalRuntime/);
   assert.match(app,/fetch\('\/api\/runtime\/retry',\{method:'POST'\}\)/);
   assert.match(app,/runtimeEls\.retry\.onclick=retryLocalRuntime/);
-  assert.match(app,/canRetry=!availability\?\.ready&&!installing/);
+  assert.match(app,/const ready=availability\?\.textReady===true\|\|boot\.ai\.mock===true/);
+  assert.match(app,/canRetry=!ready&&!installing/);
 });

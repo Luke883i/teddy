@@ -1,0 +1,32 @@
+name: chat-ui-v21
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  chat:
+    name: chat UX / SQLite + mutations + genuine Chrome surfaces
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Validate SQLite history and source-backed UI contracts
+        run: node --test tests/chat-history-v21.test.mjs tests/chat-layout-v21.test.mjs tests/browser-smoke-contract-v21.test.mjs
+      - name: Falsify ten million deterministic viewport mutations
+        run: node tools/mutate-chat-layout-v21.mjs
+      - name: Complete browser E2E on desktop
+        run: node tools/browser-text-v17.mjs --desktop
+      - name: Complete browser E2E on mobile
+        run: node tools/browser-text-v17.mjs --mobile
+      - name: Preserve rendered desktop and mobile screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: teddy-chat-v21-desktop-mobile
+          path: ${{ runner.temp }}/teddy-v21-*.png
+          if-no-files-found: ignore

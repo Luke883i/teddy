@@ -77,7 +77,16 @@ jobs:
       - name: tests / cinematic v11
         run: node --test tests/cinematic-v11.test.mjs
       - name: tests
-        run: npm test
+        run: |
+          set -o pipefail
+          npm test 2>&1 | tee "$RUNNER_TEMP/teddy-full-test.log"
+      - name: report full test failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tail -c 3200 "$RUNNER_TEMP/teddy-full-test.log" > "$RUNNER_TEMP/teddy-full-test-excerpt.txt"
+          gh issue comment ${{ github.event.pull_request.number }} --repo "$GITHUB_REPOSITORY" --body-file "$RUNNER_TEMP/teddy-full-test-excerpt.txt"
       - name: authenticated deployment smoke
         run: node tests/security-http-smoke.mjs
       - name: realtime 429 classification and cooldown smoke

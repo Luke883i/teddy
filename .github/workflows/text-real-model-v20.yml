@@ -45,10 +45,15 @@ jobs:
             { echo '### Authentic GGUF E2E failure'; echo; echo '~~~json'; head -c 4200 "$RUNNER_TEMP/teddy-real-text-v20-proof.json"; echo; echo '~~~'; } > "$RUNNER_TEMP/teddy-gguf-pr-comment.md"
             gh issue comment "${{ github.event.pull_request.number }}" --repo "$GITHUB_REPOSITORY" --body-file "$RUNNER_TEMP/teddy-gguf-pr-comment.md"
           fi
+      - name: annotate authentic GGUF failure type
+        if: failure()
+        id: proof_failure
+        run: |
+          node -e 'const fs=require("fs"),p=process.env.RUNNER_TEMP+"/teddy-real-text-v20-proof.json";let f={};try{f=JSON.parse(fs.readFileSync(p,"utf8")).failure||{}}catch{};let v=(f.code||f.message||"missing-manifest").replace(/[^a-z0-9-]/gi,"-").slice(0,110);fs.appendFileSync(process.env.GITHUB_OUTPUT,"slug="+v+"\n");'
       - name: upload proof manifest without model weights
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
-          name: teddy-genuine-text-v20
+          name: teddy-genuine-text-v20-${{ steps.proof_failure.outputs.slug || 'result' }}
           path: ${{ runner.temp }}/teddy-real-text-v20-proof.json
           if-no-files-found: ignore

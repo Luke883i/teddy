@@ -173,7 +173,23 @@ export function createRuntimeManager({home,env=process.env,fetchImpl=fetch,spawn
     if(!Object.values(steps).every(Boolean))throw Object.assign(new Error('runtime_self_test_failed'),{code:'runtime_self_test_failed',stage:'self_test',retryable:false});
     state.engines={asr:{state:'ready',healthy:true},llm:{state:'ready',healthy:true},tts:{state:'ready',healthy:true}};state.selfTest={ok:true,at:now(),steps};state.currentGeneration={id:generation.id,createdAt:generation.createdAt};state.lastError=null;state.installPhase='ready';initialRetryCycles=0;if(retryTimer){clearTimeout(retryTimer);retryTimer=null}await publish();return true;
   }
-  async function loadCurrent(){const p=await readJson(pointer);if(!p?.id)return false;const g={id:p.id,createdAt:p.createdAt,path:path.join(generations,p.id)};try{const activated=await activate(g);if(!activated){await fs.promises.rm(pointer,{force:true}).catch(()=>{});throw Object.assign(new Error('runtime_generation_invalid'),{code:'runtime_generation_invalid',stage:'layout',retryable:false})}return true}catch(e){await fail(e);return false}}
+  async function loadCurrent(){const p=await readJson(pointer);if(!p?.id)return false;const g={id:p.id,createdAt:p.createdAt,path:path.join(generations,p.id)};try{
+      if(textOnly){
+        const cfg=await readJson(path.join(g.path,'runtime.json'));
+        if(cfg?.artifacts?.length&&cfg.llama?.model){
+          const modelProof=cfg.artifacts.find(a=>a.id==='qwen3-0.6b');
+          if(!modelProof?.sha256||!/^[0-9a-f]{64}$/i.test(modelProof.sha256))throw Object.assign(new Error('model_origin_missing'),{code:'model_origin_missing',stage:'verify',retryable:false});
+          const actual=await sha256(cfg.llama.model);
+          if(actual.toLowerCase()!==modelProof.sha256.toLowerCase())throw Object.assign(new Error('artifact_digest_mismatch'),{code:'artifact_digest_mismatch',stage:'verify',artifactId:modelProof.id,retryable:false});
+          const stat=await fs.promises.stat(cfg.llama.model);
+          state.artifacts=cfg.artifacts.map(a=>({
+            ...a,role:a.role|| (a.id==='qwen3-0.6b'?'llm':'runtime'),publisher:a.publisher||(a.id==='qwen3-0.6b'?'QuantFactory':'ggml-org'),
+            name:a.name||(a.id==='qwen3-0.6b'?path.basename(cfg.llama.model):'llama-server'),phase:'installed',
+            totalBytes:a.totalBytes||(a.id==='qwen3-0.6b'?stat.size:0),downloadedBytes:a.totalBytes||(a.id==='qwen3-0.6b'?stat.size:0),verified:true
+          }));
+        }
+      }
+      const activated=await activate(g);if(!activated){await fs.promises.rm(pointer,{force:true}).catch(()=>{});throw Object.assign(new Error('runtime_generation_invalid'),{code:'runtime_generation_invalid',stage:'layout',retryable:false})}return true}catch(e){await fail(e);return false}}
   async function provision(){
     await fs.promises.mkdir(staging,{recursive:true,mode:0o700});await setPhase('discovering');state.artifacts=await buildCatalog();await publish();
     const id=`${Date.now()}-${crypto.randomBytes(4).toString('hex')}`,stage=path.join(staging,id);
@@ -197,7 +213,7 @@ export function createRuntimeManager({home,env=process.env,fetchImpl=fetch,spawn
       const port=Number(env.TEDDY_LLAMA_PORT||8080);
       if(!Number.isInteger(port)||port<1||port>65535)throw Object.assign(new Error('local_llm_port_invalid'),{code:'local_llm_port_invalid',stage:'start',retryable:false});
       const wrappers=textOnly?{}:await writeWrappers(final,path.join(final,'sherpa-runtime'),path.join(final,'asr-whisper-tiny'),path.join(final,'tts-riccardo'));
-      const runtimeConfig={mode:textOnly?'text':'voice',engines:wrappers,llama:{executable:llamaExe,model,port},artifacts:state.artifacts.map(({id,sha256,source,version})=>({id,sha256,source,version}))};
+      const runtimeConfig={mode:textOnly?'text':'voice',engines:wrappers,llama:{executable:llamaExe,model,port},artifacts:state.artifacts.map(({id,sha256,source,version,role,name,publisher,totalBytes})=>({id,sha256,source,version,role,name,publisher,totalBytes}))};
       if(textOnly)validateTextGeneration(final,runtimeConfig);
       await atomicJson(path.join(final,'runtime.json'),runtimeConfig);
       const candidate={id,createdAt:now(),path:final},old=await readJson(pointer);
