@@ -84,3 +84,16 @@ test('CSP-safe production boot installs the partitioned renderer after facial an
   assert.ok(boot.indexOf('installPlushV21()')<boot.indexOf("await import('../app.js')"));
   assert.match(browser,/anatomical-islands/);
 });
+
+test('post-draw V21 GPU frame observability is distinct from pre-draw motion telemetry',()=>{
+  const runtime=fs.readFileSync(new URL('../web/teddy/plush-islands-v21.js',import.meta.url),'utf8');
+  const browser=fs.readFileSync(new URL('../tools/browser-visual-v18.mjs',import.meta.url),'utf8');
+  const drawCall=runtime.indexOf('renderer.draw(M4.identity()');
+  const receipt=runtime.indexOf("emit('teddy:plush-frame'");
+  assert.ok(drawCall>=0&&receipt>drawCall,'GPU receipt must follow final anatomical island draw');
+  assert.match(runtime,/state\.paintedFrames=\(state\.paintedFrames\|\|0\)\+1/);
+  assert.match(runtime,/paintedFrames:state\?\.paintedFrames\|\|0/);
+  assert.match(browser,/window\.__teddyVisualProof=true/);
+  assert.match(browser,/f\.draws===3&&f\.routine\?\.name==='victory'/);
+  assert.match(browser,/raisedState\.paintedFrames<5/);
+});

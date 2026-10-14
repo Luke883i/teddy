@@ -134,6 +134,7 @@ function drawPelt(renderer,groups,seconds,projection,view,camera){
         vertices:state.vertices,triangles:state.triangles,startupMs:state.startupMs});
     }
     const state=renderer.__plushV21,gl=renderer.gl;
+    const beganFrame=typeof performance==='undefined'?0:performance.now();
     let highStretch=0,maxStretch=0;
     for(const island of state.islands){
       poseIsland(island.mesh,island.bind,groups,island.positions);
@@ -153,6 +154,17 @@ function drawPelt(renderer,groups,seconds,projection,view,camera){
         {geometry:'plushV21_'+island.name,material:'fur',roughness:.99},camera,1);
     }
     state.quality={highStretch,maxStretch,finite:true,parts:3};
+    state.paintedFrames=(state.paintedFrames||0)+1;
+    state.lastDrawMs=(typeof performance==='undefined'?0:performance.now())-beganFrame;
+    state.drawEwmaMs=state.drawEwmaMs===undefined?state.lastDrawMs:
+      state.drawEwmaMs*.85+state.lastDrawMs*.15;
+    const renderedRoutine=renderer.motionStatus?.().routine||null;
+    state.lastPaintedRoutine=renderedRoutine;
+    // Opt-in forensic receipt is emitted only AFTER all three indexed GPU draws.
+    // MotionEngine events occur earlier and cannot alone prove pixels were updated.
+    if(typeof window!=='undefined'&&window.__teddyVisualProof===true)
+      emit('teddy:plush-frame',{frame:state.paintedFrames,draws:3,
+        routine:renderedRoutine,drawMs:state.lastDrawMs,quality:state.quality});
     if((state.islands[0].frames%45)===1)
       emit('teddy:visual-quality',{detail:null,skin:state.mode,quality:state.quality,islands:3});
     return true;
@@ -189,6 +201,8 @@ export function installPlushV21(){
       topology:state?{vertices:state.vertices,triangles:state.triangles,components:state.components,
         closed:state.closed,openEdges:state.openEdges,nonmanifoldEdges:state.nonmanifoldEdges}:null,
       quality:state?.quality||null,startupMs:state?.startupMs??null,
+      paintedFrames:state?.paintedFrames||0,lastDrawMs:state?.lastDrawMs??null,
+      drawEwmaMs:state?.drawEwmaMs??null,lastPaintedRoutine:state?.lastPaintedRoutine||null,
       fallbackReason:this.__plushError||null};
   };
 }

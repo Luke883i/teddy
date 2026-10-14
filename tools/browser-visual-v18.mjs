@@ -69,6 +69,12 @@ try{
   cdp=await connectCDP(tab.webSocketDebuggerUrl);
   await cdp.send('Page.enable');await cdp.send('Runtime.enable');
   await cdp.send('Page.addScriptToEvaluateOnNewDocument',{source:`
+    window.__teddyVisualProof=true;
+    window.__teddyPaintFrames=[];
+    window.addEventListener('teddy:plush-frame',e=>{
+      window.__teddyPaintFrames.push(e.detail);
+      if(window.__teddyPaintFrames.length>600)window.__teddyPaintFrames.shift();
+    });
     window.__teddySeamQuality=null;
     window.addEventListener('teddy:visual-quality',e=>{window.__teddySeamQuality=e.detail?.seam||null});
     window.__teddySkinV16=null;
@@ -172,10 +178,11 @@ try{
     // V20 regression pose: both arms elevated, reproducing the user-reported
     // accordion geometry more directly than the asymmetrical Lightning Bolt.
     const raised=await cdp.send('Runtime.evaluate',{expression:`(async()=>{
-      const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
-      const frames=[];
+      const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+      const before=window.__teddyPaintFrames.length;
+      const motion=[];
       window.addEventListener('teddy:motion-frame',e=>{
-        if(e.detail?.routine?.name==='victory')frames.push(e.detail.routine.phase);
+        if(e.detail?.routine?.name==='victory')motion.push(e.detail.routine.phase);
       });
       const tab=document.querySelector('.motion-tabs button:nth-child(1)');
       if(!tab)throw Error('Base motion tab missing during Victory regression');
@@ -183,17 +190,29 @@ try{
       const key=document.querySelector('button[data-routine="victory"]');
       if(!key)throw Error('Victory raised-arms UI control missing after Base tab selection');
       key.click();
-      for(let i=0;i<100&&frames.length<8;i++)await wait(90);
+      const feedback=document.querySelector('#motionFeedback')?.textContent||'';
+      if(!feedback.includes('Vittoria'))throw Error('Victory click was rejected by product UI: '+feedback);
+      let painted=[];
+      for(let i=0;i<115;i++){
+        painted=window.__teddyPaintFrames.slice(before).filter(f=>
+          f.draws===3&&f.routine?.name==='victory'&&
+          f.routine.phase>.12&&f.routine.phase<.90&&
+          Number.isFinite(f.drawMs)&&f.quality?.finite);
+        if(painted.length>=5)break;
+        await sleep(85);
+      }
       const quality=window.__teddySeamQuality;
-      return {clicked:true,frames:frames.length,phases:frames.slice(-8),
-        feedback:document.querySelector('#motionFeedback')?.textContent||'',
+      return {clicked:true,frames:motion.length,paintedFrames:painted.length,
+        paintedPhases:painted.slice(-8).map(f=>f.routine.phase),
+        drawMs:painted.slice(-8).map(f=>f.drawMs),
+        feedback,skinStatus:document.querySelector('#visualBackend')?.textContent||'',
         seam:quality};
     })()`,awaitPromise:true,returnByValue:true});
     if(raised.exceptionDetails)throw Error('Raised-arms browser exception: '+JSON.stringify(raised.exceptionDetails));
     const raisedState=raised.result?.value;
-    if(!raisedState?.clicked||raisedState.frames<5||
+    if(!raisedState?.clicked||raisedState.frames<5||raisedState.paintedFrames<5||
       (skin.mode!=='anatomical-islands'&&(!raisedState.seam?.finite||raisedState.seam.after>raisedState.seam.before)))
-      throw Error('Raised-arms runtime motion not proven: '+JSON.stringify(raisedState));
+      throw Error('Raised-arms GPU-composited movement not proven: '+JSON.stringify(raisedState));
     // Capture the *composited* frame after observing actual named Victory frames;
     // a fixed 790ms wall-clock delay can pass before SwiftShader draws the pose.
     let raisedFrame=await cdp.send('Page.captureScreenshot',{format:'png',clip:value.clip,captureBeyondViewport:false});
@@ -203,8 +222,9 @@ try{
     }
     fs.writeFileSync(path.join(evidenceDir,'victory-raised-arms.png'),Buffer.from(raisedFrame.data,'base64'));
     if(raisedFrame.data===third.data)
-      throw Error('Victory had '+raisedState.frames+' real motion frames but no new compositor image: '+JSON.stringify(raisedState));
-    value.raisedArms={pixelsChanged:true,seam:raisedState.seam};
+      throw Error('Victory had '+raisedState.frames+' motion frames and '+raisedState.paintedFrames+' V21 GPU frames but no new compositor image: '+JSON.stringify(raisedState));
+    value.raisedArms={pixelsChanged:true,paintedFrames:raisedState.paintedFrames,
+      motionFrames:raisedState.frames,drawMs:raisedState.drawMs,seam:raisedState.seam};
     }
     }
   }
