@@ -1,12 +1,20 @@
 <!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#0b0c10"><title>Teddy</title><link rel="stylesheet" href="/styles.css"><link rel="stylesheet" href="/world-v8.css"></head><body>
 <main id="app">
   <canvas id="scene" aria-label="Teddy, orsetto interattivo"></canvas>
-  <header><strong>teddy</strong><span id="health" class="dot">offline</span><button id="furBtn" class="fur-toggle" type="button" aria-pressed="true" aria-label="Disattiva pelliccia">Pelliccia: ON</button><button id="settingsBtn" class="icon" aria-label="Impostazioni">⚙</button></header>
+  <header><strong>teddy</strong><span id="health" class="dot">offline</span><button id="furBtn" class="fur-toggle" type="button" aria-pressed="true" aria-label="Disattiva pelliccia">Pelliccia: ON</button><button id="settingsBtn" class="icon" type="button" aria-label="Apri menu" aria-expanded="false">☰</button></header>
   <section id="statusPanel" class="status"><span id="stateText">inizializzazione</span><div id="meter"><i></i></div></section>
-  <section id="connectionNotice" class="connection-notice hidden" role="status" aria-live="polite"><strong id="connectionTitle"></strong><p id="connectionBody"></p><div class="notice-actions"><button id="connectionDiagnostics">Diagnostica</button><button id="connectionPrimary" class="primary">Riprova</button></div></section>
-  <nav aria-label="Navigazione Teddy"><button data-view="talk" class="active">Parla</button><button data-view="movimento">Movimento</button><button data-view="history">Cronologia</button><button data-view="memory">Memoria</button><button data-view="studio">Studio</button><button data-view="diagnostics">Diagnostica</button></nav>
+  <section id="connectionNotice" class="connection-notice hidden" role="status" aria-live="polite"><strong id="connectionTitle"></strong><p id="connectionBody"></p><div class="notice-actions"><button id="noticeClose" type="button">Chiudi</button><button id="connectionDiagnostics">Diagnostica</button><button id="connectionPrimary" class="primary">Riprova</button></div></section>
+  <nav id="secondaryNav" class="hidden" aria-label="Navigazione Teddy"><button data-view="talk" class="active">Parla</button><button data-view="movimento">Movimento</button><button data-view="history">Cronologia</button><button data-view="memory">Memoria</button><button data-view="studio">Studio</button><button data-view="diagnostics">Diagnostica</button></nav>
   <section id="drawer" class="drawer hidden"></section>
-  <section id="onboarding" class="modal hidden"><div class="card"><h1>OpenAI opzionale</h1><p>Teddy parte in modalità locale senza account. Inserisci una OpenAI API key soltanto se avvii esplicitamente <code>TEDDY_PROVIDER=openai</code>. La key rimane cifrata sul server locale e non viene restituita al browser.</p><input id="apiKey" type="password" autocomplete="off" placeholder="sk-…"><div class="actions"><button id="saveKey">Salva</button></div><small id="keyError"></small></div></section>
-  <button id="talkBtn" class="talk">Parla con Teddy</button>
+  <section id="onboarding" class="modal hidden"><div class="card"><button id="closeKey" class="dialog-close" type="button" aria-label="Chiudi configurazione OpenAI">✕</button><h1>Collega OpenAI</h1><p>Teddy parte in modalità locale senza account. Inserisci una OpenAI API key soltanto se avvii esplicitamente <code>TEDDY_PROVIDER=openai</code>. La key rimane cifrata sul server locale e non viene restituita al browser.</p><input id="apiKey" type="password" autocomplete="off" placeholder="sk-…"><div class="actions"><button id="saveKey">Salva</button></div><small id="keyError"></small></div></section>
+  <section id="chatPanel" class="chat-panel" aria-label="Conversazione scritta con Teddy">
+    <div id="chatLog" class="chat-log" role="log" aria-live="polite" aria-relevant="additions"></div>
+    <form id="chatForm" class="chat-form" autocomplete="off">
+      <label class="visually-hidden" for="chatInput">Messaggio per Teddy</label>
+      <input id="chatInput" type="text" name="message" maxlength="2000" placeholder="Scrivi a Teddy…" autocomplete="off">
+      <button id="sendText" type="submit">Invia</button>
+    </form>
+    <div class="chat-footer"><span id="chatHint" role="status"></span><button id="talkBtn" class="talk" type="button">Parla con Teddy</button></div>
+  </section>
   <audio id="remoteAudio" autoplay></audio>
 </main><script type="module" src="/teddy/init-v13.js"></script></body></html>
