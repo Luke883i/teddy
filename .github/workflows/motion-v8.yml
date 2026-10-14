@@ -35,6 +35,8 @@ jobs:
           node --check web/teddy/implicit-runtime-v16.js
           node --check web/teddy/skin-quality-v18.js
           node --check web/teddy/skin-seam-v20.js
+          node --check web/teddy/plush-islands-v21.js
+          node --check tools/mutate-plush-v21.mjs
           node --check tools/mutate-shoulder-v20.mjs
           node --check tools/browser-visual-v18.mjs
           node --check web/teddy/facial-contract-v17.js
@@ -64,6 +66,10 @@ jobs:
         run: node --test tests/visual-hardening-v18.test.mjs
       - name: mutate 1 million adversarial anatomical influence pairs
         run: node tools/mutate-anatomy-v18.mjs
+      - name: V21 prove real Teddy three independent watertight anatomical islands
+        run: node --test tests/plush-v21.test.mjs
+      - name: V21 score 1000 morphology candidates and execute 10 million realistic mutations
+        run: node tools/mutate-plush-v21.mjs
       - name: V20 test real Teddy animated shoulder collar, edge strain and accordion falsifier
         env:
           GH_TOKEN: ${{ github.token }}
