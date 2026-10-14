@@ -4,7 +4,7 @@ import {buildTeddyArchetype} from './model.js';
 import {primitiveDistance} from './implicit-skin-v16.js';
 const groups=buildTeddyArchetype().groups;
 const clamp=(x,a,b)=>Math.min(b,Math.max(a,x));
-export const VISUAL_SKIN_V18=Object.freeze({version:18,maxInfluences:4,minimumDominance:.55,nearJointBlend:.20,stretchAlert:3.5});
+export const VISUAL_SKIN_V18=Object.freeze({version:18,maxInfluences:4,minimumDominance:.48,nearJointBlend:.20,stretchAlert:3.5});
 export function anatomyFamily(group){
   if(/^(shoulder|elbow|wrist)L$/.test(group))return 'armL';
   if(/^(shoulder|elbow|wrist)R$/.test(group))return 'armR';
