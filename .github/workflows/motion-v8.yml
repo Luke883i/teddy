@@ -65,7 +65,19 @@ jobs:
       - name: mutate 1 million adversarial anatomical influence pairs
         run: node tools/mutate-anatomy-v18.mjs
       - name: V20 test real Teddy animated shoulder collar, edge strain and accordion falsifier
-        run: node --test tests/skin-seam-v20.test.mjs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if node --test tests/skin-seam-v20.test.mjs > "$RUNNER_TEMP/teddy-v20-forensics.log" 2>&1; then
+            tail -n 28 "$RUNNER_TEMP/teddy-v20-forensics.log"
+          else
+            tail -n 120 "$RUNNER_TEMP/teddy-v20-forensics.log"
+            if test "${{ github.event_name }}" = "pull_request"; then
+              { echo '### V20 exact geometrical falsifier'; echo; echo '~~~'; tail -n 100 "$RUNNER_TEMP/teddy-v20-forensics.log"; echo; echo '~~~'; } > "$RUNNER_TEMP/teddy-v20-forensics.md"
+              gh issue comment "${{ github.event.pull_request.number }}" --repo "$GITHUB_REPOSITORY" --body-file "$RUNNER_TEMP/teddy-v20-forensics.md" || true
+            fi
+            exit 1
+          fi
       - name: V20 mutate one million continuous shoulder-collar parameters
         run: node tools/mutate-shoulder-v20.mjs
       - name: V19 prove real bilateral underarm negative-space and full-body watertight skin
