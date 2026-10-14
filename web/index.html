@@ -2,19 +2,27 @@
 <main id="app">
   <canvas id="scene" aria-label="Teddy, orsetto interattivo"></canvas>
   <header><strong>teddy</strong><span id="health" class="dot">offline</span><output id="visualBackend" class="visual-backend" role="status" aria-live="polite" title="Qualità del renderer">Rendering in avvio</output><button id="furBtn" class="fur-toggle" type="button" aria-pressed="true" aria-label="Disattiva pelliccia">Pelliccia: ON</button><button id="settingsBtn" class="icon" type="button" aria-label="Apri menu" aria-expanded="false">☰</button></header>
-  <section id="statusPanel" class="status"><span id="stateText">inizializzazione</span><div id="meter"><i></i></div></section>
+  <section id="statusPanel" class="status"><span id="stateText">inizializzazione</span><button id="modelDetailsBtn" class="model-details-trigger hidden" type="button" aria-expanded="false" aria-controls="installPanel">Dettagli modello <span aria-hidden="true">⌄</span></button><div id="meter"><i></i></div></section>
   <section id="connectionNotice" class="connection-notice hidden" role="status" aria-live="polite"><strong id="connectionTitle"></strong><p id="connectionBody"></p><div class="notice-actions"><button id="noticeClose" type="button">Chiudi</button><button id="connectionDiagnostics">Diagnostica</button><button id="connectionPrimary" class="primary">Riprova</button></div></section>
-  <nav id="secondaryNav" class="hidden" aria-label="Navigazione Teddy"><button data-view="talk" class="active">Parla</button><button data-view="movimento">Movimento</button><button data-view="history">Cronologia</button><button data-view="memory">Memoria</button><button data-view="studio">Studio</button><button data-view="diagnostics">Diagnostica</button></nav>
+  <nav id="secondaryNav" class="hidden" aria-label="Navigazione Teddy"><button data-view="talk" class="active">Parla</button><button data-view="movimento">Movimento</button><button data-view="memory">Memoria</button><button data-view="studio">Studio</button><button data-view="diagnostics">Diagnostica</button></nav>
   <section id="drawer" class="drawer hidden"></section>
   <section id="onboarding" class="modal hidden"><div class="card"><button id="closeKey" class="dialog-close" type="button" aria-label="Chiudi configurazione OpenAI">✕</button><h1>Collega OpenAI</h1><p>Teddy parte in modalità locale senza account. Inserisci una OpenAI API key soltanto se avvii esplicitamente <code>TEDDY_PROVIDER=openai</code>. La key rimane cifrata sul server locale e non viene restituita al browser.</p><input id="apiKey" type="password" autocomplete="off" placeholder="sk-…"><div class="actions"><button id="saveKey">Salva</button></div><small id="keyError"></small></div></section>
-  <section id="chatPanel" class="chat-panel" aria-label="Conversazione scritta con Teddy">
+  <aside id="chatHistoryPanel" class="chat-history-panel hidden" aria-label="Cronologia completa della chat">
+    <div class="chat-history-head"><div><span class="chat-history-eyebrow">LE NOSTRE CHIACCHIERE</span><h2>Cronologia</h2></div><button id="historyClose" type="button" aria-label="Chiudi cronologia">✕</button></div>
     <div id="chatLog" class="chat-log" role="log" aria-live="polite" aria-relevant="additions"></div>
+    <p id="chatHistoryEmpty" class="chat-history-empty">La prima chiacchiera inizia qui.</p>
+  </aside>
+  <section id="teddyBubble" class="teddy-bubble hidden" aria-label="Ultima risposta di Teddy" aria-live="polite">
+    <div class="teddy-bubble-head"><strong>Teddy</strong><button id="bubbleClose" type="button" aria-label="Nascondi la risposta">✕</button></div>
+    <p id="teddyBubbleText"></p>
+  </section>
+  <section id="chatPanel" class="chat-panel" aria-label="Scrivi a Teddy">
     <form id="chatForm" class="chat-form" autocomplete="off">
       <label class="visually-hidden" for="chatInput">Messaggio per Teddy</label>
       <input id="chatInput" type="text" name="message" maxlength="2000" placeholder="Scrivi a Teddy…" autocomplete="off" disabled>
       <button id="sendText" type="submit" disabled>Invia</button>
     </form>
-    <div class="chat-footer"><span id="chatHint" role="status"></span><button id="talkBtn" class="talk" type="button">Parla con Teddy</button></div>
+    <div class="chat-footer"><button id="historyToggle" class="history-trigger" type="button" aria-expanded="false" aria-controls="chatHistoryPanel"><span aria-hidden="true">☰</span> Cronologia</button><span id="chatHint" role="status"></span><button id="talkBtn" class="talk" type="button">Parla con Teddy</button></div>
   </section>
   <audio id="remoteAudio" autoplay></audio>
 </main><script type="module" src="/teddy/init-v13.js"></script></body></html>

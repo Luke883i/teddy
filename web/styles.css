@@ -48,3 +48,45 @@ header .icon{margin-left:0}
 .visual-backend{font-size:10px;letter-spacing:.035em;color:#e6dacd;background:#ffffff12;border:1px solid #ffffff20;border-radius:999px;padding:5px 9px;white-space:nowrap}
 .visual-backend[data-degraded="true"]{color:#ffcca6;border-color:#f6a86d80}
 @media(max-width:760px){.status{top:62px;left:12px;max-width:min(160px,40vw);font-size:9px;padding:7px 9px}.visual-backend{font-size:9px;padding:4px 6px}}
+
+
+/* Teddy v21: single quiet composer, independent history dock and genuine-reply comic balloon. */
+.status{left:18px;top:75px;transform:none;display:flex;align-items:center;gap:9px;max-width:calc(100vw - 36px);padding:7px 10px;border:1px solid #ffffff24;border-radius:13px;background:#10131bd9;backdrop-filter:blur(12px);text-align:left;pointer-events:auto;letter-spacing:.035em}
+.status #meter{display:none}
+.model-details-trigger{border:1px solid #f1d4b944;background:#f1d4b911;color:#ffe8d4;border-radius:9px;padding:7px 9px;font-size:11px;font-weight:650;cursor:pointer;text-transform:none;letter-spacing:0}
+.model-details-trigger:hover{background:#f1d4b925}
+.model-details-trigger:focus-visible,.history-trigger:focus-visible,.chat-history-head button:focus-visible,.teddy-bubble button:focus-visible{outline:2px solid #f7d7b7;outline-offset:3px}
+.chat-panel{left:50%;bottom:max(12px,env(safe-area-inset-bottom));width:min(535px,calc(100vw - 24px));padding:10px 12px;gap:7px;border-radius:19px;background:#12151bdc;box-shadow:0 12px 40px #0008}
+.chat-log{max-height:none;min-height:0;flex:1;padding:4px 4px 10px;gap:9px}
+.chat-history-panel{position:absolute;z-index:4;left:18px;top:143px;bottom:116px;width:min(252px,25vw);display:flex;flex-direction:column;min-height:120px;padding:15px 12px 9px;border-radius:21px;border:1px solid #f5e8da27;background:#11141bd9;box-shadow:0 20px 70px #0007;backdrop-filter:blur(18px)}
+.chat-history-head{display:flex;align-items:flex-start;justify-content:space-between;gap:7px;padding:0 3px 11px;border-bottom:1px solid #ffffff14;margin-bottom:6px}
+.chat-history-eyebrow{font-size:9px;font-weight:700;letter-spacing:.12em;color:#dcbf9e}
+.chat-history-head h2{margin:3px 0 0;font-size:19px;letter-spacing:-.035em;font-family:ui-rounded,"Trebuchet MS",system-ui,sans-serif;font-weight:760}
+.chat-history-head button,.teddy-bubble-head button{background:transparent;color:#f1e4d5;border:0;border-radius:9px;min-height:29px;min-width:29px;cursor:pointer}
+.chat-history-head button:hover{background:#ffffff17}
+.chat-history-empty{color:#e7d8c1a3;text-align:center;padding:12px 9px;line-height:1.45;font-size:12px}
+.chat-history-empty.hidden{display:none}
+.chat-message{max-width:97%;padding:9px 10px;border-radius:14px;background:#ffffff0b}
+.chat-message.user{background:#b9927323}
+.chat-message small{font-size:10px}
+.chat-message p{font-size:12px;line-height:1.52}
+.chat-message.assistant{cursor:pointer}
+.chat-message.assistant:hover{border-color:#e7c8ac6b;background:#fff1da15}
+.chat-form input{padding:11px 14px;border-radius:13px;background:#20232b;font-size:15px}
+.chat-form button{min-width:80px;border-radius:13px;font-weight:760}
+.chat-footer{min-height:24px}
+.chat-footer #chatHint{font-size:10px;flex:1;text-align:center}
+.history-trigger{border:0;background:transparent;color:#f0d8be;font-size:11px;cursor:pointer;padding:6px 7px;border-radius:9px;white-space:nowrap}
+.history-trigger:hover{background:#ffffff14}
+.teddy-bubble{position:absolute;z-index:4;top:clamp(110px,21vh,215px);right:clamp(16px,2.5vw,48px);width:min(253px,25vw);max-height:min(43vh,340px);overflow-y:auto;overflow-x:visible;padding:13px 16px 15px;background:#ffefdb;color:#49301f;border:2px solid #38271e;border-radius:24px 24px 24px 7px;box-shadow:0 10px 0 #40291d20,0 22px 45px #0005;overflow-wrap:anywhere}
+.teddy-bubble::after{content:"";position:absolute;left:-17px;bottom:19px;width:0;height:0;border-right:18px solid #38271e;border-top:13px solid transparent;border-bottom:7px solid transparent}
+.teddy-bubble::before{content:"";position:absolute;left:-12px;bottom:21px;z-index:1;width:0;height:0;border-right:15px solid #ffefdb;border-top:11px solid transparent;border-bottom:5px solid transparent}
+.teddy-bubble-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}
+.teddy-bubble-head strong{font-family:ui-rounded,"Trebuchet MS",system-ui,sans-serif;font-size:14px;letter-spacing:-.01em}
+.teddy-bubble-head button{color:#6a4d35}
+.teddy-bubble-head button:hover{background:#4a33261c}
+.teddy-bubble p{margin:0;font:500 clamp(13px,1.6vw,17px)/1.5 ui-rounded,"Trebuchet MS",system-ui,sans-serif;white-space:pre-wrap;overflow-wrap:anywhere}
+@media(max-width:899px){.chat-history-panel{width:min(292px,calc(100vw - 24px));bottom:112px;top:125px;left:12px}.teddy-bubble{width:min(214px,33vw);right:12px;top:clamp(100px,18vh,158px)}}
+@media(max-height:520px){.chat-history-panel{top:115px;bottom:97px}.teddy-bubble{top:92px;max-height:40vh}.chat-panel{bottom:6px}}
+@media(max-width:560px){.status{top:61px;left:12px;font-size:10px}.model-details-trigger{font-size:10px;padding:6px}.chat-panel{bottom:max(8px,env(safe-area-inset-bottom));padding:9px}.chat-form input{font-size:14px}.chat-form button{min-width:67px}.teddy-bubble{top:clamp(110px,22vh,180px);width:min(195px,48vw);max-height:34vh}.teddy-bubble p{font-size:13px}.chat-history-panel{top:112px;bottom:112px}.chat-footer .talk{font-size:11px}}
+@media(prefers-reduced-motion:reduce){.teddy-bubble{scroll-behavior:auto}}
