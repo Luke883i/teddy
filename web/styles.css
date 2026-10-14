@@ -90,3 +90,8 @@ header .icon{margin-left:0}
 @media(max-height:520px){.chat-history-panel{top:115px;bottom:97px}.teddy-bubble{top:92px;max-height:40vh}.chat-panel{bottom:6px}}
 @media(max-width:560px){.status{top:61px;left:12px;font-size:10px}.model-details-trigger{font-size:10px;padding:6px}.chat-panel{bottom:max(8px,env(safe-area-inset-bottom));padding:9px}.chat-form input{font-size:14px}.chat-form button{min-width:67px}.teddy-bubble{top:clamp(110px,22vh,180px);width:min(195px,48vw);max-height:34vh}.teddy-bubble p{font-size:13px}.chat-history-panel{top:112px;bottom:112px}.chat-footer .talk{font-size:11px}}
 @media(prefers-reduced-motion:reduce){.teddy-bubble{scroll-behavior:auto}}
+
+/* V21 history rows are actual selectable assistant replies, never simulated model text. */
+.chat-history-panel .chat-message{display:block;width:fit-content;color:#fff6eb;font:inherit;text-align:left}
+.chat-history-panel .chat-message.assistant{appearance:none;max-width:98%;cursor:pointer}
+.chat-history-panel .chat-message.assistant:focus-visible{outline:2px solid #ecc4a4;outline-offset:2px}
