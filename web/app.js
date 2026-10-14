@@ -37,9 +37,51 @@ updateFurControl();
 furBtn.onclick=async()=>{if(furBtn.disabled)return;furBtn.disabled=true;const old=config,updated={...config,appearance:{...config.appearance,furEnabled:!furEnabled(config.appearance)}};renderer.setConfig(updated);config=updated;updateFurControl();try{const response=await fetch('/api/config',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify(updated)});if(!response.ok)throw Error('config persistence failed');const data=await response.json();if(!data?.config)throw Error('missing config');config=data.config;renderer.setConfig(config);}catch(e){config=old;renderer.setConfig(old);stateText.textContent='Pelliccia non salvata';}finally{updateFurControl();furBtn.disabled=false;}};
 const presence=new AudioPresence(remoteAudio,v=>{meter.style.width=`${Math.round(v*100)}%`;renderer.setSpeech(v)});
 const localMode=()=>boot?.ai?.provider!=='openai';
-const runtimeEls=(()=>{const link=document.createElement('link');link.rel='stylesheet';link.href='/install.css';document.head.append(link);const panel=document.createElement('section');panel.id='installPanel';panel.className='install-panel hidden';panel.setAttribute('role','status');panel.setAttribute('aria-live','polite');panel.innerHTML='<div class="install-head"><strong id="availabilityTitle">Preparo la chat</strong><span id="availabilityBadge">installazione</span></div><p id="availabilityBody">Verifico il modello linguistico locale.</p><details id="artifactDetails"><summary>Dettagli installazione</summary><div id="artifactList" class="artifact-list"></div></details><div class="install-actions"><button id="runtimeRetry" class="hidden" type="button">Riprova installazione</button></div>';$('#statusPanel').after(panel);return{panel,title:panel.querySelector('#availabilityTitle'),badge:panel.querySelector('#availabilityBadge'),body:panel.querySelector('#availabilityBody'),list:panel.querySelector('#artifactList'),retry:panel.querySelector('#runtimeRetry')}})();
+const runtimeEls=(()=>{const link=document.createElement('link');link.rel='stylesheet';link.href='/install.css';document.head.append(link);const panel=document.createElement('section');panel.id='installPanel';panel.className='install-panel hidden';panel.setAttribute('role','status');panel.setAttribute('aria-live','polite');panel.innerHTML='<div class="install-head"><strong id="availabilityTitle">Preparo la chat</strong><span id="availabilityBadge">installazione</span><button id="installClose" class="install-close" type="button" aria-label="Chiudi dettagli modello">✕</button></div><p id="availabilityBody">Verifico il modello linguistico locale.</p><p id="runtimeFacts" class="runtime-facts"></p><details id="artifactDetails"><summary>Dettagli installazione</summary><div id="artifactList" class="artifact-list"></div></details><div class="install-actions"><button id="runtimeRetry" class="hidden" type="button">Riprova installazione</button></div>';$('#statusPanel').after(panel);return{panel,title:panel.querySelector('#availabilityTitle'),badge:panel.querySelector('#availabilityBadge'),body:panel.querySelector('#availabilityBody'),list:panel.querySelector('#artifactList'),retry:panel.querySelector('#runtimeRetry'),close:panel.querySelector('#installClose'),facts:panel.querySelector('#runtimeFacts')}})();
 function runtimeReady(){return !localMode()||Boolean(availability?.engines?.asr?.healthy&&availability?.engines?.tts?.healthy&&availability?.engines?.llm?.healthy)}
-function applyAvailability(a){availability=a||availability;if(!localMode()){runtimeEls.panel.classList.add('hidden');talkBtn.disabled=false;talkBtn.classList.remove('hidden');textChat?.update();return}renderAvailability(availability||{},runtimeEls);boot.ai.configured=Boolean(availability?.ready);const installing=availability?.availability==='installazione',canRetry=!availability?.ready&&!installing;runtimeEls.retry.classList.toggle('hidden',!canRetry);runtimeEls.retry.disabled=runtimeRetryBusy;talkBtn.disabled=!runtimeReady()&&!localAbort;talkBtn.classList.toggle('hidden',!runtimeReady()&&!localAbort);stateText.textContent=availability?.ready?'locale · pronto':installing?`locale · ${availability.installPhase||'installazione'}`:'locale · non disponibile';textChat?.update();if(availability?.textReady===true)runtimeEls.panel.classList.add('hidden')}
+let modelDetailsOpen=false,modelDetailsDismissed=false;
+const modelDetailsBtn=$('#modelDetailsBtn');
+function closeModelDetails({focus=false}={}){
+  modelDetailsOpen=false;modelDetailsDismissed=true;
+  runtimeEls.panel.classList.add('hidden');modelDetailsBtn.setAttribute('aria-expanded','false');
+  if(focus)modelDetailsBtn.focus();
+}
+function openModelDetails(){
+  if(!localMode())return;
+  modelDetailsOpen=true;modelDetailsDismissed=false;
+  textChat?.closeHistory();
+  drawer.classList.add('hidden');
+  runtimeEls.panel.classList.remove('hidden');modelDetailsBtn.setAttribute('aria-expanded','true');
+  runtimeEls.close.focus();
+}
+runtimeEls.close.onclick=()=>closeModelDetails({focus:true});
+modelDetailsBtn.onclick=()=>{
+  if(modelDetailsOpen||!runtimeEls.panel.classList.contains('hidden'))closeModelDetails({focus:true});
+  else openModelDetails();
+};
+window.addEventListener('teddy:history-open',()=>{if(!runtimeEls.panel.classList.contains('hidden'))closeModelDetails()});
+function applyAvailability(a){
+  availability=a||availability;
+  if(!localMode()){
+    runtimeEls.panel.classList.add('hidden');modelDetailsBtn.classList.add('hidden');
+    talkBtn.disabled=false;talkBtn.classList.remove('hidden');textChat?.update();return;
+  }
+  renderAvailability(availability||{},runtimeEls);
+  const ready=availability?.textReady===true||boot.ai.mock===true;
+  boot.ai.configured=Boolean(ready);
+  modelDetailsBtn.classList.remove('hidden');
+  modelDetailsBtn.setAttribute('aria-label',ready?'Modello locale pronto: apri dettagli':'Stato del modello locale: apri dettagli');
+  const installing=availability?.availability==='installazione',canRetry=!ready&&!installing;
+  runtimeEls.retry.classList.toggle('hidden',!canRetry);
+  runtimeEls.retry.disabled=runtimeRetryBusy;
+  talkBtn.disabled=!runtimeReady()&&!localAbort;
+  talkBtn.classList.toggle('hidden',!runtimeReady()&&!localAbort);
+  stateText.textContent=ready?'locale · pronto':installing?`locale · ${availability.installPhase||'installazione'}`:'locale · non disponibile';
+  textChat?.update();
+  const visible=modelDetailsOpen||(!modelDetailsDismissed&&!ready);
+  runtimeEls.panel.classList.toggle('hidden',!visible);
+  modelDetailsBtn.setAttribute('aria-expanded',String(visible));
+}
 async function refreshAvailability(){if(!localMode())return;try{const r=await fetch('/api/availability',{cache:'no-store'});if(r.ok)applyAvailability(await r.json())}catch{}}
 async function retryLocalRuntime(){if(!localMode()||runtimeRetryBusy)return;runtimeRetryBusy=true;runtimeEls.retry.disabled=true;stateText.textContent='locale · riprovo';try{const r=await fetch('/api/runtime/retry',{method:'POST'});let body=null;try{body=await r.json()}catch{}if(!(r.ok||r.status===202))throw Object.assign(new Error(body?.error||'local_runtime_retry_failed'),{code:body?.error||'local_runtime_retry_failed'});if(body?.availability)applyAvailability(body);hideConnectionNotice()}catch(e){showProblem({error:e.code||e.message||'local_runtime_retry_failed',kind:'local'})}finally{runtimeRetryBusy=false;runtimeEls.retry.disabled=false;await refreshAvailability()}}
 runtimeEls.retry.onclick=retryLocalRuntime;
@@ -86,7 +128,7 @@ function closeMenu(){document.querySelector('#secondaryNav').classList.add('hidd
 function toggleMenu(){const nav=$('#secondaryNav'),show=nav.classList.contains('hidden');nav.classList.toggle('hidden',!show);$('#settingsBtn').setAttribute('aria-expanded',String(show));if(show)drawer.classList.add('hidden')}
 async function openView(name){closeMenu();document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.dataset.view===name));if(name==='talk'){drawer.classList.add('hidden');return}drawer.classList.remove('hidden');
  if(name==='movimento'){renderMotionPanel(drawer,{onMove:routine=>{renderer.clearMotion();return renderer.enqueueMotion({routine,source:'user'})},onStop:()=>renderer.clearMotion(),onReset:()=>renderer.resetMotion(),status:()=>renderer.motionStatus(),backend:renderer.backend});}
- if(name==='history'){const d=await (await fetch('/api/history?limit=160')).json();drawer.innerHTML=`<h2>Cronologia</h2>${d.turns.map(t=>`<article class="turn ${esc(t.role)}"><small>${esc(t.role)}</small><p>${esc(t.text)}</p></article>`).join('')||'<p class="muted">Ancora nessuna conversazione.</p>'}`}
+ if(name==='history'){drawer.classList.add('hidden');textChat?.openHistory();return}
  if(name==='memory'){const d=await (await fetch('/api/memories')).json();drawer.innerHTML=`<h2>Memoria</h2><form id="memoryForm"><input id="memoryText" maxlength="4000" placeholder="Ricordati che…"><button class="primary">Aggiungi</button></form>${d.memories.map(m=>`<div class="memory"><div>${esc(m.text)}</div><button data-del="${m.id}">dimentica</button></div>`).join('')}`;$('#memoryForm').onsubmit=async e=>{e.preventDefault();const text=$('#memoryText').value.trim();if(text){await fetch('/api/memories',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({text})});openView('memory')}};drawer.querySelectorAll('[data-del]').forEach(b=>b.onclick=async()=>{await fetch(`/api/memories/${b.dataset.del}`,{method:'DELETE'});openView('memory')})}
  if(name==='studio'){
    if(localMode())drawer.innerHTML='<h2>Lingua</h2><p class="muted">Motore locale attivo. Il testo viene elaborato sul computer, senza fallback OpenAI.</p><p class="muted">Per scegliere OpenAI riavvia Teddy con <code>TEDDY_PROVIDER=openai</code>.</p>';
@@ -98,4 +140,4 @@ async function openView(name){closeMenu();document.querySelectorAll('nav button'
  const closer=document.createElement('button');closer.id='closeDrawer';closer.type='button';closer.className='drawer-close';closer.textContent='Chiudi';closer.onclick=()=>openView('talk');drawer.prepend(closer);
 }
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>openView(b.dataset.view));$('#settingsBtn').onclick=toggleMenu;
-document.addEventListener('keydown',event=>{if(event.key!=='Escape')return;if(!onboarding.classList.contains('hidden'))onboarding.classList.add('hidden');else if(!notice.classList.contains('hidden'))hideConnectionNotice();else if(!$('#secondaryNav').classList.contains('hidden'))closeMenu();else if(!drawer.classList.contains('hidden'))openView('talk')});
+document.addEventListener('keydown',event=>{if(event.key!=='Escape')return;if(!onboarding.classList.contains('hidden'))onboarding.classList.add('hidden');else if(!notice.classList.contains('hidden'))hideConnectionNotice();else if(!$('#secondaryNav').classList.contains('hidden'))closeMenu();else if(!runtimeEls.panel.classList.contains('hidden'))closeModelDetails({focus:true});else if(!drawer.classList.contains('hidden'))openView('talk')});

@@ -9,3 +9,5 @@
 .install-panel details summary:focus-visible{outline:2px solid #f7d7b7}
 .install-panel .artifact-list{padding-top:7px}
 @media(max-width:560px){.install-panel{top:100px;left:12px;max-height:55vh}}
+
+.runtime-facts{font-size:10px;line-height:1.45;color:#e3c9af;overflow-wrap:anywhere;border-top:1px solid #ffffff12;padding-top:7px}
