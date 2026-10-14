@@ -57,7 +57,7 @@ try{
     `--user-data-dir=${dir}`,'about:blank'],{stdio:['ignore','ignore','pipe']});
   proc.stderr.on('data',b=>{log+=String(b).slice(-1500);if(log.length>3500)log=log.slice(-3500)});
   const portFile=path.join(dir,'DevToolsActivePort');
-  for(let i=0;i<140&&!fs.existsSync(portFile);i++){
+  for(let i=0;i<400&&!fs.existsSync(portFile);i++){
     if(proc.exitCode!==null)throw Error('Chrome exited before CDP: '+proc.exitCode+' '+log);
     await sleep(80);
   }
