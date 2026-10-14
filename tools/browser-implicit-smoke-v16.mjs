@@ -74,6 +74,7 @@ try{
   `});
   await cdp.send('Page.navigate',{url:`http://127.0.0.1:${sitePort}/`});
   const capabilityProbe=process.argv.includes('--probe-capability');
+  const activationProbe=process.argv.includes('--probe-activation');
   const expression=capabilityProbe?`(async()=>{
     let context=null;
     for(let i=0;i<50&&!context;i++){
@@ -81,6 +82,13 @@ try{
       if(!context)await new Promise(r=>setTimeout(r,100));
     }
     return {success:!!context,backend:context?'webgl2':'unavailable',capabilityProbe:true};
+  })()`:activationProbe?`(async()=>{
+    const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+    for(let i=0;i<200&&!window.__teddySkinV16;i++)await sleep(70);
+    const skin=window.__teddySkinV16;
+    return {success:!!skin?.active&&skin?.components===1&&skin?.openEdges===0,
+      active:!!skin?.active,skin,hasNav:!!document.querySelector('button[data-view="movimento"]')?.onclick,
+      webgl2:!!document.createElement('canvas').getContext('webgl2')};
   })()`:`(async()=>{
     const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
     for(let i=0;i<220;i++){
@@ -111,7 +119,7 @@ try{
   if(result.exceptionDetails)throw Error('Browser JavaScript exception: '+result.exceptionDetails.text);
   const value=result.result?.value;
   if(!value?.success)throw Error('Teddy WebGL2 fused skin not visibly working: '+JSON.stringify(value));
-  console.log(capabilityProbe?'TEDDY_WEBGL2_CAPABILITY_PASS':'TEDDY_BROWSER_WATERTIGHT_SKIN_PASS',JSON.stringify(value));
+  console.log(capabilityProbe?'TEDDY_WEBGL2_CAPABILITY_PASS':activationProbe?'TEDDY_WEBGL2_SKIN_ACTIVATION_PASS':'TEDDY_BROWSER_WATERTIGHT_SKIN_PASS',JSON.stringify(value));
 }finally{
   cdp?.ws?.close();
   proc?.kill('SIGKILL');

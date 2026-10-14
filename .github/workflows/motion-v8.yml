@@ -72,6 +72,8 @@ jobs:
         run: node tools/mutate-implicit-v16.mjs
       - name: require actual WebGL2 SwiftShader capability in headless Chrome
         run: node tools/browser-implicit-smoke-v16.mjs --probe-capability
+      - name: prove fused skin initialization and watertight topology in real Chrome
+        run: node tools/browser-implicit-smoke-v16.mjs --probe-activation
       - name: prove real WebGL2 welded skin under production CSP
         run: node tools/browser-implicit-smoke-v16.mjs
       - name: mutate 100 million semantic kinematic parameters
