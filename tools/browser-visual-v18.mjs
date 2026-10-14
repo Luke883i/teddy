@@ -172,21 +172,38 @@ try{
     // V20 regression pose: both arms elevated, reproducing the user-reported
     // accordion geometry more directly than the asymmetrical Lightning Bolt.
     const raised=await cdp.send('Runtime.evaluate',{expression:`(async()=>{
-      document.querySelector('.motion-tabs button:nth-child(1)')?.click();
+      const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+      const frames=[];
+      window.addEventListener('teddy:motion-frame',e=>{
+        if(e.detail?.routine?.name==='victory')frames.push(e.detail.routine.phase);
+      });
+      const tab=document.querySelector('.motion-tabs button:nth-child(1)');
+      if(!tab)throw Error('Base motion tab missing during Victory regression');
+      tab.click();
       const key=document.querySelector('button[data-routine="victory"]');
-      if(!key)throw Error('Victory raised-arms UI control missing');
+      if(!key)throw Error('Victory raised-arms UI control missing after Base tab selection');
       key.click();
-      await new Promise(r=>setTimeout(r,790));
-      const q=window.__teddySeamQuality;
-      return {clicked:true,seam:q};
+      for(let i=0;i<100&&frames.length<8;i++)await wait(90);
+      const quality=window.__teddySeamQuality;
+      return {clicked:true,frames:frames.length,phases:frames.slice(-8),
+        feedback:document.querySelector('#motionFeedback')?.textContent||'',
+        seam:quality};
     })()`,awaitPromise:true,returnByValue:true});
-    if(raised.exceptionDetails)throw Error('Raised-arms browser exception: '+raised.exceptionDetails.text);
+    if(raised.exceptionDetails)throw Error('Raised-arms browser exception: '+JSON.stringify(raised.exceptionDetails));
     const raisedState=raised.result?.value;
-    if(!raisedState?.clicked||(skin.mode!=='anatomical-islands'&&(!raisedState.seam?.finite||raisedState.seam.after>raisedState.seam.before)))
-      throw Error('Raised-arms seam regression: '+JSON.stringify(raisedState));
-    const raisedFrame=await cdp.send('Page.captureScreenshot',{format:'png',clip:value.clip,captureBeyondViewport:false});
+    if(!raisedState?.clicked||raisedState.frames<5||
+      (skin.mode!=='anatomical-islands'&&(!raisedState.seam?.finite||raisedState.seam.after>raisedState.seam.before)))
+      throw Error('Raised-arms runtime motion not proven: '+JSON.stringify(raisedState));
+    // Capture the *composited* frame after observing actual named Victory frames;
+    // a fixed 790ms wall-clock delay can pass before SwiftShader draws the pose.
+    let raisedFrame=await cdp.send('Page.captureScreenshot',{format:'png',clip:value.clip,captureBeyondViewport:false});
+    for(let i=0;i<12&&raisedFrame.data===third.data;i++){
+      await sleep(140);
+      raisedFrame=await cdp.send('Page.captureScreenshot',{format:'png',clip:value.clip,captureBeyondViewport:false});
+    }
     fs.writeFileSync(path.join(evidenceDir,'victory-raised-arms.png'),Buffer.from(raisedFrame.data,'base64'));
-    if(raisedFrame.data===third.data)throw Error('Raised-arms gesture rendered no visible change');
+    if(raisedFrame.data===third.data)
+      throw Error('Victory had '+raisedState.frames+' real motion frames but no new compositor image: '+JSON.stringify(raisedState));
     value.raisedArms={pixelsChanged:true,seam:raisedState.seam};
     }
     }
