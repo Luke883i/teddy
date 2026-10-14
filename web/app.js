@@ -12,6 +12,24 @@ const notice=$('#connectionNotice'),noticeTitle=$('#connectionTitle'),noticeBody
 let boot,config,rt=null,conversationId=null,busy=false,localAbort=null,lastConnectionProblem=null,lastLocalMetrics=null,availability=null,turnGeneration=0,runtimeRetryBusy=false;
 try{const r=await fetch('/api/bootstrap');if(!r.ok)throw Error(`bootstrap ${r.status}`);boot=await r.json();config=boot.config;availability=boot.availability||null}catch(e){$('#health').textContent='offline';stateText.textContent='server non disponibile';throw e}
 const renderer=new TeddyRenderer($('#scene'),config);renderer.start();
+const visualBadge=$('#visualBackend');
+let latestVisualQuality=null;
+function updateVisualBadge(){
+  const info=renderer.implicitSkinStatus?.()||null;
+  const fallback=renderer.backend!=='webgl2'||!!info?.fallbackReason;
+  const label=renderer.backend==='canvas2d'?'Canvas2D · ripiego':
+    info?.fallbackReason?'WebGL2 · ripiego':
+    info?.active?'WebGL2 · mesh fusa':'WebGL2 · preparazione';
+  visualBadge.textContent=label;
+  visualBadge.dataset.degraded=String(fallback);
+  visualBadge.title=info?.fallbackReason?'Fallback geometrico: '+info.fallbackReason:
+    info?.active?'Superficie pelosa watertight attiva':'Rendering '+renderer.backend;
+}
+window.addEventListener('teddy:implicit-skin-ready',updateVisualBadge);
+window.addEventListener('teddy:implicit-skin-error',updateVisualBadge);
+window.addEventListener('teddy:visual-quality',e=>{latestVisualQuality=e.detail});
+updateVisualBadge();
+
 const furBtn=$('#furBtn');
 function updateFurControl(){const enabled=furEnabled(config.appearance);furBtn.textContent=furLabel(enabled);furBtn.setAttribute('aria-pressed',String(enabled));furBtn.setAttribute('aria-label',enabled?'Disattiva pelliccia':'Attiva pelliccia');}
 updateFurControl();
@@ -65,6 +83,6 @@ async function openView(name){document.querySelectorAll('nav button').forEach(b=
  if(name==='history'){const d=await (await fetch('/api/history?limit=160')).json();drawer.innerHTML=`<h2>Cronologia</h2>${d.turns.map(t=>`<article class="turn ${esc(t.role)}"><small>${esc(t.role)}</small><p>${esc(t.text)}</p></article>`).join('')||'<p class="muted">Ancora nessuna conversazione.</p>'}`}
  if(name==='memory'){const d=await (await fetch('/api/memories')).json();drawer.innerHTML=`<h2>Memoria</h2><form id="memoryForm"><input id="memoryText" maxlength="4000" placeholder="Ricordati che…"><button class="primary">Aggiungi</button></form>${d.memories.map(m=>`<div class="memory"><div>${esc(m.text)}</div><button data-del="${m.id}">dimentica</button></div>`).join('')}`;$('#memoryForm').onsubmit=async e=>{e.preventDefault();const text=$('#memoryText').value.trim();if(text){await fetch('/api/memories',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({text})});openView('memory')}};drawer.querySelectorAll('[data-del]').forEach(b=>b.onclick=async()=>{await fetch(`/api/memories/${b.dataset.del}`,{method:'DELETE'});openView('memory')})}
  if(name==='studio'){drawer.innerHTML=`<h2>Studio</h2><p class="muted">Il provider predefinito è locale. OpenAI è opzionale e non viene mai usato come fallback.</p><p class="muted">Per usare il cloud avvia Teddy con <code>TEDDY_PROVIDER=openai</code>.</p><div class="buttonline"><button id="replaceKey">Configura OpenAI</button></div>`;$('#replaceKey').onclick=()=>showKeyDialog(true)}
- if(name==='diagnostics'){await refreshAvailability();drawer.innerHTML=`<h2>Diagnostica</h2><div class="diagnostic">${esc(JSON.stringify({provider:boot.ai,availability,secret:{configured:boot.secret.configured},persistence:boot.persistence,realtime:boot.realtime,lastProblem:lastConnectionProblem,lastLocalMetrics,renderer:renderer.backend,motion:renderer.motionStatus?.()},null,2))}</div>`}
+ if(name==='diagnostics'){await refreshAvailability();drawer.innerHTML=`<h2>Diagnostica</h2><div class="diagnostic">${esc(JSON.stringify({provider:boot.ai,availability,secret:{configured:boot.secret.configured},persistence:boot.persistence,realtime:boot.realtime,lastProblem:lastConnectionProblem,lastLocalMetrics,renderer:renderer.backend,visualSkin:renderer.implicitSkinStatus?.(),visualQuality:latestVisualQuality,motion:renderer.motionStatus?.()},null,2))}</div>`}
 }
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>openView(b.dataset.view));$('#settingsBtn').onclick=()=>openView('studio');

@@ -18,3 +18,10 @@ header .icon{margin-left:0}
 
 .motion-reset{background:#ecd9bd!important;color:#30251b!important;border-color:#f7e4ce!important;font-weight:750!important}
 .motion-reset:focus-visible{outline:3px solid #ffc68e;outline-offset:3px}
+
+/* V18 portrait safe area: operational messages never cross Teddy's head. */
+.status{left:18px;top:70px;transform:none;text-align:left;max-width:min(210px,38vw);background:#171618ca;border:1px solid #ffffff19;border-radius:12px;padding:9px 11px;font-size:10px;letter-spacing:.045em;text-shadow:none;backdrop-filter:blur(10px)}
+.status #meter{width:min(132px,100%);margin:6px 0 0}
+.visual-backend{font-size:10px;letter-spacing:.035em;color:#e6dacd;background:#ffffff12;border:1px solid #ffffff20;border-radius:999px;padding:5px 9px;white-space:nowrap}
+.visual-backend[data-degraded="true"]{color:#ffcca6;border-color:#f6a86d80}
+@media(max-width:760px){.status{top:62px;left:12px;max-width:min(160px,40vw);font-size:9px;padding:7px 9px}.visual-backend{font-size:9px;padding:4px 6px}}
