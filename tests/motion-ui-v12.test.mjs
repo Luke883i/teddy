@@ -82,9 +82,10 @@ test('production HTML, script, persistence and fallback share one runtime toggli
   assert.match(html,/id="furBtn"/);assert.match(html,/data-view="movimento"/);
   assert.match(app,/renderMotionPanel\(drawer/);assert.match(app,/renderer\.enqueueMotion/);
   assert.match(app,/fetch\('\/api\/config',\{method:'PUT'/);assert.match(app,/renderer\.setConfig\(config\)/);
-  assert.match(shader,/uniform vec3 uFiberScale/);assert.match(shader,/vLocal=aPos\*uFiberScale/);
+  assert.match(shader,/uniform vec3 uFiberScale/);assert.match(shader,/vLocal=mix\(aPos,aRest,uSkinned\)\*uFiberScale/);
   assert.match(shader,/fur&&this\.furEnabled\?0\.82:0/);
-  assert.match(shader,/gl\.disable\(gl\.BLEND\);gl\.depthMask\(true\);for\(const part/);
+  assert.match(shader,/gl\.disable\(gl\.BLEND\);gl\.depthMask\(true\);const welded=/);
+  assert.match(shader,/if\(welded&&part\.material==='fur'\)continue/);
   assert.match(fallback,/renderer\.furEnabled&&fill===fur/);
   assert.match(css,/\.motion-grid/);assert.match(css,/\.fur-toggle/);
 });
