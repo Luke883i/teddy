@@ -20,7 +20,7 @@ function updateVisualBadge(){
   const fallback=renderer.backend!=='webgl2'||!!info?.fallbackReason;
   const label=renderer.backend==='canvas2d'?'Canvas2D · ripiego':
     info?.fallbackReason?'WebGL2 · ripiego':
-    info?.active?'WebGL2 · mesh fusa':'WebGL2 · preparazione';
+    info?.active?(info.mode==='anatomical-pelt-v21'?'WebGL2 · anatomia articolata':'WebGL2 · mesh fusa'):'WebGL2 · preparazione';
   visualBadge.textContent=label;
   visualBadge.dataset.degraded=String(fallback);
   visualBadge.title=info?.fallbackReason?'Fallback geometrico: '+info.fallbackReason:
