@@ -111,8 +111,8 @@ try{
     nav.click();
     await sleep(180);
     const rect=document.querySelector('#scene').getBoundingClientRect();
-    const clip={x:Math.round(rect.left+rect.width*.25),y:Math.round(rect.top+rect.height*.20),
-      width:Math.round(rect.width*.50),height:Math.round(rect.height*.62),scale:1};
+    const clip={x:Math.round(rect.left+rect.width*.08),y:Math.round(rect.top+rect.height*.02),
+      width:Math.round(rect.width*.84),height:Math.round(rect.height*.94),scale:1};
     return {success:true,backend:'webgl2',skin,clip};
   })()`;
   const result=await Promise.race([
