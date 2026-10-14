@@ -89,7 +89,7 @@ try{
     const sleep=ms=>new Promise(r=>setTimeout(r,ms));
     for(let i=0;i<200&&!window.__teddySkinV16;i++)await sleep(70);
     const skin=window.__teddySkinV16;
-    return {success:!!skin?.active&&skin?.components===1&&skin?.openEdges===0,
+    return {success:!!skin?.active&&skin?.openEdges===0&&(skin.mode==='anatomical-islands'?(skin.components===3&&skin.noCrossArmTriangles):skin.components===1),
       active:!!skin?.active,skin,hasNav:!!document.querySelector('button[data-view="movimento"]')?.onclick,
       webgl2:!!document.createElement('canvas').getContext('webgl2')};
   })()`:`(async()=>{

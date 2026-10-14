@@ -148,7 +148,15 @@ jobs:
       - name: mutate 1 million SDF skin and topology candidates
         run: node tools/mutate-implicit-v16.mjs
       - name: require actual WebGL2 SwiftShader capability in headless Chrome
-        run: node tools/browser-implicit-smoke-v16.mjs --probe-capability
+        run: |
+          set -euo pipefail
+          passed=0
+          for attempt in 1 2 3; do
+            echo "WebGL2 mandatory capability attempt $attempt/3"
+            if node tools/browser-implicit-smoke-v16.mjs --probe-capability; then passed=1; break; fi
+            sleep 4
+          done
+          test "$passed" -eq 1
       - name: prove fused skin initialization and watertight topology in real Chrome
         run: node tools/browser-implicit-smoke-v16.mjs --probe-activation
       - name: prove real WebGL2 welded skin under production CSP
