@@ -5,6 +5,7 @@ on:
     branches: [main]
 permissions:
   contents: read
+  issues: write
 jobs:
   chat:
     runs-on: ubuntu-latest
@@ -22,6 +23,13 @@ jobs:
         run: |
           set -o pipefail
           node tools/browser-text-v17.mjs --desktop 2>&1 | tee /tmp/teddy-chat-desktop.log || { echo "::error title=Teddy desktop DOM proof::$(tail -c 900 /tmp/teddy-chat-desktop.log | tr '\n' ' ')"; exit 1; }
+      - name: Report browser desktop failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tail -c 2300 /tmp/teddy-chat-desktop.log > /tmp/teddy-chat-diagnostic.txt
+          gh issue comment ${{ github.event.pull_request.number }} --repo "$GITHUB_REPOSITORY" --body-file /tmp/teddy-chat-diagnostic.txt
       - name: Actual Chromium mobile UI
         run: |
           set -o pipefail
