@@ -1,0 +1,54 @@
+name: text-real-model-v20
+on:
+  pull_request:
+    paths:
+      - 'server/lib/runtime-manager.mjs'
+      - 'server/lib/local-service.mjs'
+      - 'tools/prove-real-text-v20.mjs'
+      - '.github/workflows/text-real-model-v20.yml'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'server/lib/runtime-manager.mjs'
+      - 'tools/prove-real-text-v20.mjs'
+permissions:
+  contents: read
+  issues: write
+concurrency:
+  group: teddy-real-text-v20-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  genuine-gguf:
+    name: real Qwen GGUF / install + offline replay + text HTTP
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 24.19.0
+      - name: install dependencies
+        run: npm ci --ignore-scripts
+      - name: install authentic model, generate replies and prove networkless restart
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node tools/prove-real-text-v20.mjs
+      - name: publish bounded failure diagnosis on PR
+        if: ${{ failure() && github.event_name == 'pull_request' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if test -f "$RUNNER_TEMP/teddy-real-text-v20-proof.json"; then
+            { echo '### Authentic GGUF E2E failure'; echo; echo '~~~json'; head -c 4200 "$RUNNER_TEMP/teddy-real-text-v20-proof.json"; echo; echo '~~~'; } > "$RUNNER_TEMP/teddy-gguf-pr-comment.md"
+            gh issue comment "${{ github.event.pull_request.number }}" --repo "$GITHUB_REPOSITORY" --body-file "$RUNNER_TEMP/teddy-gguf-pr-comment.md"
+          fi
+      - name: upload proof manifest without model weights
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: teddy-genuine-text-v20
+          path: ${{ runner.temp }}/teddy-real-text-v20-proof.json
+          if-no-files-found: ignore
