@@ -45,7 +45,7 @@ async function portListening(port,{host='127.0.0.1',timeoutMs=180}={}){return aw
 async function terminateChild(child,{graceMs=900}={}){if(!child||child.exitCode!=null)return;const active=terminationPromises.get(child);if(active)return active;const task=new Promise(resolve=>{let settled=false,exited=false,timer;const done=()=>{if(settled)return;settled=true;clearTimeout(timer);resolve()},onExit=()=>{exited=true;done()};child.once?.('exit',onExit);try{child.kill('SIGTERM')}catch{return done()}timer=setTimeout(()=>{if(!exited){try{child.kill('SIGKILL')}catch{}}done()},graceMs)});terminationPromises.set(child,task);try{await task}finally{terminationPromises.delete(child)}}
 function validRuntimeConfig(cfg,{textOnly=false}={}){const port=Number(cfg?.llama?.port);const llama=Boolean(cfg&&typeof cfg.llama?.executable==='string'&&cfg.llama.executable&&typeof cfg.llama?.model==='string'&&cfg.llama.model&&Number.isInteger(port)&&port>=1&&port<=65535);return llama&&(textOnly||Boolean(typeof cfg.engines?.asrCommand==='string'&&cfg.engines.asrCommand&&Array.isArray(cfg.engines?.asrArgs)&&typeof cfg.engines?.ttsCommand==='string'&&cfg.engines.ttsCommand&&Array.isArray(cfg.engines?.ttsArgs)))}
 
-export function createRuntimeManager({home,env=process.env,fetchImpl=fetch,spawnImpl=spawn,modelSha256=QWEN_SHA256}={}){
+export function createRuntimeManager({home,env=process.env,fetchImpl=fetch,spawnImpl=spawn,modelSha256=QWEN_SHA256,modelBytes=QWEN_BYTES}={}){
   const root=path.join(home,'runtime'),generations=path.join(root,'generations'),staging=path.join(root,'staging'),pointer=path.join(root,'current.json'),statusFile=path.join(root,'install-state.json'),catalogCache=path.join(root,'catalog-cache.json');
   const external=Boolean(env.TEDDY_ASR_COMMAND&&env.TEDDY_TTS_COMMAND);
   const textOnly=env.TEDDY_TEXT_ONLY==='1';
@@ -74,7 +74,8 @@ export function createRuntimeManager({home,env=process.env,fetchImpl=fetch,spawn
     // No X-Linked-ETag: for Xet-backed files it identifies the Xet object,
     // which is not the SHA-256 digest of the downloaded GGUF bytes.
     if(!/^[0-9a-f]{64}$/i.test(modelSha256))throw Object.assign(new Error('artifact_digest_unavailable'),{code:'artifact_digest_unavailable',stage:'verify'});
-    return {source:QWEN_URL,totalBytes:QWEN_BYTES,sha256:modelSha256.toLowerCase(),name:QWEN_MODEL};
+    if(!Number.isSafeInteger(modelBytes)||modelBytes<1||modelBytes>5_000_000_000)throw Object.assign(new Error('artifact_size_invalid'),{code:'artifact_size_invalid',stage:'verify'});
+    return {source:QWEN_URL,totalBytes:modelBytes,sha256:modelSha256.toLowerCase(),name:QWEN_MODEL};
   }
   async function download(a,dest){
     await withRetry(async()=>{

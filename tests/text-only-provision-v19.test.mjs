@@ -49,7 +49,7 @@ test('text-only managed install, promoted GGUF paths, actual loopback HTTP and n
  };
  let runtime,offline;
  try{
-   runtime=createRuntimeManager({home,env,fetchImpl,modelSha256:ggufHash});
+   runtime=createRuntimeManager({home,env,fetchImpl,modelSha256:ggufHash,modelBytes:gguf.length});
    const installed=await runtime.start();
    assert.equal(installed.ready,true,JSON.stringify(installed.lastProblem));
    assert.equal(installed.textReady,true);assert.equal(installed.mode,'text');
