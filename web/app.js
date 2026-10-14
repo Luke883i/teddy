@@ -20,11 +20,11 @@ function updateVisualBadge(){
   const fallback=renderer.backend!=='webgl2'||!!info?.fallbackReason;
   const label=renderer.backend==='canvas2d'?'Canvas2D · ripiego':
     info?.fallbackReason?'WebGL2 · ripiego':
-    info?.active?'WebGL2 · mesh fusa':'WebGL2 · preparazione';
+    info?.active?(info.mode==='anatomical-islands'?'WebGL2 · pelliccia anatomica':'WebGL2 · mesh fusa'):'WebGL2 · preparazione';
   visualBadge.textContent=label;
   visualBadge.dataset.degraded=String(fallback);
   visualBadge.title=info?.fallbackReason?'Fallback geometrico: '+info.fallbackReason:
-    info?.active?'Superficie pelosa watertight attiva':'Rendering '+renderer.backend;
+    info?.active?(info.mode==='anatomical-islands'?'Tre superfici opache watertight, senza membrana fra braccia e busto':'Superficie pelosa watertight attiva'):'Rendering '+renderer.backend;
 }
 window.addEventListener('teddy:implicit-skin-ready',updateVisualBadge);
 window.addEventListener('teddy:implicit-skin-error',updateVisualBadge);

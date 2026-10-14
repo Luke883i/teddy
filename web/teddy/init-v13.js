@@ -8,6 +8,7 @@ import {installMotionTelemetryBridge} from './motion-wire-v8.js';
 import {installWorldScene} from './world-v8.js';
 import {installImplicitSkinV16} from './implicit-runtime-v16.js';
 import {installFacialV17} from './facial-runtime-v17.js';
+import {installPlushV21} from './plush-islands-v21.js';
 
 installCinematicV11();
 installTeddyRefinement();
@@ -17,6 +18,7 @@ installMotionTelemetryBridge();
 installWorldScene();
 installImplicitSkinV16();
 installFacialV17();
+installPlushV21();
 
 // Only mount the application after motion methods and the live render path exist.
 await import('../app.js');

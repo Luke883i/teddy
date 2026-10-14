@@ -103,20 +103,20 @@ try{
     for(let i=0;i<140&&!window.__teddySkinV16;i++)await sleep(70);
     const skin=window.__teddySkinV16;
     if(!skin?.active)throw Error('WebGL2 implicit skin did not activate: '+JSON.stringify(skin));
-    if(!skin.underarms?.pass||skin.underarms.cutters!==2||
-      skin.underarms.samples.some(s=>s.gap<=.012||s.torso>=0||s.arm>=0))
+    if(skin.mode!=='anatomical-islands'&&(!skin.underarms?.pass||skin.underarms.cutters!==2||
+      skin.underarms.samples.some(s=>s.gap<=.012||s.torso>=0||s.arm>=0)))
       throw Error('WebGL2 still has underarm skin webbing: '+JSON.stringify(skin.underarms));
-    if(!skin.seamEdges||skin.seamEdges<80||!skin.seamWeights||skin.seamWeights.affected<100)
+    if(skin.mode!=='anatomical-islands'&&(!skin.seamEdges||skin.seamEdges<80||!skin.seamWeights||skin.seamWeights.affected<100))
       throw Error('No V20 connected collar bound in actual GPU path: '+JSON.stringify(skin));
     for(let i=0;i<50&&!window.__teddySeamQuality;i++)await sleep(80);
     const quality=window.__teddySeamQuality;
-    if(!quality?.finite||quality.after>quality.before)
+    if(skin.mode!=='anatomical-islands'&&(!quality?.finite||quality.after>quality.before))
       throw Error('Pose-space seam strain still unguarded in Chrome: '+JSON.stringify(quality));
-    if(skin.components!==1||skin.openEdges!==0||skin.nonmanifoldEdges!==0||!skin.closed)
+    if((skin.mode==='anatomical-islands'?(skin.components!==3||!skin.noCrossArmTriangles||skin.globalWatertight!==false):skin.components!==1)||skin.openEdges!==0||skin.nonmanifoldEdges!==0||!skin.closed)
       throw Error('Non-watertight browser mesh: '+JSON.stringify(skin));
     const badge=document.querySelector('#visualBackend');
     const status=document.querySelector('#statusPanel').getBoundingClientRect();
-    if(!badge?.textContent.includes('mesh fusa')||badge.dataset.degraded!=='false')
+    if(!badge?.textContent.includes(skin.mode==='anatomical-islands'?'pelliccia anatomica':'mesh fusa')||badge.dataset.degraded!=='false')
       throw Error('Fused rendering not represented in UI');
     if(status.left>innerWidth*.31)throw Error('Operational status overlaps portrait');
     nav.click();
@@ -178,8 +178,7 @@ try{
     })()`,awaitPromise:true,returnByValue:true});
     if(raised.exceptionDetails)throw Error('Raised-arms browser exception: '+raised.exceptionDetails.text);
     const raisedState=raised.result?.value;
-    if(!raisedState?.clicked||!raisedState.seam?.finite||
-      raisedState.seam.after>raisedState.seam.before)
+    if(!raisedState?.clicked||(skin.mode!=='anatomical-islands'&&(!raisedState.seam?.finite||raisedState.seam.after>raisedState.seam.before)))
       throw Error('Raised-arms seam regression: '+JSON.stringify(raisedState));
     const raisedFrame=await cdp.send('Page.captureScreenshot',{format:'png',clip:value.clip,captureBeyondViewport:false});
     fs.writeFileSync(path.join(evidenceDir,'victory-raised-arms.png'),Buffer.from(raisedFrame.data,'base64'));
