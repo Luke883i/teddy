@@ -28,6 +28,8 @@ jobs:
           node --check web/teddy/motion-engine.js
           node --check web/teddy/choreography-v12.js
           node --check web/teddy/expressive-v14.js
+          node --check web/teddy/implicit-skin-v16.js
+          node --check web/teddy/implicit-runtime-v16.js
           node --check web/teddy/motion-dynamics-v15.js
           node --check web/teddy/silhouette-v15.js
           node --check web/teddy/motion-falsifiers-v15.js
@@ -44,6 +46,8 @@ jobs:
           node --check web/local.js
       - name: test 32 character dynamics and moving-joint silhouette
         run: node --test tests/motion-silhouette-v15.test.mjs
+      - name: prove watertight unified Teddy mesh and animated GPU binding
+        run: node --test tests/implicit-skin-v16.test.mjs
       - name: test expressive 32-profile movement and reset
         run: node --test tests/expressive-v14.test.mjs
       - name: test Canvas2D project and paint
@@ -64,6 +68,10 @@ jobs:
         run: node tools/browser-motion-smoke-v13.mjs
       - name: falsify 50m local-intermediate-global motion mutations
         run: node tools/mutate-motion-v15.mjs
+      - name: mutate 1 million SDF skin and topology candidates
+        run: node tools/mutate-implicit-v16.mjs
+      - name: prove real WebGL2 welded skin under production CSP
+        run: node tools/browser-implicit-smoke-v16.mjs
       - name: mutate 100 million semantic kinematic parameters
         run: node tools/mutate-expressive-v14.mjs
       - name: saturate 1m movement scenarios
