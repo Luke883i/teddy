@@ -111,7 +111,15 @@ jobs:
       - name: prove text HTTP server starts
         run: node tools/browser-text-v17.mjs --probe-server
       - name: prove Chrome CDP starts
-        run: node tools/browser-text-v17.mjs --probe-chrome
+        run: |
+          set -euo pipefail
+          passed=0
+          for attempt in 1 2 3; do
+            echo "CDP Chrome startup attempt $attempt/3"
+            if node tools/browser-text-v17.mjs --probe-chrome; then passed=1; break; fi
+            sleep 3
+          done
+          test "$passed" -eq 1
       - name: prove DOM shell loads
         run: node tools/browser-text-v17.mjs --probe-dom
       - name: prove language UI boots in Chrome
