@@ -49,7 +49,7 @@ test('text-only managed install, promoted GGUF paths, actual loopback HTTP and n
  };
  let runtime,offline;
  try{
-   runtime=createRuntimeManager({home,env,fetchImpl});
+   runtime=createRuntimeManager({home,env,fetchImpl,modelSha256:ggufHash});
    const installed=await runtime.start();
    assert.equal(installed.ready,true,JSON.stringify(installed.lastProblem));
    assert.equal(installed.textReady,true);assert.equal(installed.mode,'text');
@@ -65,10 +65,10 @@ test('text-only managed install, promoted GGUF paths, actual loopback HTTP and n
    const service=createLocalService({runtime,env,contextProvider:()=>({turns:[],memories:[]})});
    const answer=await service.text('Teddy funziona?',{context:{turns:[],memories:[]}});
    assert.match(answer,/Ciao dal processo locale: Teddy funziona/);
-   assert.ok(network>=4);
+   assert.ok(network>=3);
    runtime.stop();await waitClosed(port);
    const prohibited=async(url,options)=>{if(String(url).startsWith('http://127.0.0.1:'))return fetch(url,options);throw Error('network forbidden after install')};
-   offline=createRuntimeManager({home,env:{...env,TEDDY_RUNTIME_AUTOINSTALL:'0'},fetchImpl:prohibited});
+   offline=createRuntimeManager({home,env:{...env,TEDDY_RUNTIME_AUTOINSTALL:'0'},fetchImpl:prohibited,modelSha256:ggufHash});
    const restarted=await offline.start();
    assert.equal(restarted.textReady,true);assert.equal(restarted.ready,true);
    assert.match(await createLocalService({runtime:offline,env}).text('Senza rete?',{context:{turns:[],memories:[]}}),/Senza rete/);

@@ -14,7 +14,13 @@ const LLAMA_BUILD='b10218';
 const ASR_MODEL='sherpa-onnx-whisper-tiny.tar.bz2';
 const TTS_MODEL='vits-piper-it_IT-riccardo-x_low.tar.bz2';
 const QWEN_MODEL='Qwen3-0.6B.Q4_K_M.gguf';
-const QWEN_URL=`https://huggingface.co/QuantFactory/Qwen3-0.6B-GGUF/resolve/main/${QWEN_MODEL}?download=true`;
+const QWEN_REVISION='898fbebea59d00726d5c94f820cca987ebe29c42';
+// Hugging Face Xet hash (f2d64232...) is NOT the SHA-256 of downloaded model bytes.
+// The SHA-256 below is the independently published content digest for this immutable revision.
+export const QWEN_SHA256='7af3fdf842f87b24672f8a7f1dd50404043f0bfb71093ff91c31d2b49df4631d';
+export const QWEN_XET_HASH='f2d64232ac541e4a2af362e99dcfff05e3a1fb31d1ef09827fcdaa443c3ee273';
+const QWEN_BYTES=484220000;
+const QWEN_URL=`https://huggingface.co/QuantFactory/Qwen3-0.6B-GGUF/resolve/${QWEN_REVISION}/${QWEN_MODEL}?download=true`;
 const now=()=>new Date().toISOString();
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const terminationPromises=new WeakMap();
@@ -39,7 +45,7 @@ async function portListening(port,{host='127.0.0.1',timeoutMs=180}={}){return aw
 async function terminateChild(child,{graceMs=900}={}){if(!child||child.exitCode!=null)return;const active=terminationPromises.get(child);if(active)return active;const task=new Promise(resolve=>{let settled=false,exited=false,timer;const done=()=>{if(settled)return;settled=true;clearTimeout(timer);resolve()},onExit=()=>{exited=true;done()};child.once?.('exit',onExit);try{child.kill('SIGTERM')}catch{return done()}timer=setTimeout(()=>{if(!exited){try{child.kill('SIGKILL')}catch{}}done()},graceMs)});terminationPromises.set(child,task);try{await task}finally{terminationPromises.delete(child)}}
 function validRuntimeConfig(cfg,{textOnly=false}={}){const port=Number(cfg?.llama?.port);const llama=Boolean(cfg&&typeof cfg.llama?.executable==='string'&&cfg.llama.executable&&typeof cfg.llama?.model==='string'&&cfg.llama.model&&Number.isInteger(port)&&port>=1&&port<=65535);return llama&&(textOnly||Boolean(typeof cfg.engines?.asrCommand==='string'&&cfg.engines.asrCommand&&Array.isArray(cfg.engines?.asrArgs)&&typeof cfg.engines?.ttsCommand==='string'&&cfg.engines.ttsCommand&&Array.isArray(cfg.engines?.ttsArgs)))}
 
-export function createRuntimeManager({home,env=process.env,fetchImpl=fetch,spawnImpl=spawn}={}){
+export function createRuntimeManager({home,env=process.env,fetchImpl=fetch,spawnImpl=spawn,modelSha256=QWEN_SHA256}={}){
   const root=path.join(home,'runtime'),generations=path.join(root,'generations'),staging=path.join(root,'staging'),pointer=path.join(root,'current.json'),statusFile=path.join(root,'install-state.json'),catalogCache=path.join(root,'catalog-cache.json');
   const external=Boolean(env.TEDDY_ASR_COMMAND&&env.TEDDY_TTS_COMMAND);
   const textOnly=env.TEDDY_TEXT_ONLY==='1';
@@ -65,13 +71,10 @@ export function createRuntimeManager({home,env=process.env,fetchImpl=fetch,spawn
     },{attempts:retryAttempts});
   }
   async function hfArtifact(){
-    const artifactId='qwen3-0.6b',provider='huggingface';
-    return withRetry(async()=>{
-      let r;try{r=await fetchImpl(QWEN_URL,{method:'HEAD',redirect:'follow'})}catch(e){throw artifactProblem({stage:'catalog',artifactId,provider,cause:e,retryable:true})}
-      if(!r.ok)throw artifactProblem({stage:'catalog',artifactId,provider,status:r.status,retryable:[408,425,429,500,502,503,504].includes(r.status)});
-      const digest=cleanDigest(r.headers.get('x-linked-etag')||r.headers.get('etag')||'');if(!/^[0-9a-f]{64}$/i.test(digest))throw Object.assign(artifactProblem({stage:'verify',artifactId,provider,retryable:false}),{code:'artifact_digest_unavailable'});
-      return {source:QWEN_URL,totalBytes:Number(r.headers.get('content-length')||0),sha256:digest,name:QWEN_MODEL};
-    },{attempts:retryAttempts});
+    // No X-Linked-ETag: for Xet-backed files it identifies the Xet object,
+    // which is not the SHA-256 digest of the downloaded GGUF bytes.
+    if(!/^[0-9a-f]{64}$/i.test(modelSha256))throw Object.assign(new Error('artifact_digest_unavailable'),{code:'artifact_digest_unavailable',stage:'verify'});
+    return {source:QWEN_URL,totalBytes:QWEN_BYTES,sha256:modelSha256.toLowerCase(),name:QWEN_MODEL};
   }
   async function download(a,dest){
     await withRetry(async()=>{
@@ -79,9 +82,11 @@ export function createRuntimeManager({home,env=process.env,fetchImpl=fetch,spawn
       await fs.promises.mkdir(path.dirname(dest),{recursive:true,mode:0o700});let r;
       try{r=await fetchImpl(a.source,{redirect:'follow'})}catch(e){throw artifactProblem({stage:'download',artifactId:a.id,provider:a.publisher,cause:e,retryable:true})}
       if(!r.ok||!r.body)throw artifactProblem({stage:'download',artifactId:a.id,provider:a.publisher,status:r.status,retryable:[408,425,429,500,502,503,504].includes(r.status)});
-      a.totalBytes=Number(r.headers.get('content-length')||a.totalBytes||0);a.phase='downloading';let bytes=0,lastPublish=0;const file=fs.createWriteStream(dest,{mode:0o600});
+      const declared=Number(r.headers.get('content-length')||0),pinnedBytes=Number(a.totalBytes||0);
+      if(pinnedBytes&&declared&&declared!==pinnedBytes)throw Object.assign(artifactProblem({stage:'verify',artifactId:a.id,provider:a.publisher,retryable:false}),{code:'artifact_size_mismatch'});
+      a.totalBytes=pinnedBytes||declared;a.phase='downloading';let bytes=0,lastPublish=0;const file=fs.createWriteStream(dest,{mode:0o600});
       try{for await(const chunk of r.body){if(!file.write(chunk))await new Promise(ok=>file.once('drain',ok));bytes+=chunk.length;a.downloadedBytes=bytes;if(bytes-lastPublish>=4*1024*1024){lastPublish=bytes;await publish();}}await new Promise((ok,bad)=>file.end(e=>e?bad(e):ok()));}catch(e){file.destroy();throw artifactProblem({stage:'download',artifactId:a.id,provider:a.publisher,cause:e,retryable:true})}
-      a.phase='verifying';await publish();const got=await sha256(dest);if(got.toLowerCase()!==a.sha256.toLowerCase())throw Object.assign(artifactProblem({stage:'verify',artifactId:a.id,provider:a.publisher,retryable:false}),{code:'artifact_digest_mismatch'});a.verified=true;a.downloadedBytes=bytes;await publish();
+      a.phase='verifying';await publish();if(a.totalBytes&&bytes!==a.totalBytes)throw Object.assign(artifactProblem({stage:'verify',artifactId:a.id,provider:a.publisher,retryable:false}),{code:'artifact_size_mismatch'});const got=await sha256(dest);if(got.toLowerCase()!==a.sha256.toLowerCase())throw Object.assign(artifactProblem({stage:'verify',artifactId:a.id,provider:a.publisher,retryable:false}),{code:'artifact_digest_mismatch'});a.verified=true;a.downloadedBytes=bytes;await publish();
     },{attempts:retryAttempts});
   }
   async function extract(archive,dest){await fs.promises.mkdir(dest,{recursive:true,mode:0o700});await exec('tar',['-xf',archive,'-C',dest]);}
