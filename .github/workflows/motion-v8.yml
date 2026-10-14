@@ -71,6 +71,10 @@ jobs:
         run: node --test tests/choreography-v12.test.mjs
       - name: test inherited motion contracts
         run: node --test tests/motion-contract-v8.test.mjs tests/motion-world-v8.test.mjs tests/motion-routing-v8.test.mjs
+      - name: prove language UI boots in Chrome
+        run: node tools/browser-text-v17.mjs --probe-bootstrap
+      - name: prove text reply and SQLite via Chrome
+        run: node tools/browser-text-v17.mjs --probe-chat
       - name: prove real text chat, SQLite and closeable UI in Chrome
         run: node tools/browser-text-v17.mjs
       - name: diagnose real UI mounting with facial installer

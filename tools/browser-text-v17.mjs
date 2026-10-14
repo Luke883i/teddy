@@ -37,6 +37,7 @@ try{
   const command=await connectCDP(target.webSocketDebuggerUrl);
   await command('Page.enable');await command('Runtime.enable');
   await command('Page.navigate',{url:`http://127.0.0.1:${port}/`});
+  const probeBootstrap=process.argv.includes('--probe-bootstrap'),probeChat=process.argv.includes('--probe-chat');
   const expression=`(async()=>{
     const sleep=ms=>new Promise(r=>setTimeout(r,ms));
     for(let i=0;i<150&&!document.querySelector('#chatHint')?.textContent?.includes('pronto');i++)await sleep(75);
@@ -44,10 +45,12 @@ try{
     if(!input||!form)throw Error('text composer absent');
     for(let i=0;i<70&&input.disabled;i++)await sleep(70);
     if(input.disabled)throw Error('text input not ready in real mock provider');
+    if(${probeBootstrap})return {success:true,chatInputVisible:input.getBoundingClientRect().width>120};
     input.value='Come stai Teddy?';form.requestSubmit();
     for(let i=0;i<160&&document.querySelectorAll('.chat-message').length<2;i++)await sleep(80);
     const turns=[...document.querySelectorAll('.chat-message')].map(x=>x.textContent);
     if(turns.length!==2||!turns[0].includes('Come stai Teddy?')||!turns[1].includes('Ho sentito'))throw Error('chat was not actually rendered: '+JSON.stringify(turns));
+    if(${probeChat})return {success:true,chatInputVisible:input.getBoundingClientRect().width>120,turns};
     const menu=document.querySelector('#settingsBtn'),nav=document.querySelector('#secondaryNav');
     if(!nav.classList.contains('hidden'))throw Error('secondary navigation leaked into primary conversation');
     menu.click();if(nav.classList.contains('hidden'))throw Error('menu cannot open');
@@ -67,7 +70,7 @@ try{
   const png=Buffer.from(screenshot.data,'base64');
   if(png.subarray(1,4).toString()!=='PNG')throw Error('browser screenshot missing');
   const history=await (await sendHttp('/api/history?limit=10')).json();
-  if(!history.turns?.some(t=>t.role==='user'&&t.text==='Come stai Teddy?')||!history.turns?.some(t=>t.role==='assistant'&&t.text.includes('Ho sentito')))throw Error('SQLite did not persist both actual HTTP turns');
+  if(!probeBootstrap&&!history.turns?.some(t=>t.role==='user'&&t.text==='Come stai Teddy?')||!probeBootstrap&&!history.turns?.some(t=>t.role==='assistant'&&t.text.includes('Ho sentito')))throw Error('SQLite did not persist both actual HTTP turns');
   console.log('TEDDY_TEXT_BROWSER_PASS',JSON.stringify({turns:history.turns.length,screenshotSha256:crypto.createHash('sha256').update(png).digest('hex'),imageWidth:png.readUInt32BE(16),imageHeight:png.readUInt32BE(20),...data}));
 }finally{
   ws?.close();proc?.kill('SIGKILL');api?.kill('SIGTERM');
