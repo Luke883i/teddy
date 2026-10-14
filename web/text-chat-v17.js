@@ -43,6 +43,7 @@ export function installTextChat({boot,getAvailability,getConversationId,setConve
     }
   }
   form.addEventListener('submit',submit);
+  form.dataset.wired='true';
   update();
   return {update,close:()=>{controller?.abort();form.removeEventListener('submit',submit)}};
 }

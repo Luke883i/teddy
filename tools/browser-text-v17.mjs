@@ -38,14 +38,23 @@ try{
   const target=pages.find(x=>x.type==='page');if(!target)throw Error('No browser page');
   const command=await connectCDP(target.webSocketDebuggerUrl);
   await command('Page.enable');await command('Runtime.enable');
+  await command('Page.addScriptToEvaluateOnNewDocument',{source:`
+    // Language E2E: isolate actual UI/network/runtime from software 3D GPU cost.
+    const previous=HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext=function(kind,...rest){
+      if(kind==='webgl2')return null;
+      return previous.call(this,kind,...rest);
+    };
+  `});
   await command('Page.navigate',{url:`http://127.0.0.1:${port}/`});
   if(process.argv.includes('--probe-dom')){const r=await command('Runtime.evaluate',{expression:'JSON.stringify({readyState:document.readyState,html:!!document.querySelector(\'#chatForm\'),hint:document.querySelector(\'#chatHint\')?.textContent||\'\'})',returnByValue:true});console.log('TEDDY_CHROME_DOM_PASS',r.result?.value);process.exit(0);}
   const probeBootstrap=process.argv.includes('--probe-bootstrap'),probeChat=process.argv.includes('--probe-chat');
   const expression=`(async()=>{
     const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-    for(let i=0;i<150&&!document.querySelector('#chatHint')?.textContent?.includes('pronto');i++)await sleep(75);
+    for(let i=0;i<150&&document.querySelector('#chatForm')?.dataset.wired!=='true';i++)await sleep(75);
     const input=document.querySelector('#chatInput'),form=document.querySelector('#chatForm');
     if(!input||!form)throw Error('text composer absent');
+    if(form.dataset.wired!=='true')throw Error('composer HTML present without live submit handler');
     for(let i=0;i<70&&input.disabled;i++)await sleep(70);
     if(input.disabled)throw Error('text input not ready in real mock provider');
     if(${probeBootstrap})return {success:true,chatInputVisible:input.getBoundingClientRect().width>120};
