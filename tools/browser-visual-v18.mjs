@@ -104,6 +104,9 @@ try{
     const skin=window.__teddySkinV16;
     if(!skin?.active)throw Error('WebGL2 implicit skin did not activate: '+JSON.stringify(skin));
     if(skin.mode==='anatomical-pelt-v21'){
+      if(!skin.faceGeometry?.pass||skin.faceGeometry.noseOverhang>=.11||
+         skin.faceGeometry.mouthDepth>=.06)
+        throw Error('V22 face geometry not integrated into actual browser pelt: '+JSON.stringify(skin.faceGeometry));
       if(skin.components!==6||!skin.zeroCrossRegionTriangles||skin.crossRegionWeights!==0||
         skin.openEdges!==0||skin.nonmanifoldEdges!==0||!skin.closed)
         throw Error('Anatomical pelt not closed or arm/torso topology still bridged '+JSON.stringify(skin));
@@ -143,6 +146,12 @@ try{
     fs.mkdirSync(evidenceDir,{recursive:true});
     const before=await cdp.send('Page.captureScreenshot',{format:'png',clip:value.clip,captureBeyondViewport:false});
     fs.writeFileSync(path.join(evidenceDir,'neutral.png'),Buffer.from(before.data,'base64'));
+    // Visual audit companion: aim head toward the far side of the viewport to
+    // reveal depth layering without relying on toDataURL in WebGL2.
+    await cdp.send('Input.dispatchMouseEvent',{type:'mouseMoved',x:Math.round(value.clip.x+value.clip.width*.90),y:Math.round(value.clip.y+value.clip.height*.42)});
+    await sleep(650);
+    const angled=await cdp.send('Page.captureScreenshot',{format:'png',clip:value.clip,captureBeyondViewport:false});
+    fs.writeFileSync(path.join(evidenceDir,'muzzle-angled.png'),Buffer.from(angled.data,'base64'));
     const action=await cdp.send('Runtime.evaluate',{expression:`(async()=>{
       const samples=[];
       window.addEventListener('teddy:motion-frame',e=>{if(e.detail?.routine?.name==='greet')samples.push(e.detail.routine.phase)});

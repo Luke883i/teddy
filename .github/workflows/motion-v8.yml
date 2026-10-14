@@ -37,6 +37,8 @@ jobs:
           node --check web/teddy/skin-seam-v20.js
           node --check web/teddy/anatomical-pelt-v21.js
           node --check web/teddy/anatomical-runtime-v21.js
+          node --check web/teddy/facial-volume-v22.js
+          node --check tools/mutate-facial-profile-v22.mjs
           node --check tools/choose-anatomical-pelt-v21.mjs
           node --check tools/mutate-shoulder-v20.mjs
           node --check tools/browser-visual-v18.mjs
@@ -67,6 +69,10 @@ jobs:
         run: node --test tests/visual-hardening-v18.test.mjs
       - name: mutate 1 million adversarial anatomical influence pairs
         run: node tools/mutate-anatomy-v18.mjs
+      - name: V22 prove side-view muzzle continuity, anatomical jaw support and real six-pelt rendering
+        run: node --test tests/facial-volume-v22.test.mjs
+      - name: V22 falsify one million facial pigment-coordinate profiles
+        run: node tools/mutate-facial-profile-v22.mjs
       - name: V21 prove anatomical six-part topology, dynamic motion and GPU frame wiring
         run: node --test tests/anatomical-pelt-v21.test.mjs
       - name: V21 rank 1000 architectures and falsify 10M realistic preseeded semantic parameter units
