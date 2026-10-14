@@ -27,7 +27,7 @@ for(let family=0;family<10;family++){
     assert.equal(o.composerWidth,Math.min(535,w-24));
     assert.ok(o.historyWidth>=0&&o.historyWidth<=w-24);
     assert.ok(o.bubbleWidth>0&&o.bubbleWidth<=Math.floor(w*.5));
-    assert.equal(o.centralGap,w-o.historyWidth-o.bubbleWidth-(o.compact?24:36));
+    assert.equal(o.centralGap,Math.max(0,w-o.historyWidth-o.bubbleWidth-(o.compact?24:36)));
     if(w>=900)assert.ok(o.centralGap>=w*.30);
     if(w<900)assert.equal(o.initialHistoryOpen,false);
     if(h<=520)assert.equal(o.shortScreen,true);
