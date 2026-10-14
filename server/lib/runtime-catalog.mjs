@@ -3,7 +3,7 @@ const SPECS=Object.freeze({
   'asr-whisper-tiny':Object.freeze({role:'asr',publisher:'k2-fsa',version:'tiny-multilingual',hosts:['github.com']}),
   'tts-riccardo':Object.freeze({role:'tts',publisher:'k2-fsa',version:'it_IT-riccardo-x_low',hosts:['github.com']}),
   'llama-runtime':Object.freeze({role:'runtime',publisher:'ggml-org',version:'b10218',hosts:['github.com']}),
-  'qwen3-0.6b':Object.freeze({role:'llm',publisher:'Qwen',version:'Q8_0',hosts:['huggingface.co']})
+  'qwen3-0.6b':Object.freeze({role:'llm',publisher:'QuantFactory',version:'Q4_K_M',hosts:['huggingface.co']})
 });
 const IDS=Object.freeze(Object.keys(SPECS)),SHA256=/^[0-9a-f]{64}$/i;
 export const RUNTIME_CATALOG_SCHEMA=1;
