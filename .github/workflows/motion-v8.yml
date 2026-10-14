@@ -30,6 +30,9 @@ jobs:
           node --check web/teddy/expressive-v14.js
           node --check web/teddy/implicit-skin-v16.js
           node --check web/teddy/implicit-runtime-v16.js
+          node --check web/teddy/facial-contract-v17.js
+          node --check web/teddy/facial-runtime-v17.js
+          node --check tools/browser-face-v17.mjs
           node --check web/teddy/motion-dynamics-v15.js
           node --check web/teddy/silhouette-v15.js
           node --check web/teddy/motion-falsifiers-v15.js
@@ -46,6 +49,10 @@ jobs:
           node --check web/local.js
       - name: test 32 character dynamics and moving-joint silhouette
         run: node --test tests/motion-silhouette-v15.test.mjs
+      - name: verify V17 facial topology, anatomy, 32-motif micro-expression and both backends
+        run: node --test tests/facial-v17.test.mjs
+      - name: mutate one million facial speech and behavior states
+        run: node tools/mutate-face-v17.mjs
       - name: prove watertight unified Teddy mesh and animated GPU binding
         run: node --test tests/implicit-skin-v16.test.mjs
       - name: test expressive 32-profile movement and reset
@@ -76,6 +83,8 @@ jobs:
         run: node tools/browser-implicit-smoke-v16.mjs --probe-activation
       - name: prove real WebGL2 welded skin under production CSP
         run: node tools/browser-implicit-smoke-v16.mjs
+      - name: prove expressive face in real WebGL2 Chrome under production CSP
+        run: node tools/browser-face-v17.mjs
       - name: mutate 100 million semantic kinematic parameters
         run: node tools/mutate-expressive-v14.mjs
       - name: saturate 1m movement scenarios
