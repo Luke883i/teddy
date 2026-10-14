@@ -168,6 +168,7 @@ try{
     // V20 regression pose: both arms elevated, reproducing the user-reported
     // accordion geometry more directly than the asymmetrical Lightning Bolt.
     const raised=await cdp.send('Runtime.evaluate',{expression:`(async()=>{
+      document.querySelector('.motion-tabs button:nth-child(1)')?.click();
       const key=document.querySelector('button[data-routine="victory"]');
       if(!key)throw Error('Victory raised-arms UI control missing');
       key.click();
