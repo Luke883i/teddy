@@ -34,7 +34,21 @@ jobs:
       - name: Chromium actual DOM shell
         run: node tools/browser-text-v17.mjs --probe-dom
       - name: Chromium JS composer wiring and readiness
-        run: node tools/browser-text-v17.mjs --probe-bootstrap
+        run: |
+          set -o pipefail
+          node tools/browser-text-v17.mjs --probe-bootstrap 2>&1 | tee /tmp/teddy-v21-bootstrap.log
+      - name: expose bootstrap diagnostic slug
+        if: failure()
+        id: bootstrap_failure
+        run: |
+          node -e 'const fs=require("fs");const s=fs.existsSync("/tmp/teddy-v21-bootstrap.log")?fs.readFileSync("/tmp/teddy-v21-bootstrap.log","utf8"):"empty-log";const lines=s.split("\n").filter(x=>/Error:|TypeError:|SyntaxError:|not ready|timeout|Failed|failure/i.test(x));let v=(lines[0]||"no-error-line").replace(/[^a-z0-9-]/gi,"-").slice(0,110);fs.appendFileSync(process.env.GITHUB_OUTPUT,"slug="+v+"\n");'
+      - name: publish bootstrap failure fingerprint
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: teddy-bootstrap-${{ steps.bootstrap_failure.outputs.slug }}
+          path: /tmp/teddy-v21-bootstrap.log
+          if-no-files-found: ignore
       - name: Chromium HTTP baseline
         run: node tools/browser-text-v17.mjs --desktop --probe-chat
       - name: Chromium real balloon
