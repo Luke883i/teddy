@@ -7,6 +7,7 @@ import {createLocalEngines} from './local-engines.mjs';
 import {publicRuntimeStatus,assertRuntimeInvariant} from './runtime-state.mjs';
 import {artifactProblem,publicFailure,retryDelay,withRetry} from './runtime-resilience.mjs';
 import {runtimeCatalogKey,runtimeCatalogCacheRecord,hydrateRuntimeCatalogCache} from './runtime-catalog.mjs';
+import {validateTextGeneration} from './text-runtime-contract.mjs';
 
 const SHERPA_VERSION='1.13.3';
 const LLAMA_BUILD='b10218';
@@ -36,16 +37,17 @@ async function exec(command,args,{cwd}={}){return await new Promise((resolve,rej
 async function findNamed(root,name){const q=[root];while(q.length){const d=q.shift();let entries;try{entries=await fs.promises.readdir(d,{withFileTypes:true})}catch{continue}for(const e of entries){const p=path.join(d,e.name);if(e.isDirectory())q.push(p);else if(e.name===name)return p;}}return null;}
 async function portListening(port,{host='127.0.0.1',timeoutMs=180}={}){return await new Promise(resolve=>{let settled=false;const finish=v=>{if(settled)return;settled=true;socket.destroy();resolve(v)},socket=net.createConnection({host,port:Number(port)});socket.once('connect',()=>finish(true));socket.once('error',()=>finish(false));socket.setTimeout(timeoutMs,()=>finish(false));});}
 async function terminateChild(child,{graceMs=900}={}){if(!child||child.exitCode!=null)return;const active=terminationPromises.get(child);if(active)return active;const task=new Promise(resolve=>{let settled=false,exited=false,timer;const done=()=>{if(settled)return;settled=true;clearTimeout(timer);resolve()},onExit=()=>{exited=true;done()};child.once?.('exit',onExit);try{child.kill('SIGTERM')}catch{return done()}timer=setTimeout(()=>{if(!exited){try{child.kill('SIGKILL')}catch{}}done()},graceMs)});terminationPromises.set(child,task);try{await task}finally{terminationPromises.delete(child)}}
-function validRuntimeConfig(cfg){const port=Number(cfg?.llama?.port);return Boolean(cfg&&typeof cfg.engines?.asrCommand==='string'&&cfg.engines.asrCommand&&Array.isArray(cfg.engines?.asrArgs)&&typeof cfg.engines?.ttsCommand==='string'&&cfg.engines.ttsCommand&&Array.isArray(cfg.engines?.ttsArgs)&&typeof cfg.llama?.executable==='string'&&cfg.llama.executable&&typeof cfg.llama?.model==='string'&&cfg.llama.model&&Number.isInteger(port)&&port>=1&&port<=65535)}
+function validRuntimeConfig(cfg,{textOnly=false}={}){const port=Number(cfg?.llama?.port);const llama=Boolean(cfg&&typeof cfg.llama?.executable==='string'&&cfg.llama.executable&&typeof cfg.llama?.model==='string'&&cfg.llama.model&&Number.isInteger(port)&&port>=1&&port<=65535);return llama&&(textOnly||Boolean(typeof cfg.engines?.asrCommand==='string'&&cfg.engines.asrCommand&&Array.isArray(cfg.engines?.asrArgs)&&typeof cfg.engines?.ttsCommand==='string'&&cfg.engines.ttsCommand&&Array.isArray(cfg.engines?.ttsArgs)))}
 
 export function createRuntimeManager({home,env=process.env,fetchImpl=fetch,spawnImpl=spawn}={}){
   const root=path.join(home,'runtime'),generations=path.join(root,'generations'),staging=path.join(root,'staging'),pointer=path.join(root,'current.json'),statusFile=path.join(root,'install-state.json'),catalogCache=path.join(root,'catalog-cache.json');
   const external=Boolean(env.TEDDY_ASR_COMMAND&&env.TEDDY_TTS_COMMAND);
+  const textOnly=env.TEDDY_TEXT_ONLY==='1';
   const autoinstall=env.TEDDY_RUNTIME_AUTOINSTALL==='1';
   const retryAttempts=Math.max(1,Math.min(8,Number(env.TEDDY_RUNTIME_FETCH_ATTEMPTS||4)));
   const initialRetryLimit=Math.max(0,Math.min(5,Number(env.TEDDY_RUNTIME_INITIAL_RETRY_CYCLES??3)));
   let llama=null,startPromise=null,engineConfig=null,retryTimer=null,initialRetryCycles=0,stopping=false;
-  let state={installPhase:'idle',currentGeneration:null,previousGeneration:null,engines:{asr:{state:'missing',healthy:false},llm:{state:'missing',healthy:false},tts:{state:'missing',healthy:false}},artifacts:[],selfTest:null,lastError:null};
+  let state={mode:textOnly?'text':'voice',installPhase:'idle',currentGeneration:null,previousGeneration:null,engines:{asr:{state:'missing',healthy:false},llm:{state:'missing',healthy:false},tts:{state:'missing',healthy:false}},artifacts:[],selfTest:null,lastError:null};
   const publish=async()=>{assertRuntimeInvariant(state);await atomicJson(statusFile,publicRuntimeStatus(state)).catch(()=>{});};
   const setPhase=async phase=>{state.installPhase=phase;await publish()};
   const fail=async e=>{state.lastError={...publicFailure(e),at:now()};state.installPhase=state.currentGeneration?'rolled_back':'failed';await publish();};
@@ -97,7 +99,14 @@ export function createRuntimeManager({home,env=process.env,fetchImpl=fetch,spawn
       {id:'qwen3-0.6b',role:'llm',version:'Q4_K_M',publisher:'QuantFactory',...qwen}
     ].map(a=>({...a,phase:'pending',downloadedBytes:0,verified:false,catalogSource:'live'}));
   }
+  async function discoverTextCatalog(){
+    const p=platformNames();
+    const llama=await releaseAsset('ggml-org/llama.cpp',LLAMA_BUILD,a=>a.name.includes(p.llamaNeedle)&&/\.tar\.(gz|bz2)$/.test(a.name),{artifactId:'llama-runtime'});
+    const qwen=await hfArtifact();
+    return [{id:'llama-runtime',role:'runtime',version:LLAMA_BUILD,publisher:'ggml-org',...llama},{id:'qwen3-0.6b',role:'llm',version:'Q4_K_M',publisher:'QuantFactory',...qwen}].map(a=>({...a,phase:'pending',downloadedBytes:0,verified:false,catalogSource:'live'}));
+  }
   async function buildCatalog(){
+    if(textOnly)return discoverTextCatalog();
     const p=platformNames(),key=runtimeCatalogKey({platform:process.platform,arch:p.arch,sherpaVersion:SHERPA_VERSION,llamaBuild:LLAMA_BUILD,asrModel:ASR_MODEL,ttsModel:TTS_MODEL,qwenModel:QWEN_MODEL});
     try{
       const live=await discoverCatalog(p);await atomicJson(catalogCache,runtimeCatalogCacheRecord(key,live));return live;
@@ -129,12 +138,23 @@ export function createRuntimeManager({home,env=process.env,fetchImpl=fetch,spawn
     const args=['-m',config.model,'--host','127.0.0.1','--port',String(config.port),'--ctx-size','2048','--n-predict','128'];
     let child;try{child=spawnImpl(config.executable,args,{stdio:['ignore','ignore','pipe'],shell:false})}catch(e){throw Object.assign(new Error('local_llm_start_failed'),{code:'local_llm_start_failed',stage:'start',retryable:false,cause:e})}
     llama=child;let exited=false,spawnError=null;child.stderr?.on('data',()=>{});child.once?.('error',e=>{spawnError=e});child.once?.('exit',()=>{exited=true;if(state.engines.llm.healthy){state.engines.llm={state:'stopped',healthy:false};state.installPhase='failed';publish().catch(()=>{})}});
-    for(let i=0;i<120;i++){if(stopping){if(llama===child)llama=null;await terminateChild(child);throw Object.assign(new Error('runtime_stopped'),{code:'runtime_stopped',stage:'start',retryable:false})}if(spawnError||exited){if(llama===child)llama=null;throw Object.assign(new Error('local_llm_start_failed'),{code:'local_llm_start_failed',stage:'start',retryable:false,cause:spawnError||undefined})}try{const r=await fetchImpl(`http://127.0.0.1:${config.port}/v1/models`);if(r.ok&&!exited&&!spawnError)return}catch{}await sleep(250)}
+    for(let i=0;i<120;i++){if(stopping){if(llama===child)llama=null;await terminateChild(child);throw Object.assign(new Error('runtime_stopped'),{code:'runtime_stopped',stage:'start',retryable:false})}if(spawnError||exited){if(llama===child)llama=null;throw Object.assign(new Error('local_llm_start_failed'),{code:'local_llm_start_failed',stage:'start',retryable:false,cause:spawnError||undefined})}try{const r=await fetchImpl(`http://127.0.0.1:${config.port}/v1/models`,{signal:AbortSignal.timeout(1200)});if(r.ok&&!exited&&!spawnError)return}catch{}await sleep(250)}
     if(llama===child)llama=null;await terminateChild(child);throw Object.assign(new Error('local_llm_start_timeout'),{code:'local_llm_start_timeout',stage:'start',retryable:true});
   }
   async function activate(generation){
-    const cfg=await readJson(path.join(generation.path,'runtime.json'));if(!validRuntimeConfig(cfg))return false;
-    await setPhase('starting');await startLlama(cfg.llama);engineConfig=cfg.engines;
+    const cfg=await readJson(path.join(generation.path,'runtime.json'));if(!validRuntimeConfig(cfg,{textOnly}))return false;
+    if(textOnly){try{validateTextGeneration(generation.path,cfg)}catch(e){throw Object.assign(e,{stage:'layout',retryable:false})}}
+    await setPhase('starting');await startLlama(cfg.llama);engineConfig=textOnly?{llamaUrl:`http://127.0.0.1:${cfg.llama.port}`}:cfg.engines;
+    if(textOnly){
+      state.engines={asr:{state:'not_installed',healthy:false},llm:{state:'running',healthy:true},tts:{state:'not_installed',healthy:false}};await publish();
+      await setPhase('self_testing');
+      const llm=createLocalEngines({...engineConfig,fetchImpl});let reply;
+      try{reply=await llm.llm('Rispondi in italiano con un saluto breve.',{signal:AbortSignal.timeout(60000)})}catch(e){throw Object.assign(e,{stage:'self_test',retryable:false})}
+      if(!reply?.trim())throw Object.assign(new Error('text_runtime_self_test_failed'),{code:'text_runtime_self_test_failed',stage:'self_test',retryable:false});
+      state.engines.llm={state:'ready',healthy:true};state.selfTest={ok:true,at:now(),steps:{llm:true}};
+      state.currentGeneration={id:generation.id,createdAt:generation.createdAt};state.lastError=null;state.installPhase='ready';initialRetryCycles=0;
+      if(retryTimer){clearTimeout(retryTimer);retryTimer=null}await publish();return true;
+    }
     state.engines={asr:{state:'checking',healthy:false},llm:{state:'running',healthy:true},tts:{state:'checking',healthy:false}};await publish();
     const engines=createLocalEngines({...engineConfig,llamaUrl:`http://127.0.0.1:${cfg.llama.port}`,fetchImpl});
     await setPhase('self_testing');const steps={};
@@ -150,19 +170,41 @@ export function createRuntimeManager({home,env=process.env,fetchImpl=fetch,spawn
   async function loadCurrent(){const p=await readJson(pointer);if(!p?.id)return false;const g={id:p.id,createdAt:p.createdAt,path:path.join(generations,p.id)};try{const activated=await activate(g);if(!activated){await fs.promises.rm(pointer,{force:true}).catch(()=>{});throw Object.assign(new Error('runtime_generation_invalid'),{code:'runtime_generation_invalid',stage:'layout',retryable:false})}return true}catch(e){await fail(e);return false}}
   async function provision(){
     await fs.promises.mkdir(staging,{recursive:true,mode:0o700});await setPhase('discovering');state.artifacts=await buildCatalog();await publish();
-    const id=`${Date.now()}-${crypto.randomBytes(4).toString('hex')}`,stage=path.join(staging,id);let failedGenerationPath=null;await fs.promises.mkdir(stage,{recursive:true,mode:0o700});
+    const id=`${Date.now()}-${crypto.randomBytes(4).toString('hex')}`,stage=path.join(staging,id);
+    let failedGenerationPath=null;await fs.promises.mkdir(stage,{recursive:true,mode:0o700});
     try{
-      for(const a of state.artifacts){const archive=path.join(stage,'downloads',a.name);await download(a,archive);if(a.id!=='qwen3-0.6b'){a.phase='extracting';await publish();await extract(archive,path.join(stage,a.id));}else{await fs.promises.mkdir(path.join(stage,'qwen3-0.6b'),{recursive:true});await fs.promises.rename(archive,path.join(stage,'qwen3-0.6b',QWEN_MODEL));}a.phase='installed';await publish();}
-      const wrappers=await writeWrappers(stage,path.join(stage,'sherpa-runtime'),path.join(stage,'asr-whisper-tiny'),path.join(stage,'tts-riccardo'));
-      const llamaExe=await findNamed(path.join(stage,'llama-runtime'),'llama-server');if(!llamaExe)throw Object.assign(new Error('runtime_layout_invalid'),{code:'runtime_layout_invalid',stage:'layout',retryable:false});
+      for(const a of state.artifacts){
+        const archive=path.join(stage,'downloads',a.name);await download(a,archive);
+        if(a.id!=='qwen3-0.6b'){a.phase='extracting';await publish();await extract(archive,path.join(stage,a.id));}
+        else {await fs.promises.mkdir(path.join(stage,'qwen3-0.6b'),{recursive:true});await fs.promises.rename(archive,path.join(stage,'qwen3-0.6b',QWEN_MODEL));}
+        a.phase='installed';await publish();
+      }
+      // Finalize before writing runtime descriptors: every absolute path must belong to the promoted directory.
+      const final=path.join(generations,id);await fs.promises.mkdir(generations,{recursive:true,mode:0o700});
+      await fs.promises.rename(stage,final);failedGenerationPath=final;
+      const llamaExe=await findNamed(path.join(final,'llama-runtime'),'llama-server');
+      if(!llamaExe)throw Object.assign(new Error('runtime_layout_invalid'),{code:'runtime_layout_invalid',stage:'layout',retryable:false});
       try{await fs.promises.access(llamaExe,fs.constants.X_OK)}catch{throw Object.assign(new Error('runtime_layout_invalid'),{code:'runtime_layout_invalid',stage:'layout',retryable:false})}
-      const model=path.join(stage,'qwen3-0.6b',QWEN_MODEL);let modelOk=false;try{modelOk=(await fs.promises.stat(model)).isFile()}catch{}if(!modelOk)throw Object.assign(new Error('runtime_layout_invalid'),{code:'runtime_layout_invalid',stage:'layout',retryable:false});
-      const port=Number(env.TEDDY_LLAMA_PORT||8080);if(!Number.isInteger(port)||port<1||port>65535)throw Object.assign(new Error('local_llm_port_invalid'),{code:'local_llm_port_invalid',stage:'start',retryable:false});
-      await atomicJson(path.join(stage,'runtime.json'),{engines:wrappers,llama:{executable:llamaExe,model,port},artifacts:state.artifacts.map(({id,sha256,source,version})=>({id,sha256,source,version}))});
-      const final=path.join(generations,id);await fs.promises.mkdir(generations,{recursive:true,mode:0o700});await fs.promises.rename(stage,final);failedGenerationPath=final;
-      const candidate={id,createdAt:now(),path:final};const old=await readJson(pointer);state.previousGeneration=old?.id?{id:old.id,createdAt:old.createdAt}:null;
-      await activate(candidate);await atomicJson(pointer,{id,createdAt:candidate.createdAt});failedGenerationPath=null;return status();
-    }catch(e){if(llama){const failed=llama;llama=null;await terminateChild(failed).catch(()=>{})}await fs.promises.rm(stage,{recursive:true,force:true}).catch(()=>{});if(failedGenerationPath)await fs.promises.rm(failedGenerationPath,{recursive:true,force:true}).catch(()=>{});if(await loadCurrent())state.installPhase='rolled_back';else await fail(e);await publish();throw e}
+      const model=path.join(final,'qwen3-0.6b',QWEN_MODEL);
+      let modelOk=false;try{modelOk=(await fs.promises.stat(model)).isFile()}catch{}
+      if(!modelOk)throw Object.assign(new Error('runtime_layout_invalid'),{code:'runtime_layout_invalid',stage:'layout',retryable:false});
+      const port=Number(env.TEDDY_LLAMA_PORT||8080);
+      if(!Number.isInteger(port)||port<1||port>65535)throw Object.assign(new Error('local_llm_port_invalid'),{code:'local_llm_port_invalid',stage:'start',retryable:false});
+      const wrappers=textOnly?{}:await writeWrappers(final,path.join(final,'sherpa-runtime'),path.join(final,'asr-whisper-tiny'),path.join(final,'tts-riccardo'));
+      const runtimeConfig={mode:textOnly?'text':'voice',engines:wrappers,llama:{executable:llamaExe,model,port},artifacts:state.artifacts.map(({id,sha256,source,version})=>({id,sha256,source,version}))};
+      if(textOnly)validateTextGeneration(final,runtimeConfig);
+      await atomicJson(path.join(final,'runtime.json'),runtimeConfig);
+      const candidate={id,createdAt:now(),path:final},old=await readJson(pointer);
+      state.previousGeneration=old?.id?{id:old.id,createdAt:old.createdAt}:null;
+      await activate(candidate);await atomicJson(pointer,{id,createdAt:candidate.createdAt});
+      failedGenerationPath=null;return status();
+    }catch(e){
+      if(llama){const failed=llama;llama=null;await terminateChild(failed).catch(()=>{})}
+      await fs.promises.rm(stage,{recursive:true,force:true}).catch(()=>{});
+      if(failedGenerationPath)await fs.promises.rm(failedGenerationPath,{recursive:true,force:true}).catch(()=>{});
+      if(await loadCurrent())state.installPhase='rolled_back';else await fail(e);
+      await publish();throw e;
+    }
   }
   async function attemptStart(){
     if(status().ready)return status();

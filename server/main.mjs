@@ -24,7 +24,8 @@ const policy=deploymentPolicy({listenHost:HOST,publicOrigin:PUBLIC_ORIGIN,authPa
 if(!policy.ok)throw new Error(`unsafe_deployment:${policy.error}`);
 const REALTIME_URL=validateRealtimeEndpoint(process.env.TEDDY_OPENAI_REALTIME_URL||'https://api.openai.com/v1/realtime/calls');
 const secrets=new SecretStore(HOME,{externalMasterKey:MASTER_KEY}),state=new StateStore(HOME),defaults=readDefaultConfig(ROOT);let config=mergeConfig(defaults,state.getSetting('config')||{});
-const realtimeGate=new RealtimeBackoff();let closing=false,runtime=createRuntimeManager({home:HOME}),localService=createLocalService({runtime}),textBusy=false;
+const runtimeEnv={...process.env,TEDDY_TEXT_ONLY:process.env.TEDDY_TEXT_ONLY??'1',TEDDY_RUNTIME_AUTOINSTALL:process.env.TEDDY_RUNTIME_AUTOINSTALL??'1'};
+const realtimeGate=new RealtimeBackoff();let closing=false,runtime=createRuntimeManager({home:HOME,env:runtimeEnv}),localService=createLocalService({runtime}),textBusy=false;
 let runtimeWasReady=false,runtimeRecovery=null,recoveryCycles=0,nextRecoveryAt=0;
 if(PROVIDER==='local')runtime.start().catch(e=>console.error('local runtime:',e?.code||e?.message||e));
 const localAvailability=()=>runtime.status();
@@ -45,7 +46,7 @@ async function checkRuntimeRecovery(){
   if(current.ready){runtimeWasReady=true;recoveryCycles=0;nextRecoveryAt=0;return}
   if(!shouldAttemptRuntimeRecovery({provider:PROVIDER,closing,wasReady:runtimeWasReady,ready:current.ready,active:Boolean(runtimeRecovery),now:Date.now(),nextAt:nextRecoveryAt}))return;
   const failedRuntime=runtime;
-  runtimeRecovery=recoverManagedRuntime({maxAttempts:Number(process.env.TEDDY_RUNTIME_RECOVERY_ATTEMPTS||3),createRuntime:()=>createRuntimeManager({home:HOME})})
+  runtimeRecovery=recoverManagedRuntime({maxAttempts:Number(process.env.TEDDY_RUNTIME_RECOVERY_ATTEMPTS||3),createRuntime:()=>createRuntimeManager({home:HOME,env:runtimeEnv})})
     .then(({runtime:next})=>{if(closing){next.stop();return}failedRuntime.stop();runtime=next;localService=createLocalService({runtime});runtimeWasReady=true;recoveryCycles=0;nextRecoveryAt=0;console.log('Teddy local runtime recovered')})
     .catch(e=>{recoveryCycles++;nextRecoveryAt=Date.now()+recoveryCooldown(recoveryCycles);console.error('local runtime recovery:',e?.code||e?.message||e)})
     .finally(()=>{runtimeRecovery=null});
@@ -93,9 +94,9 @@ async function route(req,res){
     textBusy=true;
     try{
       const existing=typeof body?.conversationId==='string'?body.conversationId:'';
-      const history=existing?state.history(100).filter(t=>t.conversation_id===existing).slice(-10):[];
+      const history=existing?state.history(500).filter(t=>t.conversation_id===existing).slice(-10):[];
       const reply=PROVIDER==='local'
-        ?await localService.text(text,{signal:controller.signal})
+        ?await localService.text(text,{signal:controller.signal,context:{turns:history,memories:state.listMemories(6)}})
         :await openAITextTurn({apiKey,text,config,memories:state.listMemories(),history,signal:controller.signal,model:process.env.TEDDY_OPENAI_TEXT_MODEL||'gpt-4.1-mini'});
       if(controller.signal.aborted)return;
       if(!reply?.trim())return json(res,502,{error:'text_reply_empty'});
