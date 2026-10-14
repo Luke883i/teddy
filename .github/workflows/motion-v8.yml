@@ -72,10 +72,22 @@ jobs:
         run: node --test tests/choreography-v12.test.mjs
       - name: test inherited motion contracts
         run: node --test tests/motion-contract-v8.test.mjs tests/motion-world-v8.test.mjs tests/motion-routing-v8.test.mjs
+      - name: prove text HTTP server starts
+        run: node tools/browser-text-v17.mjs --probe-server
+      - name: prove Chrome CDP starts
+        run: node tools/browser-text-v17.mjs --probe-chrome
+      - name: prove DOM shell loads
+        run: node tools/browser-text-v17.mjs --probe-dom
       - name: prove language UI boots in Chrome
         run: |
           set -o pipefail
           node tools/browser-text-v17.mjs --probe-bootstrap 2>&1 | tee "$RUNNER_TEMP/teddy-browser-diag.log"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: teddy-chrome-language-diagnostics
+          path: ${{ runner.temp }}/teddy-browser-diag.log
+          if-no-files-found: ignore
       - name: report forensic gate result to PR
         if: ${{ failure() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository }}
         env:

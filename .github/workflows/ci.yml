@@ -29,10 +29,30 @@ jobs:
           bash -n teddy.sh
           find server web tools tests -type f \( -name '*.mjs' -o -name '*.js' \) -print0 | sort -z | xargs -0 -n1 node --check
           npm run doctor
+      - name: language contract 1 payload normalization
+        run: node --test --test-name-pattern="payload normalization" tests/text-turn-v17.test.mjs
+      - name: language contract 2 responses output
+        run: node --test --test-name-pattern="responses output" tests/text-turn-v17.test.mjs
+      - name: language contract 3 cloud route
+        run: node --test --test-name-pattern="cloud route" tests/text-turn-v17.test.mjs
+      - name: language contract 4 cloud refusal
+        run: node --test --test-name-pattern="cloud refusal" tests/text-turn-v17.test.mjs
+      - name: language contract 5 text service
+        run: node --test --test-name-pattern="text service" tests/text-turn-v17.test.mjs
+      - name: language contract 6 chat UI
+        run: node --test --test-name-pattern="chat UI" tests/text-turn-v17.test.mjs
+      - name: language contract 7 server route
+        run: node --test --test-name-pattern="server route" tests/text-turn-v17.test.mjs
       - name: diagnose language v17 test contract
         run: |
           set -o pipefail
           node --test tests/text-turn-v17.test.mjs 2>&1 | tee "$RUNNER_TEMP/teddy-text-diag.log"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: teddy-language-diagnostics
+          path: ${{ runner.temp }}/teddy-text-diag.log
+          if-no-files-found: ignore
       - name: report forensic gate result to PR
         if: ${{ failure() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository }}
         env:

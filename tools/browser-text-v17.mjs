@@ -27,16 +27,19 @@ try{
   api.stderr.on('data',chunk=>log+=String(chunk).slice(-1000));
   let ready=false;for(let i=0;i<100;i++){try{const r=await sendHttp('/api/health');if(r.ok){ready=true;break}}catch{}await sleep(90)}
   if(!ready)throw Error('real Node control plane did not boot: '+log);
+  if(process.argv.includes('--probe-server')){console.log('TEDDY_SERVER_BOOT_PASS',port);await import('node:process').then(()=>process.exit(0));}
   proc=spawn(chrome,['--headless=new','--no-sandbox','--disable-gpu','--disable-dev-shm-usage','--no-first-run','--no-default-browser-check','--remote-debugging-port=0',`--user-data-dir=${chromeHome}`,'about:blank'],{stdio:['ignore','ignore','pipe']});
   const portFile=path.join(chromeHome,'DevToolsActivePort');
   for(let i=0;i<150&&!fs.existsSync(portFile);i++)await sleep(85);
   if(!fs.existsSync(portFile))throw Error('Chrome CDP not ready');
+  if(process.argv.includes('--probe-chrome')){console.log('TEDDY_CHROME_CDP_PASS');process.exit(0);}
   const cdpPort=Number(fs.readFileSync(portFile,'utf8').split('\n')[0]);
   const pages=await (await fetch(`http://127.0.0.1:${cdpPort}/json/list`)).json();
   const target=pages.find(x=>x.type==='page');if(!target)throw Error('No browser page');
   const command=await connectCDP(target.webSocketDebuggerUrl);
   await command('Page.enable');await command('Runtime.enable');
   await command('Page.navigate',{url:`http://127.0.0.1:${port}/`});
+  if(process.argv.includes('--probe-dom')){const r=await command('Runtime.evaluate',{expression:'JSON.stringify({readyState:document.readyState,html:!!document.querySelector(\'#chatForm\'),hint:document.querySelector(\'#chatHint\')?.textContent||\'\'})',returnByValue:true});console.log('TEDDY_CHROME_DOM_PASS',r.result?.value);process.exit(0);}
   const probeBootstrap=process.argv.includes('--probe-bootstrap'),probeChat=process.argv.includes('--probe-chat');
   const expression=`(async()=>{
     const sleep=ms=>new Promise(r=>setTimeout(r,ms));
