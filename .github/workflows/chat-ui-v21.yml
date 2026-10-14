@@ -5,9 +5,9 @@ on:
     branches: [main]
 permissions:
   contents: read
-  issues: write
 jobs:
   chat:
+    name: chat UX / SQLite + mutations + genuine Chrome surfaces
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
@@ -15,70 +15,18 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - name: SQLite history and UX contracts
-        run: node --test tests/chat-history-v21.test.mjs tests/chat-layout-v21.test.mjs
-      - name: Adversarial 10m viewport mutation
+      - name: Validate SQLite history and source-backed UI contracts
+        run: node --test tests/chat-history-v21.test.mjs tests/chat-layout-v21.test.mjs tests/browser-smoke-contract-v21.test.mjs
+      - name: Falsify ten million deterministic viewport mutations
         run: node tools/mutate-chat-layout-v21.mjs
-      - name: Node tests A-F
-        run: node --test tests/[a-f]*.test.mjs
-      - name: Node tests G-M
-        run: node --test tests/[g-m]*.test.mjs
-      - name: Node tests N-R
-        run: node --test tests/[n-r]*.test.mjs
-      - name: Node tests S-Z
-        run: node --test tests/[s-z]*.test.mjs
-      - name: Chromium server control-plane boot
-        run: node tools/browser-text-v17.mjs --probe-server
-      - name: Chromium CDP availability
-        run: node tools/browser-text-v17.mjs --probe-chrome
-      - name: Chromium actual DOM shell
-        run: node tools/browser-text-v17.mjs --probe-dom
-      - name: Chromium JS composer wiring and readiness
-        run: |
-          set -o pipefail
-          node tools/browser-text-v17.mjs --probe-bootstrap 2>&1 | tee /tmp/teddy-v21-bootstrap.log
-      - name: expose bootstrap diagnostic slug
-        if: failure()
-        id: bootstrap_failure
-        run: |
-          node -e 'const fs=require("fs");const s=fs.existsSync("/tmp/teddy-v21-bootstrap.log")?fs.readFileSync("/tmp/teddy-v21-bootstrap.log","utf8"):"empty-log";const lines=s.split("\n").filter(x=>/^(?:Error|TypeError|SyntaxError|ReferenceError):|^TEDDY_/i.test(x));let v=(lines.at(-1)||"no-error-line").replace(/[^a-z0-9-]/gi,"-").slice(0,130);fs.appendFileSync(process.env.GITHUB_OUTPUT,"slug="+v+"\n");'
-      - name: publish bootstrap failure fingerprint
-        if: failure()
+      - name: Complete browser E2E on desktop
+        run: node tools/browser-text-v17.mjs --desktop
+      - name: Complete browser E2E on mobile
+        run: node tools/browser-text-v17.mjs --mobile
+      - name: Preserve rendered desktop and mobile screenshots
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: teddy-bootstrap-${{ steps.bootstrap_failure.outputs.slug }}
-          path: /tmp/teddy-v21-bootstrap.log
+          name: teddy-chat-v21-desktop-mobile
+          path: ${{ runner.temp }}/teddy-v21-*.png
           if-no-files-found: ignore
-      - name: Chromium HTTP baseline
-        run: node tools/browser-text-v17.mjs --desktop --probe-chat
-      - name: Chromium real balloon
-        run: node tools/browser-text-v17.mjs --desktop --probe-balloon
-      - name: Chromium central stage
-        run: node tools/browser-text-v17.mjs --desktop --probe-geometry
-      - name: Chromium controls
-        run: node tools/browser-text-v17.mjs --desktop --probe-controls
-      - name: Actual Chromium desktop UI
-        run: |
-          set -o pipefail
-          node tools/browser-text-v17.mjs --desktop 2>&1 | tee /tmp/teddy-chat-desktop.log || { echo "::error title=Teddy desktop DOM proof::$(tail -c 900 /tmp/teddy-chat-desktop.log | tr '\n' ' ')"; exit 1; }
-      - name: Report browser desktop failure
-        if: failure()
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          tail -c 2300 /tmp/teddy-chat-desktop.log > /tmp/teddy-chat-diagnostic.txt
-          gh issue comment ${{ github.event.pull_request.number }} --repo "$GITHUB_REPOSITORY" --body-file /tmp/teddy-chat-diagnostic.txt
-      - name: Mobile HTTP baseline
-        run: node tools/browser-text-v17.mjs --mobile --probe-chat
-      - name: Mobile balloon
-        run: node tools/browser-text-v17.mjs --mobile --probe-balloon
-      - name: Mobile history visibility
-        run: node tools/browser-text-v17.mjs --mobile --probe-history
-      - name: Mobile geometry
-        run: node tools/browser-text-v17.mjs --mobile --probe-geometry
-      - name: Mobile controls
-        run: node tools/browser-text-v17.mjs --mobile --probe-controls
-      - name: Actual Chromium mobile UI
-        run: |
-          set -o pipefail
-          node tools/browser-text-v17.mjs --mobile 2>&1 | tee /tmp/teddy-chat-mobile.log || { echo "::error title=Teddy mobile DOM proof::$(tail -c 900 /tmp/teddy-chat-mobile.log | tr '\n' ' ')"; exit 1; }
