@@ -14,6 +14,7 @@ on:
       - 'tools/prove-real-text-v20.mjs'
 permissions:
   contents: read
+  issues: write
 concurrency:
   group: teddy-real-text-v20-${{ github.ref }}
   cancel-in-progress: true
@@ -35,6 +36,15 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: node tools/prove-real-text-v20.mjs
+      - name: publish bounded failure diagnosis on PR
+        if: ${{ failure() && github.event_name == 'pull_request' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if test -f "$RUNNER_TEMP/teddy-real-text-v20-proof.json"; then
+            { echo '### Authentic GGUF E2E failure'; echo; echo '~~~json'; head -c 4200 "$RUNNER_TEMP/teddy-real-text-v20-proof.json"; echo; echo '~~~'; } > "$RUNNER_TEMP/teddy-gguf-pr-comment.md"
+            gh issue comment "${{ github.event.pull_request.number }}" --repo "$GITHUB_REPOSITORY" --body-file "$RUNNER_TEMP/teddy-gguf-pr-comment.md"
+          fi
       - name: upload proof manifest without model weights
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()

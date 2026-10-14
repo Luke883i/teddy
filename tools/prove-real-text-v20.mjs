@@ -78,6 +78,12 @@ try{
   const out=path.join(process.env.RUNNER_TEMP||tmp,'teddy-real-text-v20-proof.json');
   fs.writeFileSync(out,JSON.stringify(report,null,2));
   console.log('TEDDY_REAL_TEXT_E2E_PASS',JSON.stringify(report));
+}catch(error){
+  report.failure={code:error?.code||null,message:String(error?.message||error).slice(0,700),stack:String(error?.stack||'').slice(0,1800)};
+  const out=path.join(process.env.RUNNER_TEMP||tmp,'teddy-real-text-v20-proof.json');
+  fs.writeFileSync(out,JSON.stringify(report,null,2));
+  console.error('TEDDY_REAL_TEXT_E2E_FAILURE',JSON.stringify(report.failure));
+  throw error;
 }finally{
   app?.kill('SIGTERM');offline?.stop();runtime?.stop();
   await sleep(350);
