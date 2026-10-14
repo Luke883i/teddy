@@ -101,6 +101,9 @@ export function installTextChat({boot,getAvailability,getConversationId,setConve
   bubbleClose.addEventListener('click',hideBubble);
   function onKeydown(event){
     if(event.key!=='Escape')return;
+    // Foreground drawers/menu/dialogs own Escape before the transcript and balloon.
+    const front=['#secondaryNav','#drawer','#onboarding','#connectionNotice','#installPanel'];
+    if(front.some(q=>{const el=document.querySelector(q);return el&&!el.classList.contains('hidden')}))return;
     if(historyOpen){setHistory(false,{focus:true});event.stopImmediatePropagation()}
     else if(!bubble.classList.contains('hidden')){hideBubble();event.stopImmediatePropagation()}
   }
