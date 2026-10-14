@@ -71,6 +71,8 @@ jobs:
         run: node --test tests/choreography-v12.test.mjs
       - name: test inherited motion contracts
         run: node --test tests/motion-contract-v8.test.mjs tests/motion-world-v8.test.mjs tests/motion-routing-v8.test.mjs
+      - name: prove real text chat, SQLite and closeable UI in Chrome
+        run: node tools/browser-text-v17.mjs
       - name: diagnose real UI mounting with facial installer
         run: node tools/browser-motion-smoke-v13.mjs --probe-ui
       - name: diagnose baseline greeting motion under Canvas2D

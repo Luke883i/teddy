@@ -39,7 +39,7 @@ try{
   await command('Page.navigate',{url:`http://127.0.0.1:${port}/`});
   const expression=`(async()=>{
     const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-    for(let i=0;i<150&&!document.querySelector('#chatForm')?.onsubmit&&!document.querySelector('#chatInput')?.disabled;i++)await sleep(75);
+    for(let i=0;i<150&&!document.querySelector('#chatHint')?.textContent?.includes('pronto');i++)await sleep(75);
     const input=document.querySelector('#chatInput'),form=document.querySelector('#chatForm');
     if(!input||!form)throw Error('text composer absent');
     for(let i=0;i<70&&input.disabled;i++)await sleep(70);
