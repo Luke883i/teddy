@@ -113,6 +113,13 @@ try{
     document.querySelector('#installClose').click();
     if(!document.querySelector('#installPanel').classList.contains('hidden'))throw Error('model details do not close');
     if(${probeControls})return {success:true,chatInputVisible:true,stage:'controls'};
+    const newChat=document.querySelector('#newChat');
+    if(!newChat||newChat.disabled)throw Error('new chat cannot start');
+    newChat.click();
+    if(!bubble.classList.contains('hidden'))throw Error('old answer remains visible after new conversation');
+    if(input.disabled)throw Error('new conversation disabled the composer');
+    history.querySelector('.chat-message.assistant').click();
+    if(bubble.classList.contains('hidden'))throw Error('saved conversation cannot be resumed');
 
     const menu=document.querySelector('#settingsBtn'),nav=document.querySelector('#secondaryNav');
     if(!nav.classList.contains('hidden'))throw Error('secondary navigation leaked into primary conversation');
