@@ -140,7 +140,7 @@ jobs:
           cleanup(){ kill "$pid" 2>/dev/null || true; }
           trap cleanup EXIT
           for i in {1..60}; do curl -fsS http://127.0.0.1:8787/api/health >/dev/null && break; sleep .1; done
-          curl -fsS http://127.0.0.1:8787/api/bootstrap | grep '"transport":"webrtc"'
+          curl -fsS http://127.0.0.1:8787/api/bootstrap | grep '"interaction":{"mode":"text","voiceUi":false,"voiceEndpoints":false}'
           curl -fsS http://127.0.0.1:8787/api/bootstrap | grep '"presenceRig":"v4"'
           curl -fsS http://127.0.0.1:8787/api/bootstrap | grep '"morphology":"v5"'
           curl -fsS http://127.0.0.1:8787/api/bootstrap | grep '"correctedDepth":true'

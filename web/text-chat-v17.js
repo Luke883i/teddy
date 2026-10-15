@@ -99,7 +99,7 @@ export function installTextChat({boot,getAvailability,getConversationId,setConve
       setConversationId(body.conversationId);
       append('user',text);append('assistant',body.reply);
       showBubble(body.reply);
-      input.value='';setState('parla quando vuoi');
+      input.value='';setState('pronto a leggere');
     }catch(error){
       if(error.name==='AbortError')setState('messaggio interrotto · controlla la cronologia');
       else showProblem({error:error.code||'text_turn_failed',kind:'text'});

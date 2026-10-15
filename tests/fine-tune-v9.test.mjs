@@ -24,4 +24,4 @@ test('missing local database degrades to empty context',()=>{const home=fs.mkdte
 
 test('runtime recovery remains bounded and local-only',()=>{assert.ok(recoveryDelay(999)<=4000);assert.ok(recoveryCooldown(999)<=30000);assert.equal(shouldAttemptRuntimeRecovery({provider:'openai',wasReady:true,ready:false}),false);assert.equal(shouldAttemptRuntimeRecovery({provider:'local',wasReady:false,ready:false}),false);assert.equal(shouldAttemptRuntimeRecovery({provider:'local',wasReady:true,ready:false,now:10,nextAt:9}),true)});
 
-test('local semantic event has one owner across transport and app',()=>{const local=fs.readFileSync(new URL('../web/local.js',import.meta.url),'utf8'),app=fs.readFileSync(new URL('../web/app.js',import.meta.url),'utf8');assert.equal((local.match(/teddy:local-event/g)||[]).length+(app.match(/teddy:local-event/g)||[]).length,1)});
+test('legacy speech event cannot auto-enter the Step 0 chat shell',()=>{const app=fs.readFileSync(new URL('../web/app.js',import.meta.url),'utf8');assert.doesNotMatch(app,/teddy:local-event|streamLocalTurn|captureWav|AudioPresence/)});
