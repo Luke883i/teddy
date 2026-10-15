@@ -27,7 +27,7 @@ test('only real model / HTTP / SQLite sources are permitted in 30-session proof'
  const p=read('tools/prove-thirty-browser-v27.mjs');
  const main=read('tools/prove-real-text-v20.mjs');
  assert.match(main,/proveThirtyBrowser\(\{appPort,home,root\}\)/);
- assert.match(p,/sessions\.length/);assert.match(p,/!==30/);
+ assert.match(p,/report\.complete=30/);assert.match(p,/!==30/);
  assert.match(p,/const db=new DatabaseSync|db=new DatabaseSync/);
  assert.match(p,/stored!==rendered/);
  assert.match(p,/receipts\.length!==3/);
