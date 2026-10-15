@@ -56,6 +56,16 @@ jobs:
             { echo '### Authentic GGUF E2E failure'; echo; echo '~~~json'; head -c 4200 "$RUNNER_TEMP/teddy-real-text-v20-proof.json"; echo; echo '~~~'; } > "$RUNNER_TEMP/teddy-gguf-pr-comment.md"
             gh issue comment "${{ github.event.pull_request.number }}" --repo "$GITHUB_REPOSITORY" --body-file "$RUNNER_TEMP/teddy-gguf-pr-comment.md"
           fi
+      - name: expose 30-session progress on PR failure
+        if: ${{ failure() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          REPORT="$RUNNER_TEMP/teddy-v27-real-30/teddy-v27-30-session-proof.json"
+          if test -f "$REPORT"; then
+            node -e 'const fs=require("fs"),p=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));process.stdout.write("### Teddy V27 genuine browser progress\n\nCompleted sessions: "+p.sessions.length+"/30\n\nCurrent stage: "+JSON.stringify(p.failureContext||{})+"\n\nFailure: "+String(p.failure||"unknown").slice(0,340)+"\n")' "$REPORT" > "$RUNNER_TEMP/teddy-v27-progress-comment.md"
+            gh issue comment "${{ github.event.pull_request.number }}" --repo "$GITHUB_REPOSITORY" --body-file "$RUNNER_TEMP/teddy-v27-progress-comment.md" || true
+          fi
       - name: annotate authentic GGUF failure type
         if: failure()
         id: proof_failure

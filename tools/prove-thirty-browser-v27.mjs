@@ -31,6 +31,8 @@ export async function proveThirtyBrowser({appPort,home,root=process.cwd()}){
  let chromeError='';proc.stderr.on('data',b=>chromeError=(chromeError+String(b)).slice(-1200));
  let ws,command,db;
  const report={schema:'teddy.v27.browser.30',realModel:true,realBrowser:true,syntheticUserPrompts:true,modelMock:false,sessions:[],startedAt:new Date().toISOString()};
+ let progress={session:0,turn:0,stage:'starting',since:Date.now()};
+ const mark=(session,turn,stage)=>{progress={session,turn,stage,since:Date.now()};console.log('TEDDY_V27_STAGE',JSON.stringify(progress))};
  try{
    const pf=path.join(userDir,'DevToolsActivePort');
    for(let i=0;i<180&&!fs.existsSync(pf);i++)await pause(100);
@@ -52,10 +54,12 @@ export async function proveThirtyBrowser({appPort,home,root=process.cwd()}){
      if(result.exceptionDetails)throw Error(result.exceptionDetails.exception?.description||result.exceptionDetails.text);
      return result.result?.value;
    }
+   mark(0,0,'browser_boot');
    const boot=await evaluate(`(async()=>{for(let i=0;i<150;i++){if(document.querySelector('#chatForm')?.dataset.wired==='true')return true;await new Promise(r=>setTimeout(r,100))}return false})()`);
    if(!boot)throw Error('chat did not become wired');
    db=new DatabaseSync(path.join(home,'data','teddy.sqlite'));
    for(let i=0;i<30;i++){
+     mark(i+1,0,'new_session');
      const mobile=i%2===1;await resize(mobile);await pause(130);
      const name='Nome'+String.fromCharCode(65+Math.floor(i/26))+String.fromCharCode(65+i%26);
      const seed=await evaluate(`(()=>{const b=document.querySelector('#newChat');if(b.disabled)throw Error('new chat disabled');b.click();return {active:document.querySelector('#chatInput').disabled,balloonHidden:document.querySelector('#teddyBubble').classList.contains('hidden')}})()`);
@@ -64,6 +68,7 @@ export async function proveThirtyBrowser({appPort,home,root=process.cwd()}){
      const cases=['chi sei?','Mi chiamo '+name,prompts[i]];
      const replies=[];
      for(let j=0;j<cases.length;j++){
+       mark(i+1,j+1,j===2?'authentic_qwen_turn':'deterministic_turn');
        const text=cases[j],reply=await evaluate(`(async()=>{const input=document.querySelector('#chatInput'),form=document.querySelector('#chatForm');input.value=${JSON.stringify(text)};form.requestSubmit();for(let i=0;i<450;i++){await new Promise(r=>setTimeout(r,100));const output=document.querySelector('#teddyBubbleText').textContent,send=document.querySelector('#sendText');if(output&&send.textContent==='Invia'&&output!==${JSON.stringify(replies.at(-1)?.text||'')})return {text:output,button:send.textContent}}throw Error('no browser reply for real user turn')})()`,55000);
        if(!reply?.text||reply.text.length<9){
          throw Error('browser_short_reply_session_'+(i+1)+'_turn_'+(j+1)+'_chars_'+(reply?.text?.length||0)+'_digest_'+sha(reply?.text||'').slice(0,9));
@@ -71,6 +76,7 @@ export async function proveThirtyBrowser({appPort,home,root=process.cwd()}){
        replies.push(reply);
        console.log('TEDDY_REAL_BROWSER_TURN',JSON.stringify({session:i+1,turn:j+1,characters:reply.text.length,digest:sha(reply.text).slice(0,12)}));
      }
+     mark(i+1,3,'sqlite_and_ui_evidence');
      const transcript=db.prepare('SELECT c.id conversation_id,t.role,t.text FROM turns t JOIN conversations c ON c.id=t.conversation_id ORDER BY t.id DESC LIMIT 6').all().reverse();
      const ids=new Set(transcript.map(x=>x.conversation_id));if(ids.size!==1)throw Error('session leakage at '+i);
      const id=[...ids][0],stored=transcript.at(-1)?.text,rendered=replies.at(-1).text;
@@ -82,12 +88,14 @@ export async function proveThirtyBrowser({appPort,home,root=process.cwd()}){
      if(metrics.balloon.left<0||metrics.balloon.right>metrics.viewport.width+1||metrics.composer.left<0||metrics.composer.right>metrics.viewport.width+1)throw Error('viewport clipping '+i);
      if(metrics.overflow&&!metrics.readAllVisible)throw Error('truncated long response without full-read affordance '+i);
      if(mobile&&!metrics.historyDockHidden)throw Error('history obscures mobile Teddy '+i);
+     mark(i+1,3,'capture_screenshot');
      const frame=await command('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});
      const filename=path.join(out,String(i+1).padStart(2,'0')+'.png');fs.writeFileSync(filename,Buffer.from(frame.data,'base64'));
      if(metrics.overflow){
        const full=await evaluate(`(()=>{document.querySelector('#bubbleReadAll').click();const history=document.querySelector('#chatHistoryPanel'),rows=[...history.querySelectorAll('.chat-message.assistant p')];return {open:!history.classList.contains('hidden'),found:rows.some(x=>x.textContent===document.querySelector('#teddyBubbleText').textContent)}})()`);
        if(!full.open||!full.found)throw Error('full-text disclosure broken '+i);
      }
+     mark(i+1,3,'session_verified');
      report.sessions.push({n:i+1,conversationDigest:sha(id).slice(0,16),mobile,turns:3,modelTurns:1,ruleTurns:2,elapsedMs:Math.round(performance.now()-start),replyCharacters:rendered.length,replyDigest:sha(rendered),metrics,frame:path.basename(filename)});
      console.log('TEDDY_REAL_BROWSER_SESSION_PASS',JSON.stringify({session:i+1,mobile,latencyMs:report.sessions.at(-1).elapsedMs,chars:rendered.length,font:metrics.fontPx,overflow:metrics.overflow}));
    }
@@ -107,7 +115,11 @@ export async function proveThirtyBrowser({appPort,home,root=process.cwd()}){
    if(!report.videoCreated)throw Error('real_video_evidence_unavailable:'+report.videoError);
    return report;
  }catch(e){
+   const dbTurns=(()=>{try{return db?.prepare('SELECT COUNT(*) n FROM turns').get().n||0}catch{return null}})();
+   const dbReceipts=(()=>{try{return db?.prepare('SELECT COUNT(*) n FROM semantic_receipts').get().n||0}catch{return null}})();
    report.failure=String(e?.stack||e).slice(0,1600);
+   report.failureContext={...progress,elapsedSinceStageMs:Date.now()-progress.since,completeSessions:report.sessions.length,dbTurns,dbReceipts};
+   console.error('TEDDY_REAL_30_SESSION_FAIL',JSON.stringify({failure:report.failure.slice(0,550),context:report.failureContext}));
    fs.writeFileSync(path.join(out,'teddy-v27-30-session-proof.json'),JSON.stringify(report,null,2));
    throw e;
  }finally{
