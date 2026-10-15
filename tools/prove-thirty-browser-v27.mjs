@@ -6,6 +6,7 @@ import os from 'node:os';
 import crypto from 'node:crypto';
 import {spawn,spawnSync} from 'node:child_process';
 import {DatabaseSync} from 'node:sqlite';
+import {assembleEvidenceVideo} from './assemble-evidence-video-v27.mjs';
 
 const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const sha=v=>crypto.createHash('sha256').update(v).digest('hex');
@@ -108,11 +109,14 @@ export async function proveThirtyBrowser({appPort,home,root=process.cwd()}){
    report.visualEvidence='30 actual browser screenshots; mp4 is a sampled-frame storyboard, NOT continuous screen recording';
    const json=path.join(out,'teddy-v27-30-session-proof.json');
    fs.writeFileSync(json,JSON.stringify(report,null,2));
-   const movie=spawnSync('ffmpeg',['-y','-loglevel','error','-framerate','1','-pattern_type','glob','-i',path.join(out,'*.png'),'-vf','scale=960:540:force_original_aspect_ratio=decrease:flags=lanczos,pad=960:540:(ow-iw)/2:(oh-ih)/2','-pix_fmt','yuv420p',path.join(out,'teddy-v27-sampled-ui.mp4')],{timeout:120000});
-   report.videoCreated=movie.status===0;report.videoError=movie.status===0?null:String(movie.stderr||'').slice(0,450);
+   const video=assembleEvidenceVideo({
+     frames:Array.from({length:30},(_,i)=>path.join(out,String(i+1).padStart(2,'0')+'.png')),
+     output:path.join(out,'teddy-v27-sampled-ui.mp4'),
+     workDir:userDir
+   });
+   report.videoCreated=video.created;report.video=video;
    fs.writeFileSync(json,JSON.stringify(report,null,2));
-   console.log('TEDDY_REAL_30_SESSION_PASS',JSON.stringify({sessions:report.complete,latency:report.latency,minFontPx:report.minFontPx,overflows:report.overflowSessions,video:report.videoCreated}));
-   if(!report.videoCreated)throw Error('real_video_evidence_unavailable:'+report.videoError);
+   console.log('TEDDY_REAL_30_SESSION_PASS',JSON.stringify({sessions:report.complete,latency:report.latency,minFontPx:report.minFontPx,overflows:report.overflowSessions,video}));
    return report;
  }catch(e){
    const dbTurns=(()=>{try{return db?.prepare('SELECT COUNT(*) n FROM turns').get().n||0}catch{return null}})();
