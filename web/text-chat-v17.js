@@ -5,10 +5,10 @@ export function installTextChat({boot,getAvailability,getConversationId,setConve
   const $=selector=>document.querySelector(selector);
   const form=$('#chatForm'),input=$('#chatInput'),send=$('#sendText'),log=$('#chatLog'),hint=$('#chatHint');
   const history=$('#chatHistoryPanel'),toggle=$('#historyToggle'),historyClose=$('#historyClose'),historyEmpty=$('#chatHistoryEmpty');
-  const bubble=$('#teddyBubble'),bubbleText=$('#teddyBubbleText'),bubbleClose=$('#bubbleClose'),newChat=$('#newChat');
-  if([form,input,send,log,hint,history,toggle,historyClose,historyEmpty,bubble,bubbleText,bubbleClose,newChat].some(el=>!el))throw Error('text_chat_surface_missing');
+  const bubble=$('#teddyBubble'),bubbleText=$('#teddyBubbleText'),bubbleClose=$('#bubbleClose'),bubbleReadAll=$('#bubbleReadAll'),newChat=$('#newChat');
+  if([form,input,send,log,hint,history,toggle,historyClose,historyEmpty,bubble,bubbleText,bubbleClose,bubbleReadAll,newChat].some(el=>!el))throw Error('text_chat_surface_missing');
   const local=boot.ai.provider==='local';
-  let busy=false,controller=null,historyOpen=false,closed=false,lastCompact=null,explicitSessionChoice=false;
+  let busy=false,controller=null,historyOpen=false,closed=false,lastCompact=null,explicitSessionChoice=false,lastBubbleConversationId=null;
   function applyGeometry(){
     const g=chatLayout(window.innerWidth,window.innerHeight);
     document.documentElement.style.setProperty('--teddy-history-width',g.historyWidth+'px');
@@ -35,13 +35,22 @@ export function installTextChat({boot,getAvailability,getConversationId,setConve
     const modelReady=local?Boolean(boot.ai.mock||getAvailability()?.textReady===true):Boolean(boot.secret?.configured);
     hint.textContent=busy?'Teddy sta rispondendo…':local?(boot.ai.mock?'Modalità di prova · nessun modello reale':(modelReady?'Modello locale pronto':getAvailability()?.installPhase==='failed'?'Chat base pronta · Qwen non pronto':'Chat base pronta · Qwen in preparazione')):(modelReady?'OpenAI API collegata':'Chat base pronta · OpenAI non collegata');
   }
-  function showBubble(text){
+  function refreshBubbleOverflow(){
+    if(bubble.classList.contains('hidden'))return;
+    const overflow=bubbleText.scrollHeight>bubbleText.clientHeight+2;
+    bubbleReadAll.classList.toggle('hidden',!overflow);
+    bubbleReadAll.setAttribute('aria-hidden',String(!overflow));
+  }
+  function showBubble(text,conversationId=null){
     if(typeof text!=='string'||!text.trim())return;
+    lastBubbleConversationId=conversationId||getConversationId();
     bubbleText.textContent=text;
     bubble.classList.remove('hidden');
-    bubble.scrollTop=0;
+    bubbleText.scrollTop=0;
+    refreshBubbleOverflow();
+    requestAnimationFrame(refreshBubbleOverflow);
   }
-  function hideBubble(){bubble.classList.add('hidden')}
+  function hideBubble(){bubble.classList.add('hidden');bubbleReadAll.classList.add('hidden')}
   function setHistory(open,{focus=false}={}){
     historyOpen=Boolean(open);
     history.classList.toggle('hidden',!historyOpen);
@@ -53,7 +62,7 @@ export function installTextChat({boot,getAvailability,getConversationId,setConve
     if(typeof text!=='string'||!text.trim()||!['user','assistant'].includes(role))return;
     if(id!=null){if(seenIds.has(id))return;seenIds.add(id)}
     const item=document.createElement(role==='assistant'?'button':'article');
-    if(role==='assistant'){item.type='button';item.setAttribute('aria-label','Riapri questa conversazione e rileggi Teddy');item.addEventListener('click',()=>{if(busy)return;if(conversationId){explicitSessionChoice=true;setConversationId(conversationId)}showBubble(text);input.focus()})}
+    if(role==='assistant'){item.type='button';item.setAttribute('aria-label','Riapri questa conversazione e rileggi Teddy');item.addEventListener('click',()=>{if(busy)return;if(conversationId){explicitSessionChoice=true;setConversationId(conversationId)}showBubble(text,conversationId);input.focus()})}
     item.className='chat-message '+role;
     const who=document.createElement('small');who.textContent=role==='user'?'Tu':'Teddy';
     const message=document.createElement('p');message.textContent=text;
@@ -100,7 +109,7 @@ export function installTextChat({boot,getAvailability,getConversationId,setConve
       if(!response.ok||typeof body.reply!=='string'||!body.reply.trim()||typeof body.conversationId!=='string')throw Object.assign(new Error('text_turn_failed'),{code:body.error||'text_turn_failed'});
       setConversationId(body.conversationId);
       append('user',text,null,body.conversationId);append('assistant',body.reply,null,body.conversationId);
-      showBubble(body.reply);
+      showBubble(body.reply,body.conversationId);
       input.value='';setState('pronto a leggere');
     }catch(error){
       if(error.name==='AbortError')setState('messaggio interrotto · controlla la cronologia');
@@ -121,6 +130,13 @@ export function installTextChat({boot,getAvailability,getConversationId,setConve
   toggle.addEventListener('click',()=>setHistory(!historyOpen,{focus:true}));
   historyClose.addEventListener('click',()=>setHistory(false,{focus:true}));
   bubbleClose.addEventListener('click',hideBubble);
+  bubbleReadAll.addEventListener('click',()=>{
+    setHistory(true,{focus:true});
+    if(lastBubbleConversationId){explicitSessionChoice=true;setConversationId(lastBubbleConversationId)}
+    const matches=Array.from(log.querySelectorAll('.chat-message.assistant'));
+    matches.reverse().find(el=>el.querySelector('p')?.textContent===bubbleText.textContent)?.scrollIntoView({block:'nearest'});
+  });
+  window.addEventListener('resize',refreshBubbleOverflow);
   function onKeydown(event){
     if(event.key!=='Escape')return;
     // Foreground drawers/menu/dialogs own Escape before the transcript and balloon.
@@ -145,6 +161,6 @@ export function installTextChat({boot,getAvailability,getConversationId,setConve
     openHistory:()=>setHistory(true,{focus:true}),
     closeHistory:()=>setHistory(false),
     hydrated,
-    close:()=>{if(closed)return;closed=true;controller?.abort();form.removeEventListener('submit',submit);document.removeEventListener('keydown',onKeydown);window.removeEventListener('resize',applyGeometry);window.visualViewport?.removeEventListener('resize',applyGeometry)}
+    close:()=>{if(closed)return;closed=true;controller?.abort();form.removeEventListener('submit',submit);document.removeEventListener('keydown',onKeydown);window.removeEventListener('resize',applyGeometry);window.removeEventListener('resize',refreshBubbleOverflow);window.visualViewport?.removeEventListener('resize',applyGeometry)}
   };
 }
