@@ -12,8 +12,10 @@
 Teddy is a local-first bear you can **type to**, even without internet **after** installing his small model. Start from the repository directory:
 
 ```bash
-./teddy.sh
+bash teddy.sh
 ```
+
+Se vedi **Permission denied**, la causa era il bit eseguibile assente in Git. Da V27 lo script è eseguibile anche con `./teddy.sh`; su una vecchia copia puoi usare `chmod +x teddy.sh`.
 
 You can type immediately: simple social messages work with deterministic rules while the model is still installing. Wait for **modello locale pronto** before asking open questions. Press **Invia**, and read Teddy's response in the comic bubble. **Cronologia** opens the persisted chat; **Dettagli modello** reopens installation/verification information. These controls are wired to the running server, not demonstrations.
 

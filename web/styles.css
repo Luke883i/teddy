@@ -115,3 +115,10 @@ header .icon{margin-left:0}
 .chat-footer #newChat{font-weight:650;flex-shrink:0}
 .chat-footer #newChat:disabled{opacity:.45;cursor:wait}
 @media(max-width:440px){.chat-footer #newChat{font-size:10px;padding:5px 3px}.chat-footer #chatHint{font-size:9px}}
+
+/* V27: readable, discoverable full reply without an extra central overlay. */
+.teddy-bubble p{font-size:clamp(15px,1.6vw,18px);line-height:1.55;overflow-y:auto;overscroll-behavior:contain}
+.teddy-bubble .bubble-read-all{display:block;margin-top:10px;padding:9px 11px;border:1px solid #8c644856;border-radius:11px;background:#f5d9b7;color:#422a1d;font:700 12px/1.25 ui-rounded,"Trebuchet MS",system-ui,sans-serif;cursor:pointer;text-align:left;width:100%}
+.teddy-bubble .bubble-read-all:hover{background:#e8c5a1}
+.teddy-bubble .bubble-read-all:focus-visible{outline:2px solid #5e3721;outline-offset:2px}
+@media(max-width:560px){.teddy-bubble p{font-size:15px;line-height:1.52}.teddy-bubble{width:min(220px,54vw)}}

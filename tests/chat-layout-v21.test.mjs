@@ -29,7 +29,7 @@ test('chat elements are distinct and model details are operable on demand',()=>{
  assert.match(app,/function openModelDetails/);
  assert.match(app,/function closeModelDetails/);
  assert.match(app,/aria-expanded/);
- assert.match(chat,/showBubble\(body\.reply\)/);
+ assert.match(chat,/showBubble\(body\.reply,body\.conversationId\)/);
  assert.match(chat,/fetch\(path,\{cache:'no-store'\}\)/);
  assert.match(chat,/role==='assistant'\?'button':'article'/);
  assert.doesNotMatch(chat,/innerHTML\s*=\s*.*body\.reply/);

@@ -8,6 +8,11 @@ on:
       - 'server/lib/semantic-spine.mjs'
       - 'server/lib/local-service.mjs'
       - 'tools/prove-real-text-v20.mjs'
+      - 'tools/prove-thirty-browser-v27.mjs'
+      - 'tools/assemble-evidence-video-v27.mjs'
+      - 'web/text-chat-v17.js'
+      - 'web/styles.css'
+      - 'web/index.html'
       - '.github/workflows/text-real-model-v20.yml'
   workflow_dispatch:
   push:
@@ -15,6 +20,11 @@ on:
     paths:
       - 'server/lib/runtime-manager.mjs'
       - 'tools/prove-real-text-v20.mjs'
+      - 'tools/prove-thirty-browser-v27.mjs'
+      - 'tools/assemble-evidence-video-v27.mjs'
+      - 'web/text-chat-v17.js'
+      - 'web/styles.css'
+      - 'web/index.html'
 permissions:
   contents: read
   issues: write
@@ -25,7 +35,7 @@ jobs:
   genuine-gguf:
     name: real Qwen GGUF / install + offline replay + text HTTP
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -35,6 +45,19 @@ jobs:
           node-version: 24.19.0
       - name: install dependencies
         run: npm ci --ignore-scripts
+      - name: install checksum-pinned user-space video encoder
+        run: |
+          mkdir -p "$RUNNER_TEMP/ffmpeg-wheel" "$RUNNER_TEMP/ffmpeg-python"
+          python3 -m pip download --only-binary=:all: --no-deps --dest "$RUNNER_TEMP/ffmpeg-wheel" imageio-ffmpeg==0.6.0
+          echo "c7e46fcec401dd990405049d2e2f475e2b397779df2519b544b8aab515195282  $RUNNER_TEMP/ffmpeg-wheel/imageio_ffmpeg-0.6.0-py3-none-manylinux2014_x86_64.whl" | sha256sum -c -
+          python3 -m pip install --no-deps --target "$RUNNER_TEMP/ffmpeg-python" "$RUNNER_TEMP/ffmpeg-wheel/imageio_ffmpeg-0.6.0-py3-none-manylinux2014_x86_64.whl"
+          VIDEO_BIN=$(PYTHONPATH="$RUNNER_TEMP/ffmpeg-python" python3 -c 'import imageio_ffmpeg; print(imageio_ffmpeg.get_ffmpeg_exe())')
+          test -x "$VIDEO_BIN"
+          "$VIDEO_BIN" -version
+          echo "TEDDY_EVIDENCE_FFMPEG=$VIDEO_BIN" >> "$GITHUB_ENV"
+      - name: prove video encoder against mixed-aspect frames before GGUF install
+        run: node --test tests/evidence-video-v27.test.mjs
+
       - name: install authentic model, generate replies and prove networkless restart
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -48,11 +71,29 @@ jobs:
             { echo '### Authentic GGUF E2E failure'; echo; echo '~~~json'; head -c 4200 "$RUNNER_TEMP/teddy-real-text-v20-proof.json"; echo; echo '~~~'; } > "$RUNNER_TEMP/teddy-gguf-pr-comment.md"
             gh issue comment "${{ github.event.pull_request.number }}" --repo "$GITHUB_REPOSITORY" --body-file "$RUNNER_TEMP/teddy-gguf-pr-comment.md"
           fi
+      - name: expose 30-session progress on PR failure
+        if: ${{ failure() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          REPORT="$RUNNER_TEMP/teddy-v27-real-30/teddy-v27-30-session-proof.json"
+          if test -f "$REPORT"; then
+            node -e 'const fs=require("fs"),p=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));process.stdout.write("### Teddy V27 genuine browser progress\n\nCompleted sessions: "+p.sessions.length+"/30\n\nCurrent stage: "+JSON.stringify(p.failureContext||{})+"\n\nFailure: "+String(p.failure||"unknown").slice(0,340)+"\n")' "$REPORT" > "$RUNNER_TEMP/teddy-v27-progress-comment.md"
+            gh issue comment "${{ github.event.pull_request.number }}" --repo "$GITHUB_REPOSITORY" --body-file "$RUNNER_TEMP/teddy-v27-progress-comment.md" || true
+          fi
       - name: annotate authentic GGUF failure type
         if: failure()
         id: proof_failure
         run: |
           node -e 'const fs=require("fs"),p=process.env.RUNNER_TEMP+"/teddy-real-text-v20-proof.json";let f={};try{f=JSON.parse(fs.readFileSync(p,"utf8")).failure||{}}catch{};let v=(f.message||f.code||"missing-manifest").replace(/[^a-z0-9-]/gi,"-").slice(0,140);fs.appendFileSync(process.env.GITHUB_OUTPUT,"slug="+v+"\n");'
+      - name: archive 30-session real browser frames and sampled-frame video
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: teddy-v27-real-30-sessions
+          path: ${{ runner.temp }}/teddy-v27-real-30/
+          if-no-files-found: ignore
+          retention-days: 14
       - name: upload proof manifest without model weights
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()

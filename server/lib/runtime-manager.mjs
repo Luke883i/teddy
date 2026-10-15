@@ -141,7 +141,7 @@ export function createRuntimeManager({home,env=process.env,fetchImpl=fetch,spawn
   async function startLlama(config){
     if(llama){const old=llama;llama=null;await terminateChild(old)}
     if(await portListening(config.port))throw Object.assign(new Error('local_llm_port_in_use'),{code:'local_llm_port_in_use',stage:'start',retryable:false});
-    const args=['-m',config.model,'--host','127.0.0.1','--port',String(config.port),'--ctx-size','2048','--n-predict','128'];
+    const args=['-m',config.model,'--host','127.0.0.1','--port',String(config.port),'--ctx-size','2048','--n-predict','192',...(textOnly?['--reasoning','off']:[])];
     let child;try{child=spawnImpl(config.executable,args,{stdio:['ignore','ignore','pipe'],shell:false})}catch(e){throw Object.assign(new Error('local_llm_start_failed'),{code:'local_llm_start_failed',stage:'start',retryable:false,cause:e})}
     llama=child;let exited=false,spawnError=null;child.stderr?.on('data',()=>{});child.once?.('error',e=>{spawnError=e});child.once?.('exit',()=>{exited=true;if(state.engines.llm.healthy){state.engines.llm={state:'stopped',healthy:false};state.installPhase='failed';publish().catch(()=>{})}});
     for(let i=0;i<120;i++){if(stopping){if(llama===child)llama=null;await terminateChild(child);throw Object.assign(new Error('runtime_stopped'),{code:'runtime_stopped',stage:'start',retryable:false})}if(spawnError||exited){if(llama===child)llama=null;throw Object.assign(new Error('local_llm_start_failed'),{code:'local_llm_start_failed',stage:'start',retryable:false,cause:spawnError||undefined})}try{const r=await fetchImpl(`http://127.0.0.1:${config.port}/v1/models`,{signal:AbortSignal.timeout(1200)});if(r.ok&&!exited&&!spawnError)return}catch{}await sleep(250)}
