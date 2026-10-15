@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';import {spawn} from 'node:child_process';import fs from 'node:fs';import os from 'node:os';import path from 'node:path';
 const port=8797,home=fs.mkdtempSync(path.join(os.tmpdir(),'teddy-v7-http-'));
-const child=spawn(process.execPath,['server/main.mjs'],{cwd:process.cwd(),env:{...process.env,TEDDY_HOME:home,TEDDY_PORT:String(port),TEDDY_LOCAL_ENGINE_MOCK:'1',TEDDY_PROVIDER:'local'},stdio:['ignore','pipe','pipe']});
+const child=spawn(process.execPath,['server/main.mjs'],{cwd:process.cwd(),env:{...process.env,TEDDY_HOME:home,TEDDY_PORT:String(port),TEDDY_LOCAL_ENGINE_MOCK:'1',TEDDY_PROVIDER:'local',TEDDY_ENABLE_VOICE_ENDPOINTS:'1'},stdio:['ignore','pipe','pipe']});
 const base=`http://127.0.0.1:${port}`;const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 try{
  let ready=false;for(let i=0;i<80;i++){try{const r=await fetch(`${base}/api/health`);if(r.ok){ready=true;break}}catch{}await sleep(50)}assert.equal(ready,true,'server ready');

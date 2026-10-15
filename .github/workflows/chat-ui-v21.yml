@@ -19,8 +19,28 @@ jobs:
         run: node --test tests/chat-history-v21.test.mjs tests/chat-layout-v21.test.mjs tests/browser-smoke-contract-v21.test.mjs
       - name: Falsify ten million deterministic viewport mutations
         run: node tools/mutate-chat-layout-v21.mjs
+      - name: Assert text-only runtime and negative voice HTTP scenarios
+        run: |
+          node --test tests/text-only-boundary-v25.test.mjs
+          node tools/prove-text-only-boundary-v25.mjs
       - name: Complete browser E2E on desktop
-        run: node tools/browser-text-v17.mjs --desktop
+        id: desktop
+        run: |
+          set +e
+          node tools/browser-text-v17.mjs --desktop > "$RUNNER_TEMP/teddy-v25-desktop.log" 2>&1
+          status=$?
+          cat "$RUNNER_TEMP/teddy-v25-desktop.log"
+          if test "$status" -ne 0; then
+            node -e 'const fs=require("fs"),p=process.env.RUNNER_TEMP+"/teddy-v25-desktop.log";const s=fs.readFileSync(p,"utf8");const errors=s.split("\n").filter(l=>/Error:|TypeError:|ReferenceError:|SyntaxError:|text browser smoke timeout|unhandled/i.test(l));const tag=(errors.at(-1)||"unknown").replace(/[^a-z0-9-]/gi,"-").slice(0,90);fs.appendFileSync(process.env.GITHUB_OUTPUT,"fingerprint="+tag+"\n");'
+            exit "$status"
+          fi
+      - name: Fingerprint failing browser interaction
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: teddy-v25-desktop-${{ steps.desktop.outputs.fingerprint || 'unknown' }}
+          path: ${{ runner.temp }}/teddy-v25-desktop.log
+          if-no-files-found: ignore
       - name: Complete browser E2E on mobile
         run: node tools/browser-text-v17.mjs --mobile
       - name: Preserve rendered desktop and mobile screenshots

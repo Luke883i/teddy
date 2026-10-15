@@ -24,7 +24,7 @@ test('chat elements are distinct and model details are operable on demand',()=>{
  assert.match(html,/id="historyClose"/);
  assert.match(html,/id="bubbleClose"/);
  assert.match(html,/id="modelDetailsBtn"/);
- const composer=html.slice(html.indexOf('<section id="chatPanel"'),html.indexOf('<audio id="remoteAudio"'));
+ const composer=html.slice(html.indexOf('<section id="chatPanel"'),html.indexOf('</section>',html.indexOf('<section id="chatPanel"')));
  assert.doesNotMatch(composer,/id="chatLog"/);
  assert.match(app,/function openModelDetails/);
  assert.match(app,/function closeModelDetails/);

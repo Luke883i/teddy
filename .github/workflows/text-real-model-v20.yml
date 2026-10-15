@@ -52,7 +52,7 @@ jobs:
         if: failure()
         id: proof_failure
         run: |
-          node -e 'const fs=require("fs"),p=process.env.RUNNER_TEMP+"/teddy-real-text-v20-proof.json";let f={};try{f=JSON.parse(fs.readFileSync(p,"utf8")).failure||{}}catch{};let v=(f.code||f.message||"missing-manifest").replace(/[^a-z0-9-]/gi,"-").slice(0,110);fs.appendFileSync(process.env.GITHUB_OUTPUT,"slug="+v+"\n");'
+          node -e 'const fs=require("fs"),p=process.env.RUNNER_TEMP+"/teddy-real-text-v20-proof.json";let f={};try{f=JSON.parse(fs.readFileSync(p,"utf8")).failure||{}}catch{};let v=(f.message||f.code||"missing-manifest").replace(/[^a-z0-9-]/gi,"-").slice(0,140);fs.appendFileSync(process.env.GITHUB_OUTPUT,"slug="+v+"\n");'
       - name: upload proof manifest without model weights
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
