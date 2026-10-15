@@ -10,6 +10,7 @@ import assert from 'node:assert/strict';
 import {createRuntimeManager,QWEN_SHA256} from '../server/lib/runtime-manager.mjs';
 import {createLocalService} from '../server/lib/local-service.mjs';
 import {fileURLToPath} from 'node:url';
+import {proveThirtyBrowser} from './prove-thirty-browser-v27.mjs';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'teddy-real-text-v20-')),home=path.join(tmp,'home');
@@ -115,6 +116,7 @@ try{
   }finally{proofDb.close()}
   report.semantic={modelTurns:3,deterministicTurns:7,sequentialTurns:10,verifiedDbReceipts:10,additionalTurnLatencyMs:latencies};
   report.appHttp=true;report.turns=history.turns.length+6;report.httpReplySha256=crypto.createHash('sha256').update(result.reply).digest('hex');
+  report.thirtySessionSummary=await proveThirtyBrowser({appPort,home,root}).then(({sessions,latency,minFontPx,overflowSessions,videoCreated})=>({sessions:sessions.length,latency,minFontPx,overflowSessions,videoCreated}));
   report.elapsedMs=Date.now()-begin;
   const out=path.join(process.env.RUNNER_TEMP||tmp,'teddy-real-text-v20-proof.json');
   fs.writeFileSync(out,JSON.stringify(report,null,2));

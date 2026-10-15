@@ -79,12 +79,12 @@ export async function proveThirtyBrowser({appPort,home,root=process.cwd()}){
      if(metrics.balloon.left<0||metrics.balloon.right>metrics.viewport.width+1||metrics.composer.left<0||metrics.composer.right>metrics.viewport.width+1)throw Error('viewport clipping '+i);
      if(metrics.overflow&&!metrics.readAllVisible)throw Error('truncated long response without full-read affordance '+i);
      if(mobile&&!metrics.historyDockHidden)throw Error('history obscures mobile Teddy '+i);
+     const frame=await command('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});
+     const filename=path.join(out,String(i+1).padStart(2,'0')+'.png');fs.writeFileSync(filename,Buffer.from(frame.data,'base64'));
      if(metrics.overflow){
        const full=await evaluate(`(()=>{document.querySelector('#bubbleReadAll').click();const history=document.querySelector('#chatHistoryPanel'),rows=[...history.querySelectorAll('.chat-message.assistant p')];return {open:!history.classList.contains('hidden'),found:rows.some(x=>x.textContent===document.querySelector('#teddyBubbleText').textContent)}})()`);
        if(!full.open||!full.found)throw Error('full-text disclosure broken '+i);
      }
-     const frame=await command('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});
-     const filename=path.join(out,String(i+1).padStart(2,'0')+'.png');fs.writeFileSync(filename,Buffer.from(frame.data,'base64'));
      report.sessions.push({n:i+1,conversationDigest:sha(id).slice(0,16),mobile,turns:3,modelTurns:1,ruleTurns:2,elapsedMs:Math.round(performance.now()-start),replyCharacters:rendered.length,replyDigest:sha(rendered),metrics,frame:path.basename(filename)});
      console.log('TEDDY_REAL_BROWSER_SESSION_PASS',JSON.stringify({session:i+1,mobile,latencyMs:report.sessions.at(-1).elapsedMs,chars:rendered.length,font:metrics.fontPx,overflow:metrics.overflow}));
    }
