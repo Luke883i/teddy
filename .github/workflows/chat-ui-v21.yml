@@ -19,6 +19,10 @@ jobs:
         run: node --test tests/chat-history-v21.test.mjs tests/chat-layout-v21.test.mjs tests/browser-smoke-contract-v21.test.mjs
       - name: Falsify ten million deterministic viewport mutations
         run: node tools/mutate-chat-layout-v21.mjs
+      - name: Assert text-only runtime and negative voice HTTP scenarios
+        run: |
+          node --test tests/text-only-boundary-v25.test.mjs
+          node tools/prove-text-only-boundary-v25.mjs
       - name: Complete browser E2E on desktop
         run: node tools/browser-text-v17.mjs --desktop
       - name: Complete browser E2E on mobile

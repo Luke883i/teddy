@@ -40,6 +40,14 @@ try{
   const command=await connectCDP(target.webSocketDebuggerUrl);
   await command('Page.enable');await command('Runtime.enable');
   await command('Page.addScriptToEvaluateOnNewDocument',{source:`
+    // Browser proof: microphone permission must never be requested in text-only mode.
+    globalThis.__teddyMicAttempts=0;
+    globalThis.__teddyVoiceFetchAttempts=0;
+    const nativeFetch=globalThis.fetch;
+    globalThis.fetch=(input,init)=>{if(/\/api\/(?:local\/turn|realtime\/session)/.test(String(input?.url||input)))globalThis.__teddyVoiceFetchAttempts++;return nativeFetch(input,init)};
+    if(navigator.mediaDevices&&typeof navigator.mediaDevices.getUserMedia==='function'){
+      navigator.mediaDevices.getUserMedia=()=>{globalThis.__teddyMicAttempts++;throw Error('microphone_must_not_start_in_text_mode')};
+    }
     // Language E2E: isolate actual UI/network/runtime from software 3D GPU cost.
     const previous=HTMLCanvasElement.prototype.getContext;
     HTMLCanvasElement.prototype.getContext=function(kind,...rest){
@@ -59,6 +67,8 @@ try{
     const input=document.querySelector('#chatInput'),form=document.querySelector('#chatForm');
     if(!input||!form)throw Error('text composer absent');
     if(form.dataset.wired!=='true')throw Error('composer HTML present without live submit handler');
+    if(document.querySelector('#talkBtn')||document.querySelector('#remoteAudio')||document.querySelector('#meter'))throw Error('voice controls leaked into text-only UI');
+    if(globalThis.__teddyMicAttempts!==0||globalThis.__teddyVoiceFetchAttempts!==0)throw Error('voice started during text-only bootstrap');
     for(let i=0;i<150&&input.disabled;i++)await sleep(70);
     if(input.disabled)throw Error('text input not ready in real mock provider');
     if(${probeBootstrap})return {success:true,chatInputVisible:input.getBoundingClientRect().width>120};
@@ -71,6 +81,7 @@ try{
     const history=document.querySelector('#chatHistoryPanel'),bubble=document.querySelector('#teddyBubble');
     if(!history||!bubble||bubble.classList.contains('hidden'))throw Error('history dock or real-reply balloon absent');
     if(!document.querySelector('#teddyBubbleText').textContent.includes('Ho sentito'))throw Error('balloon is not wired to real reply');
+    if(globalThis.__teddyMicAttempts!==0||globalThis.__teddyVoiceFetchAttempts!==0)throw Error('voice side-effect during actual chat turn');
     if(${probeBalloon})return {success:true,chatInputVisible:true,stage:'balloon'};
     const compact=innerWidth<900;
     if(compact===(!history.classList.contains('hidden')))throw Error('history default visibility mismatch: '+JSON.stringify({width:innerWidth,compact,historyHidden:history.classList.contains('hidden'),expanded:document.querySelector('#historyToggle')?.getAttribute('aria-expanded')}));
