@@ -71,7 +71,7 @@ done
 if [[ "$OPEN_BROWSER" -eq 1 ]]; then if command -v xdg-open >/dev/null; then xdg-open "$url" >/dev/null 2>&1 || true; elif command -v open >/dev/null; then open "$url" >/dev/null 2>&1 || true; fi; fi
 echo "Teddy server: $url"
 if [[ "$AUTOINSTALL" == "1" && "${TEDDY_PROVIDER:-local}" == "local" ]]; then
-  echo "Teddy prepara ASR + LLM + TTS locali; avanzamento e provenienza sono visibili nel browser."
+  echo "Teddy installa soltanto Qwen e il motore linguistico; dettagli disponibili nel browser."
   (
     last=""
     while kill -0 "$PID" 2>/dev/null; do

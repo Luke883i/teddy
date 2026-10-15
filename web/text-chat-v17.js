@@ -24,13 +24,15 @@ export function installTextChat({boot,getAvailability,getConversationId,setConve
   window.addEventListener('resize',applyGeometry);
   window.visualViewport?.addEventListener('resize',applyGeometry);
   const seenIds=new Set();
-  const ready=()=>local?Boolean(boot.ai.mock||getAvailability()?.textReady===true):Boolean(boot.secret?.configured);
+  // Step 1 social replies run without Qwen; the server denies unsupported model requests.
+  const ready=()=>true;
   function update(){
     const available=ready();
     input.disabled=!available||busy;
     send.disabled=!available&&!busy;
     send.textContent=busy?'Annulla':'Invia';
-    hint.textContent=busy?'Teddy sta rispondendo…':local?(boot.ai.mock?'Modalità di prova · nessun modello reale':(available?'Modello locale pronto · nessuna rete necessaria':'Modello locale non pronto · verifica installazione')):(available?'OpenAI API collegata':'Chiave OpenAI richiesta');
+    const modelReady=local?Boolean(boot.ai.mock||getAvailability()?.textReady===true):Boolean(boot.secret?.configured);
+    hint.textContent=busy?'Teddy sta rispondendo…':local?(boot.ai.mock?'Modalità di prova · nessun modello reale':(modelReady?'Modello locale pronto':'Chat base pronta · Qwen in preparazione')):(modelReady?'OpenAI API collegata':'Chat base pronta · OpenAI non collegata');
   }
   function showBubble(text){
     if(typeof text!=='string'||!text.trim())return;
@@ -90,7 +92,6 @@ export function installTextChat({boot,getAvailability,getConversationId,setConve
     if(busy){controller?.abort();return}
     const text=input.value.trim();
     if(!text)return;
-    if(!ready()){if(local)showProblem({error:'local_text_not_ready',kind:'local'});else showKeyDialog();return}
     busy=true;controller=new AbortController();const own=controller;update();
     try{
       const response=await fetch('/api/text/turn',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({text,conversationId:getConversationId()}),signal:own.signal});
