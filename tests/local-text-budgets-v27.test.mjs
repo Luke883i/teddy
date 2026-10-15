@@ -13,7 +13,8 @@ test('tiny local Qwen uses bounded completion budgets on complex and normal ques
   const extended=await engine.llm('spiega la gravità',{context:{extended:true}});
   assert.match(standard,/risposta/);
   assert.match(extended,/risposta/);
-  assert.deepEqual(bodies.map(x=>x.max_tokens),[96,128]);
+  assert.deepEqual(bodies.map(x=>x.max_tokens),[112,160]);
+  assert.ok(bodies.every(x=>x.chat_template_kwargs?.enable_thinking===false),'Qwen3 must not spend short replies on hidden thinking');
   assert.ok(bodies.every(x=>x.stream===false&&x.temperature===.35));
   assert.ok(bodies.every(x=>x.messages.some(m=>m.role==='user')));
 });
