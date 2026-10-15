@@ -16,3 +16,16 @@ test('all CDP expression variants are valid standalone JavaScript',()=>{
     assert.doesNotThrow(()=>new Function('return '+value+';'),'bad Chromium expression in '+name);
   }
 });
+
+test('CDP pre-navigation microphone sentinel actually parses and initializes',()=>{
+ const source=fs.readFileSync(new URL('../tools/browser-text-v17.mjs',import.meta.url),'utf8');
+ const opener="await command('Page.addScriptToEvaluateOnNewDocument',{source:`";
+ const start=source.indexOf(opener),end=source.indexOf('`});',start+opener.length);
+ assert.ok(start>=0&&end>start,'missing browser speech sentinel');
+ const template=source.slice(start+opener.length,end);
+ const injected=Function('return `'+template+'`;')();
+ assert.doesNotThrow(()=>new Function(injected),'sentinel must be valid JavaScript in Chromium');
+ assert.match(injected,/__teddyMicAttempts=0/);
+ assert.match(injected,/__teddyVoiceFetchAttempts=0/);
+ assert.match(injected,/uri\.includes\('\/api\/local\/turn'\)/);
+});

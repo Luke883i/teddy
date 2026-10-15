@@ -44,7 +44,7 @@ try{
     globalThis.__teddyMicAttempts=0;
     globalThis.__teddyVoiceFetchAttempts=0;
     const nativeFetch=globalThis.fetch;
-    globalThis.fetch=(input,init)=>{if(/\/api\/(?:local\/turn|realtime\/session)/.test(String(input?.url||input)))globalThis.__teddyVoiceFetchAttempts++;return nativeFetch(input,init)};
+    globalThis.fetch=(input,init)=>{const uri=String(input?.url||input);if(uri.includes('/api/local/turn')||uri.includes('/api/realtime/session'))globalThis.__teddyVoiceFetchAttempts++;return nativeFetch(input,init)};
     if(navigator.mediaDevices&&typeof navigator.mediaDevices.getUserMedia==='function'){
       navigator.mediaDevices.getUserMedia=()=>{globalThis.__teddyMicAttempts++;throw Error('microphone_must_not_start_in_text_mode')};
     }
@@ -68,6 +68,7 @@ try{
     if(!input||!form)throw Error('text composer absent');
     if(form.dataset.wired!=='true')throw Error('composer HTML present without live submit handler');
     if(document.querySelector('#talkBtn')||document.querySelector('#remoteAudio')||document.querySelector('#meter'))throw Error('voice controls leaked into text-only UI');
+    if(typeof globalThis.__teddyMicAttempts!=='number'||typeof globalThis.__teddyVoiceFetchAttempts!=='number')throw Error('voice probe was not injected');
     if(globalThis.__teddyMicAttempts!==0||globalThis.__teddyVoiceFetchAttempts!==0)throw Error('voice started during text-only bootstrap');
     for(let i=0;i<150&&input.disabled;i++)await sleep(70);
     if(input.disabled)throw Error('text input not ready in real mock provider');
