@@ -8,7 +8,7 @@ import {spawn} from 'node:child_process';
 const root=path.resolve(new URL('..',import.meta.url).pathname),home=fs.mkdtempSync(path.join(os.tmpdir(),'teddy-v02-')),port=8791,mockPort=8991;let upstreamCalls=0;
 const mock=http.createServer(async(req,res)=>{for await(const _ of req){}upstreamCalls++;res.writeHead(429,{'content-type':'application/json','retry-after':'7','x-request-id':'req_ci_429'});res.end(JSON.stringify({error:{type:'rate_limit_error',code:'rate_limit_exceeded',message:'rate limited'}}))});
 await new Promise((resolve,reject)=>{mock.once('error',reject);mock.listen(mockPort,'127.0.0.1',resolve)});
-const child=spawn(process.execPath,['server/main.mjs'],{cwd:root,env:{...process.env,TEDDY_PROVIDER:'openai',TEDDY_HOME:home,TEDDY_PORT:String(port),TEDDY_OPENAI_REALTIME_URL:`http://127.0.0.1:${mockPort}/v1/realtime/calls`},stdio:['ignore','pipe','pipe']});
+const child=spawn(process.execPath,['server/main.mjs'],{cwd:root,env:{...process.env,TEDDY_PROVIDER:'openai',TEDDY_ENABLE_VOICE_ENDPOINTS:'1',TEDDY_HOME:home,TEDDY_PORT:String(port),TEDDY_OPENAI_REALTIME_URL:`http://127.0.0.1:${mockPort}/v1/realtime/calls`},stdio:['ignore','pipe','pipe']});
 let stderr='';child.stderr.on('data',d=>stderr+=d);
 async function wait(){for(let i=0;i<80;i++){try{const r=await fetch(`http://127.0.0.1:${port}/api/health`);if(r.ok)return}catch{}await new Promise(r=>setTimeout(r,50))}throw Error(`Teddy did not start: ${stderr}`)}
 try{

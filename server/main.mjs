@@ -24,6 +24,8 @@ const PROVIDER=normalizeProvider(process.env.TEDDY_PROVIDER||'local');
 const policy=deploymentPolicy({listenHost:HOST,publicOrigin:PUBLIC_ORIGIN,authPassword:AUTH_PASSWORD,secretMasterKey:MASTER_KEY});
 if(!policy.ok)throw new Error(`unsafe_deployment:${policy.error}`);
 const REALTIME_URL=validateRealtimeEndpoint(process.env.TEDDY_OPENAI_REALTIME_URL||'https://api.openai.com/v1/realtime/calls');
+// Voice belongs to Step 2, not the text-chat product. Only legacy explicit test environments enable these routes.
+const VOICE_ENDPOINTS_ENABLED=process.env.TEDDY_ENABLE_VOICE_ENDPOINTS==='1';
 const secrets=new SecretStore(HOME,{externalMasterKey:MASTER_KEY}),state=new StateStore(HOME),defaults=readDefaultConfig(ROOT);let config=mergeConfig(defaults,state.getSetting('config')||{});
 const runtimeEnv={...process.env,TEDDY_TEXT_ONLY:process.env.TEDDY_TEXT_ONLY??'1',TEDDY_RUNTIME_AUTOINSTALL:process.env.TEDDY_RUNTIME_AUTOINSTALL??'1'};
 const realtimeGate=new RealtimeBackoff();let closing=false,runtime=createRuntimeManager({home:HOME,env:runtimeEnv}),localService=createLocalService({runtime}),textBusy=false;
@@ -37,7 +39,7 @@ const bootstrap=()=>({
   secret:secrets.status(),config,
   persistence:{engine:'sqlite',durable:true,wal:true},
   security:{mode:policy.mode,authenticated:!!AUTH_PASSWORD,publicOrigin:policy.publicOrigin},
-  realtime:{optional:PROVIDER!=='openai',transport:'webrtc',model:config.model,cooldownSeconds:realtimeGate.remaining()},
+  interaction:{mode:'text',voiceUi:false,voiceEndpoints:VOICE_ENDPOINTS_ENABLED},
   render:{backend:'client-negotiated',webgl2:true,canvas2dFallback:true,webgpuOptional:true,presenceRig:'v4',morphology:'v5',anatomy:'v6',correctedDepth:true,audioReactive:true,adaptiveNoise:true},
   install:{id:String(state.getSetting('install_id')).slice(0,8)}
 });
@@ -71,6 +73,7 @@ async function route(req,res){
     return json(res,202,{...runtime.status(),retryRequested:true});
   }
   if(req.method==='POST'&&u.pathname==='/api/local/turn'){
+    if(!VOICE_ENDPOINTS_ENABLED)return json(res,404,{error:'voice_not_enabled'});
     if(PROVIDER!=='local')return json(res,409,{error:'local_provider_disabled'});
     const localStatus=localService.status();if(!localStatus.ready)return json(res,503,{error:'local_runtime_not_ready',status:localStatus});
     requireContentType(req,'audio/wav');
@@ -129,6 +132,7 @@ async function route(req,res){
   if(req.method==='POST'&&u.pathname==='/api/memories'){const b=await readJson(req,8_000);if(!b.text?.trim())return json(res,400,{error:'text_required'});return json(res,201,{id:state.addMemory(b.text,b.salience)})}
   if(req.method==='DELETE'&&/^\/api\/memories\/\d+$/.test(u.pathname)){state.deleteMemory(u.pathname.split('/').pop());return json(res,200,{ok:true})}
   if(req.method==='POST'&&u.pathname==='/api/realtime/session'){
+    if(!VOICE_ENDPOINTS_ENABLED)return json(res,404,{error:'voice_not_enabled'});
     if(PROVIDER!=='openai')return json(res,409,{error:'cloud_provider_not_selected'});
     requireContentType(req,'application/sdp');
     let apiKey;try{apiKey=secrets.getOpenAI()}catch{return json(res,409,{error:'openai_key_corrupt'})}if(!apiKey)return json(res,409,{error:'openai_key_missing'});
