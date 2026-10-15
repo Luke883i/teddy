@@ -29,10 +29,21 @@ try{
   let ready=false;for(let i=0;i<100;i++){try{const r=await sendHttp('/api/health');if(r.ok){ready=true;break}}catch{}await sleep(90)}
   if(!ready)throw Error('real Node control plane did not boot: '+log);
   if(process.argv.includes('--probe-server')){console.log('TEDDY_SERVER_BOOT_PASS',port);await completeProbe();}
-  proc=spawn(chrome,['--headless=new','--no-sandbox','--disable-gpu','--disable-dev-shm-usage','--no-first-run','--no-default-browser-check','--remote-debugging-port=0',`--user-data-dir=${chromeHome}`,'about:blank'],{stdio:['ignore','ignore','pipe']});
-  const portFile=path.join(chromeHome,'DevToolsActivePort');
-  for(let i=0;i<150&&!fs.existsSync(portFile);i++)await sleep(85);
-  if(!fs.existsSync(portFile))throw Error('Chrome CDP not ready');
+  // A cold CI runner sometimes fails to publish DevToolsActivePort on the first
+  // launch. Reopen the *real* browser with a fresh profile; never fake the UI.
+  let portFile=null,chromeBootError='';
+  for(let attempt=0;attempt<3;attempt++){
+    const profile=attempt===0?chromeHome:path.join(work,'chrome-retry-'+attempt);
+    proc=spawn(chrome,['--headless=new','--no-sandbox','--disable-gpu','--disable-dev-shm-usage','--no-first-run','--no-default-browser-check','--remote-debugging-port=0',`--user-data-dir=${profile}`,'about:blank'],{stdio:['ignore','ignore','pipe']});
+    proc.stderr?.on('data',chunk=>{chromeBootError=(chromeBootError+String(chunk)).slice(-1100)});
+    const file=path.join(profile,'DevToolsActivePort');
+    for(let i=0;i<155&&!fs.existsSync(file)&&proc.exitCode===null;i++)await sleep(85);
+    if(fs.existsSync(file)){portFile=file;break}
+    console.error('TEDDY_CHROME_BOOT_RETRY',JSON.stringify({attempt:attempt+1,exitCode:proc.exitCode,stderr:chromeBootError.slice(-300)}));
+    proc.kill('SIGKILL');
+    await sleep(250);
+  }
+  if(!portFile)throw Error('Chrome CDP not ready after 3 real starts: '+chromeBootError.slice(-500));
   if(process.argv.includes('--probe-chrome')){console.log('TEDDY_CHROME_CDP_PASS');await completeProbe();}
   const cdpPort=Number(fs.readFileSync(portFile,'utf8').split('\n')[0]);
   const pages=await (await fetch(`http://127.0.0.1:${cdpPort}/json/list`)).json();
