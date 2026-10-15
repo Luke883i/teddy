@@ -57,7 +57,7 @@ export async function proveThirtyBrowser({appPort,home,root=process.cwd()}){
    db=new DatabaseSync(path.join(home,'data','teddy.sqlite'));
    for(let i=0;i<30;i++){
      const mobile=i%2===1;await resize(mobile);await pause(130);
-     const name='Persona'+String(i+1).padStart(2,'0');
+     const name='Nome'+String.fromCharCode(65+Math.floor(i/26))+String.fromCharCode(65+i%26);
      const seed=await evaluate(`(()=>{const b=document.querySelector('#newChat');if(b.disabled)throw Error('new chat disabled');b.click();return {active:document.querySelector('#chatInput').disabled,balloonHidden:document.querySelector('#teddyBubble').classList.contains('hidden')}})()`);
      if(seed.active||!seed.balloonHidden)throw Error('new chat not reset at '+i);
      const start=performance.now();
@@ -97,7 +97,7 @@ export async function proveThirtyBrowser({appPort,home,root=process.cwd()}){
    report.visualEvidence='30 actual browser screenshots; mp4 is a sampled-frame storyboard, NOT continuous screen recording';
    const json=path.join(out,'teddy-v27-30-session-proof.json');
    fs.writeFileSync(json,JSON.stringify(report,null,2));
-   const movie=spawnSync('ffmpeg',['-y','-loglevel','error','-framerate','1','-pattern_type','glob','-i',path.join(out,'*.png'),'-vf','scale=960:-2:flags=lanczos','-pix_fmt','yuv420p',path.join(out,'teddy-v27-sampled-ui.mp4')],{timeout:120000});
+   const movie=spawnSync('ffmpeg',['-y','-loglevel','error','-framerate','1','-pattern_type','glob','-i',path.join(out,'*.png'),'-vf','scale=960:540:force_original_aspect_ratio=decrease:flags=lanczos,pad=960:540:(ow-iw)/2:(oh-ih)/2','-pix_fmt','yuv420p',path.join(out,'teddy-v27-sampled-ui.mp4')],{timeout:120000});
    report.videoCreated=movie.status===0;report.videoError=movie.status===0?null:String(movie.stderr||'').slice(0,450);
    fs.writeFileSync(json,JSON.stringify(report,null,2));
    console.log('TEDDY_REAL_30_SESSION_PASS',JSON.stringify({sessions:report.complete,latency:report.latency,minFontPx:report.minFontPx,overflows:report.overflowSessions,video:report.videoCreated}));
