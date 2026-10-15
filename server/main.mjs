@@ -101,7 +101,7 @@ async function route(req,res){
       const memories=state.listMemories(6);
       // Step 1: deterministic planning is separate from model-generated language.
       const plan=planSemanticTurn({text,history,memories,conversationId:existing});
-      const useRules=plan.path==='deterministic'&&!(PROVIDER==='local'&&localService.status().mock);
+      const useRules=plan.path==='deterministic';
       const effectivePlan=useRules?plan:{...plan,path:'model'};
       const modelContext={turns:history,memories,semanticDirective:plan.directive,extended:plan.extended};
       const raw=useRules?plan.reply:PROVIDER==='local'

@@ -36,5 +36,7 @@ jobs:
         run: node tools/search-semantic-v24.mjs
       - name: one million adaptive, deterministic semantic mutations
         run: node tools/mutate-semantic-v24.mjs
+      - name: actual sequential human HTTP chat with SQLite receipts
+        run: node tools/prove-semantic-chat-v24.mjs
       - name: actual HTTP chat + persisted UI state in Chromium
         run: node tools/browser-text-v17.mjs --desktop
