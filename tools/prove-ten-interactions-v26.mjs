@@ -50,7 +50,7 @@ await runScenario({mock:true,cases:[
  {input:'come mi chiamo?',act:'name_query',path:'deterministic',expected:/non me lo|non lo ritrovo/i},
  {input:'Chiamami Elena',act:'introduction',path:'deterministic',expected:/Elena/},
  {input:'come mi chiamo?',act:'name_query',path:'deterministic',expected:/Elena/},
- {input:'spiega perché piove',act:'open',path:'model',expected:/Ho sentito/},
+ {input:'spiega perché piove',act:'followup',path:'model',expected:/Ho sentito/},
  {input:'grazie di cuore',act:'thanks',path:'deterministic'}
 ]});
 await runScenario({mock:false,cases:[
