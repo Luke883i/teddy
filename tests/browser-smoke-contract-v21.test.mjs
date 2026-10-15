@@ -29,3 +29,11 @@ test('CDP pre-navigation microphone sentinel actually parses and initializes',()
  assert.match(injected,/__teddyVoiceFetchAttempts=0/);
  assert.match(injected,/uri\.includes\('\/api\/local\/turn'\)/);
 });
+
+test('voice negative probes include WebAudio and media playback without altering the chat reply',()=>{
+ const source=fs.readFileSync(new URL('../tools/browser-text-v17.mjs',import.meta.url),'utf8');
+ assert.match(source,/__teddyAudioContextAttempts=0/);
+ assert.match(source,/__teddyMediaPlayAttempts=0/);
+ assert.match(source,/HTMLMediaElement\.prototype\.play/);
+ assert.match(source,/voice side-effect during actual chat turn/);
+});
