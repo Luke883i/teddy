@@ -45,6 +45,19 @@ jobs:
           node-version: 24.19.0
       - name: install dependencies
         run: npm ci --ignore-scripts
+      - name: install checksum-pinned user-space video encoder
+        run: |
+          mkdir -p "$RUNNER_TEMP/ffmpeg-wheel" "$RUNNER_TEMP/ffmpeg-python"
+          python3 -m pip download --only-binary=:all: --no-deps --dest "$RUNNER_TEMP/ffmpeg-wheel" imageio-ffmpeg==0.6.0
+          echo "c7e46fcec401dd990405049d2e2f475e2b397779df2519b544b8aab515195282  $RUNNER_TEMP/ffmpeg-wheel/imageio_ffmpeg-0.6.0-py3-none-manylinux2014_x86_64.whl" | sha256sum -c -
+          python3 -m pip install --no-deps --target "$RUNNER_TEMP/ffmpeg-python" "$RUNNER_TEMP/ffmpeg-wheel/imageio_ffmpeg-0.6.0-py3-none-manylinux2014_x86_64.whl"
+          VIDEO_BIN=$(PYTHONPATH="$RUNNER_TEMP/ffmpeg-python" python3 -c 'import imageio_ffmpeg; print(imageio_ffmpeg.get_ffmpeg_exe())')
+          test -x "$VIDEO_BIN"
+          "$VIDEO_BIN" -version
+          echo "TEDDY_EVIDENCE_FFMPEG=$VIDEO_BIN" >> "$GITHUB_ENV"
+      - name: prove video encoder against mixed-aspect frames before GGUF install
+        run: node --test tests/evidence-video-v27.test.mjs
+
       - name: install authentic model, generate replies and prove networkless restart
         env:
           GITHUB_TOKEN: ${{ github.token }}
