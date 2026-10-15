@@ -123,6 +123,7 @@ export function installTextChat({boot,getAvailability,getConversationId,setConve
     explicitSessionChoice=true;
     setConversationId(null);
     hideBubble();
+    bubbleText.textContent='';
     if(window.innerWidth<900)setHistory(false);
     input.value='';
     hint.textContent='Nuova conversazione · scrivi pure';

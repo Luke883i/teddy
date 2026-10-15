@@ -65,8 +65,11 @@ export async function proveThirtyBrowser({appPort,home,root=process.cwd()}){
      const replies=[];
      for(let j=0;j<cases.length;j++){
        const text=cases[j],reply=await evaluate(`(async()=>{const input=document.querySelector('#chatInput'),form=document.querySelector('#chatForm');input.value=${JSON.stringify(text)};form.requestSubmit();for(let i=0;i<450;i++){await new Promise(r=>setTimeout(r,100));const output=document.querySelector('#teddyBubbleText').textContent,send=document.querySelector('#sendText');if(output&&send.textContent==='Invia'&&output!==${JSON.stringify(replies.at(-1)?.text||'')})return {text:output,button:send.textContent}}throw Error('no browser reply for real user turn')})()`,55000);
-       if(!reply?.text||reply.text.length<9)throw Error('too short or missing actual reply in browser');
+       if(!reply?.text||reply.text.length<9){
+         throw Error('browser_short_reply_session_'+(i+1)+'_turn_'+(j+1)+'_chars_'+(reply?.text?.length||0)+'_digest_'+sha(reply?.text||'').slice(0,9));
+       }
        replies.push(reply);
+       console.log('TEDDY_REAL_BROWSER_TURN',JSON.stringify({session:i+1,turn:j+1,characters:reply.text.length,digest:sha(reply.text).slice(0,12)}));
      }
      const transcript=db.prepare('SELECT c.id conversation_id,t.role,t.text FROM turns t JOIN conversations c ON c.id=t.conversation_id ORDER BY t.id DESC LIMIT 6').all().reverse();
      const ids=new Set(transcript.map(x=>x.conversation_id));if(ids.size!==1)throw Error('session leakage at '+i);
