@@ -53,6 +53,6 @@ test('server route validates provider readiness and persists both real turns',()
   const main=fs.readFileSync(new URL('../server/main.mjs',import.meta.url),'utf8');
   assert.match(main,/u\.pathname==='\/api\/text\/turn'/);
   assert.match(main,/localService\.status\(\)\.textReady/);
-  assert.match(main,/state\.addTurn\(conversationId,'user',text\)/);
-  assert.match(main,/state\.addTurn\(conversationId,'assistant',reply\)/);
+  assert.match(main,/state\.commitTextTurn\(\{conversationId:existing,text,reply,receipt\}\)/);
+  assert.match(main,/state\.conversationHistory\(existing,12\)/);
 });

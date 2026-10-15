@@ -10,6 +10,7 @@ import { deploymentPolicy, guardRequest, SECURITY_HEADERS } from './lib/security
 import { normalizeProvider, providerCapabilities } from './lib/provider.mjs';
 import { createLocalService } from './lib/local-service.mjs';
 import {openAITextTurn,normalizeUserText} from './lib/text-service.mjs';
+import {planSemanticTurn,finalizeSemanticReply,semanticReceipt} from './lib/semantic-spine.mjs';
 import { createRuntimeManager } from './lib/runtime-manager.mjs';
 import { recoverManagedRuntime, recoveryCooldown, shouldAttemptRuntimeRecovery } from './lib/runtime-recovery.mjs';
 
@@ -94,16 +95,23 @@ async function route(req,res){
     textBusy=true;
     try{
       const existing=typeof body?.conversationId==='string'?body.conversationId:'';
-      const history=existing?state.history(500).filter(t=>t.conversation_id===existing).slice(-10):[];
-      const reply=PROVIDER==='local'
-        ?await localService.text(text,{signal:controller.signal,context:{turns:history,memories:state.listMemories(6)}})
-        :await openAITextTurn({apiKey,text,config,memories:state.listMemories(),history,signal:controller.signal,model:process.env.TEDDY_OPENAI_TEXT_MODEL||'gpt-4.1-mini'});
+      if(existing&&!state.conversationExists(existing))return json(res,409,{error:'conversation_not_found'});
+      // Step 0: only this conversation contributes recent user/assistant messages.
+      const history=existing?state.conversationHistory(existing,12):[];
+      const memories=state.listMemories(6);
+      // Step 1: deterministic planning is separate from model-generated language.
+      const plan=planSemanticTurn({text,history,memories,conversationId:existing});
+      const useRules=plan.path==='deterministic'&&!(PROVIDER==='local'&&localService.status().mock);
+      const effectivePlan=useRules?plan:{...plan,path:'model'};
+      const modelContext={turns:history,memories,semanticDirective:plan.directive,extended:plan.extended};
+      const raw=useRules?plan.reply:PROVIDER==='local'
+        ?await localService.text(text,{signal:controller.signal,context:modelContext})
+        :await openAITextTurn({apiKey,text,config,memories,history,semanticDirective:plan.directive,signal:controller.signal,model:process.env.TEDDY_OPENAI_TEXT_MODEL||'gpt-4.1-mini'});
       if(controller.signal.aborted)return;
-      if(!reply?.trim())return json(res,502,{error:'text_reply_empty'});
-      const conversationId=existing||state.startConversation();
-      state.addTurn(conversationId,'user',text);
-      state.addTurn(conversationId,'assistant',reply);
-      return json(res,200,{conversationId,reply,provider:PROVIDER});
+      const reply=finalizeSemanticReply(effectivePlan,raw);
+      const receipt=semanticReceipt(effectivePlan,PROVIDER==='local'&&localService.status().mock?'test_mock':PROVIDER,reply);
+      const conversationId=state.commitTextTurn({conversationId:existing,text,reply,receipt});
+      return json(res,200,{conversationId,reply,provider:PROVIDER,semantic:{act:receipt.act,path:receipt.path,schema:receipt.schema}});
     }catch(e){
       if(controller.signal.aborted)return;
       const code=e?.code||'text_turn_failed';
