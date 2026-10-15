@@ -32,7 +32,9 @@ async function scenario(provider){
    assert.equal(response.status,200);const body=await response.json();assert.equal(body.semantic.path,'deterministic');assert.match(body.reply,/Teddy/);
   }else{
    const response=await fetch(url+'/api/text/turn',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({text:'chi sei?'})});
-   assert.equal(response.status,409);assert.equal((await response.json()).error,'openai_key_missing');
+   assert.equal(response.status,200);assert.equal((await response.json()).semantic.path,'deterministic');
+   const open=await fetch(url+'/api/text/turn',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({text:'spiega la gravità'})});
+   assert.equal(open.status,409);assert.equal((await open.json()).error,'openai_key_missing');
   }
   console.log('TEDDY_STEP0_TEXT_ONLY_E2E',JSON.stringify({provider,voiceRoutesDenied:2,uiVoiceElements:0,chatHttp:true}));
  }finally{server.kill('SIGTERM');await sleep(230);if(server.exitCode===null)server.kill('SIGKILL');fs.rmSync(home,{recursive:true,force:true})}
