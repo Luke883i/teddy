@@ -20,7 +20,7 @@ for(let i=0;i<1_000_000;i++){
    if(mostRecentDeclaredName(history)){assert.match(a.reply,/Luca/);counts.withEvidence++}
    else {assert.doesNotMatch(a.reply,/Ti chiami Luca/);counts.withoutEvidence++}
  }
- if(msg==='non mi chiamo Luca')assert.equal(a.path,'model');
+ if(msg==='non mi chiamo Luca')assert.equal(a.path,'deterministic');
 }
 assert.equal(counts.model+counts.deterministic,1_000_000);
 console.log('TEDDY_V26_MUTATION_PASS',JSON.stringify({seed:'0x26eed005',cases:1_000_000,...counts}));

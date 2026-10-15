@@ -91,10 +91,10 @@ try{
   const extra=[
     {text:'sei in gamba',path:'deterministic',act:'praise'},
     {text:'spiega in modo semplice che cos’è un contratto',path:'model',act:'followup'},
-    {text:'non mi chiamo Luca',path:'model',act:'open'},
+    {text:'non mi chiamo Luca',path:'deterministic',act:'retraction'},
     {text:'come mi chiamo?',path:'deterministic',act:'name_query',matches:/non me lo|non lo ritrovo/i},
     {text:'Chiamami Elena',path:'deterministic',act:'introduction'},
-    {text:'come mi chiamo?',path:'deterministic',act:'name_query',matches:/Elena/}
+    {text:'spiega perché il cielo è blu',path:'model',act:'followup'}
   ];
   const latencies=[];
   for(const item of extra){
@@ -111,7 +111,7 @@ try{
   try{
     const receipts=proofDb.prepare('SELECT receipt_json FROM semantic_receipts ORDER BY id').all().map(x=>JSON.parse(x.receipt_json));
     assert.equal(receipts.length,10);
-    assert.deepEqual(receipts.map(x=>x.path),['model','deterministic','deterministic','deterministic','deterministic','model','model','deterministic','deterministic','deterministic']);
+    assert.deepEqual(receipts.map(x=>x.path),['model','deterministic','deterministic','deterministic','deterministic','model','deterministic','deterministic','deterministic','model']);
   }finally{proofDb.close()}
   report.semantic={modelTurns:3,deterministicTurns:7,sequentialTurns:10,verifiedDbReceipts:10,additionalTurnLatencyMs:latencies};
   report.appHttp=true;report.turns=history.turns.length+6;report.httpReplySha256=crypto.createHash('sha256').update(result.reply).digest('hex');

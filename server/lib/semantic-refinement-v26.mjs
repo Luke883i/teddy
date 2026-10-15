@@ -27,6 +27,7 @@ export function mostRecentDeclaredName(history=[]){
   return null;
 }
 const controls=[
+ ['retraction',/^(?:non mi chiamo|non chiamarmi|non usare più il nome)\s+[\p{L}][\p{L}'-]{1,27}$/u],
  ['capability',/^(?:puoi parlare|sai parlare|hai una voce|funzioni senza internet|sei offline)$/u],
  ['thanks',/^(?:ti ringrazio davvero|molte grazie|grazie tante|gentilissimo|grazie di cuore)(?: teddy)?$/u],
  ['praise',/^(?:sei in gamba|sei davvero bravo|ottimo lavoro|ben fatto|niente male|complimenti davvero)(?: teddy)?$/u],
@@ -86,6 +87,11 @@ export const adultVariants=Object.freeze({
     "Dimmi che cosa vuoi chiarire. Una domanda alla volta, senza fumo.",
     "Che punto ti sembra ambiguo? La precisione non è un lusso.",
     "Scegli il pezzo difficile e lo rendiamo più semplice."
+  ]),
+  retraction:Object.freeze([
+    'Ricevuto. Non userò quel nome in questa conversazione. Come preferisci che ti chiami?',
+    'Correzione acquisita. Quel nome esce dal discorso; dimmi quello giusto.',
+    'Bene, rettifica fatta. Meglio un nome corretto che una sicurezza sbagliata.'
   ]),
   capability:Object.freeze([
     "Adesso lavoro in chat scritta. Il modello locale può rispondere offline dopo l'installazione; la voce non è attiva.",

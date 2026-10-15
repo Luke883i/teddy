@@ -46,7 +46,7 @@ await runScenario({mock:true,cases:[
  {input:'sei in gamba',act:'praise',path:'deterministic',expected:/complimento|giudizio|valutazione/i},
  {input:'Mi chiamo Luca',act:'introduction',path:'deterministic',expected:/Luca/},
  {input:'come mi chiamo?',act:'name_query',path:'deterministic',expected:/Luca/},
- {input:'non mi chiamo Luca',act:'open',path:'model',expected:/Ho sentito/},
+ {input:'non mi chiamo Luca',act:'retraction',path:'deterministic',expected:/nome|Correzione|rettifica/i},
  {input:'come mi chiamo?',act:'name_query',path:'deterministic',expected:/non me lo|non lo ritrovo/i},
  {input:'Chiamami Elena',act:'introduction',path:'deterministic',expected:/Elena/},
  {input:'come mi chiamo?',act:'name_query',path:'deterministic',expected:/Elena/},
