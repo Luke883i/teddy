@@ -93,11 +93,11 @@ function showProblem(problem={}){
   const g=connectionGuidance(problem);
   noticeTitle.textContent=g.title;
   noticeBody.textContent=problem.error==='local_runtime_not_ready'||problem.error==='local_text_not_ready'
-    ?'Il modello linguistico non è ancora pronto. Apri Dettagli modello per controllare installazione e verifica.'
+    ?'Questa domanda richiede Qwen, che non è ancora pronto. Le risposte semplici funzionano già; apri Dettagli modello per verifica o installazione.'
     :g.message;
   notice.classList.remove('hidden');
   noticeDiag.onclick=()=>openView('diagnostics');
-  const canRetry=problem.kind==='local'&&localMode()&&availability?.textReady!==true;
+  const canRetry=localMode()&&availability?.textReady!==true&&['local','text'].includes(problem.kind)&&availability?.installPhase!=='installing';
   noticePrimary.textContent=canRetry?'Riprova installazione':'Chiudi';
   noticePrimary.onclick=()=>canRetry?retryLocalRuntime():hideConnectionNotice();
 }

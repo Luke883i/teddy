@@ -110,3 +110,8 @@ header .icon{margin-left:0}
 .chat-panel{max-width:calc(100vw - 24px)}
 .teddy-bubble{max-width:calc(100vw - 24px)}
 .chat-history-panel{max-width:calc(100vw - 24px)}
+
+/* v26: honest session controls, without adding a floating layer above Teddy. */
+.chat-footer #newChat{font-weight:650;flex-shrink:0}
+.chat-footer #newChat:disabled{opacity:.45;cursor:wait}
+@media(max-width:440px){.chat-footer #newChat{font-size:10px;padding:5px 3px}.chat-footer #chatHint{font-size:9px}}

@@ -31,11 +31,17 @@ jobs:
         with:
           node-version: '24'
       - name: contract units and real SQLite transactions
-        run: node --test tests/semantic-spine-v24.test.mjs tests/semantic-state-v24.test.mjs tests/text-turn-v17.test.mjs tests/local-context-v9.test.mjs
+        run: node --test tests/semantic-spine-v24.test.mjs tests/semantic-state-v24.test.mjs tests/semantic-refinement-v26.test.mjs tests/text-turn-v17.test.mjs tests/local-context-v9.test.mjs
       - name: screen 1000 architectural contracts
         run: node tools/search-semantic-v24.mjs
       - name: one million adaptive, deterministic semantic mutations
         run: node tools/mutate-semantic-v24.mjs
+      - name: one million v26 adversarial memory and persona mutations
+        run: node tools/mutate-semantic-v26.mjs
+      - name: ten sequential real HTTP interactions and negative model boundaries
+        run: node tools/prove-ten-interactions-v26.mjs
+      - name: voice stays inactive in both providers
+        run: node tools/prove-text-only-boundary-v25.mjs
       - name: actual sequential human HTTP chat with SQLite receipts
         run: node tools/prove-semantic-chat-v24.mjs
       - name: actual HTTP chat + persisted UI state in Chromium

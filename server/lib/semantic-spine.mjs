@@ -1,6 +1,7 @@
 // Teddy v24: bounded, reproducible semantic control plane. Not a truth oracle or a second LLM.
 // Data from past turns and memories never becomes an instruction source.
 import crypto from 'node:crypto';
+import {selfDeclaredName,mostRecentDeclaredName,extendedSocialAct,adultVariants,chooseSocialVariant} from './semantic-refinement-v26.mjs';
 const hash=v=>crypto.createHash('sha256').update(String(v)).digest('hex');
 const normalize=s=>String(s??'').normalize('NFKC').trim().replace(/\s+/g,' ').slice(0,2000);
 const lexical=s=>normalize(s).toLocaleLowerCase('it-IT').replace(/[!?.,;:…]+$/u,'').trim();
@@ -54,9 +55,10 @@ function findName(history=[]){
   return null;
 }
 export function classifyInteraction(text,history=[]){
-  const raw=normalize(text),simple=lexical(raw),extracted=raw.match(ownName);
-  if(extracted&&/^mi chiamo\s+/iu.test(raw))return {act:'introduction',name:extracted[1]};
+  const raw=normalize(text),simple=lexical(raw),extracted=selfDeclaredName(raw);
+  if(extracted)return {act:'introduction',name:extracted};
   for(const [act,re] of social)if(re.test(simple))return {act};
+  const extension=extendedSocialAct(simple);if(extension)return {act:extension};
   // An incomplete follow-up is a context request, never a fresh generic greeting.
   const followup=/^(?:perché|perche|come mai|e quindi|e allora|spiega|approfondisci|continua)(?:\s|$)/u.test(simple);
   const caution=/\b(?:oggi|adesso|attualmente|ultima notizia|prezzo|certezza|sicuro|medicina|legge|diagnosi|fonti)\b/u.test(simple);
@@ -71,9 +73,10 @@ export function planSemanticTurn({text,history=[],memories=[],conversationId=nul
   let reply=null;
   if(act==='introduction')reply=`Piacere, ${classification.name}. Lo tengo a mente in questa conversazione; niente cerimonie.`;
   else if(act==='name_query'){
-    const name=findName(recent);
+    const name=mostRecentDeclaredName(recent);
     reply=name?`Ti chiami ${name}. Vedi? Non sono soltanto pelliccia e cattivo umore.`:'Non me lo hai detto in questa conversazione, oppure non lo ritrovo. Come ti chiami?';
-  }else if(templates[act])reply=pick(templates[act],seed);
+  }else if(adultVariants[act])reply=chooseSocialVariant(act,hash(seed));
+  else if(templates[act])reply=pick(templates[act],seed);
   const extended=/\b(?:spiega|analizza|perché|perche|confronta|approfondisci|argomenta|passaggi)\b/iu.test(text);
   const caution=Boolean(classification.caution);
   const directive=[
@@ -91,13 +94,13 @@ export function planSemanticTurn({text,history=[],memories=[],conversationId=nul
     schema:'teddy.semantic.v1',act,path:reply?'deterministic':'model',
     reply,directive,extended,caution,
     inputDigest:hash(normalize(text)),contextTurns:recent.length,memoryCount:Math.min(Array.isArray(memories)?memories.length:0,6),
-    variant:parseInt(hash(seed).slice(0,8),16)%3
+    variant:parseInt(hash(seed).slice(0,8),16)%(adultVariants[act]?.length||3)
   });
 }
 export function finalizeSemanticReply(plan,raw){
   if(typeof raw!=='string'||!raw.trim())throw Object.assign(new Error('semantic_empty_reply'),{code:'semantic_empty_reply',status:502});
   const answer=raw.replace(/<think>[\s\S]*?<\/think>/gi,'').replace(/\r\n?/g,'\n').trim();
-  if(!answer||answer.length>4000)throw Object.assign(new Error('semantic_invalid_reply'),{code:'semantic_invalid_reply',status:502});
+  if(!answer||answer.length>4000||/<\/?think\b/i.test(answer))throw Object.assign(new Error('semantic_invalid_reply'),{code:'semantic_invalid_reply',status:502});
   return answer;
 }
 export function semanticReceipt(plan,provider,reply){

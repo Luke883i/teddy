@@ -87,12 +87,6 @@ async function route(req,res){
     const body=await readJson(req,8_000);
     let text;try{text=normalizeUserText(body?.text)}catch{return json(res,400,{error:'text_input_invalid'})}
     if(textBusy)return json(res,429,{error:'text_turn_in_progress'});
-    if(PROVIDER==='local'&&!localService.status().textReady)return json(res,503,{error:'local_text_not_ready'});
-    let apiKey;
-    if(PROVIDER==='openai'){
-      try{apiKey=secrets.getOpenAI()}catch{return json(res,409,{error:'openai_key_corrupt'})}
-      if(!apiKey)return json(res,409,{error:'openai_key_missing'});
-    }
     const controller=new AbortController(),abort=()=>controller.abort();
     req.once('aborted',abort);res.once('close',()=>{if(!res.writableEnded)abort()});
     textBusy=true;
@@ -105,6 +99,13 @@ async function route(req,res){
       // Step 1: deterministic planning is separate from model-generated language.
       const plan=planSemanticTurn({text,history,memories,conversationId:existing});
       const useRules=plan.path==='deterministic';
+      // Social rules work before installation; open questions still require a real ready provider.
+      if(!useRules&&PROVIDER==='local'&&!localService.status().textReady)return json(res,503,{error:'local_text_not_ready'});
+      let apiKey;
+      if(!useRules&&PROVIDER==='openai'){
+        try{apiKey=secrets.getOpenAI()}catch{return json(res,409,{error:'openai_key_corrupt'})}
+        if(!apiKey)return json(res,409,{error:'openai_key_missing'});
+      }
       const effectivePlan=useRules?plan:{...plan,path:'model'};
       const modelContext={turns:history,memories,semanticDirective:plan.directive,extended:plan.extended};
       const raw=useRules?plan.reply:PROVIDER==='local'

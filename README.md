@@ -15,7 +15,7 @@ Teddy is a local-first bear you can **type to**, even without internet **after**
 ./teddy.sh
 ```
 
-Wait for **modello locale pronto**. Type in the bottom box, press **Invia**, and read the comic reply. **Cronologia** opens the persisted chat; **Dettagli modello** reopens installation/verification information. These controls are wired to the running server, not demonstrations.
+You can type immediately: simple social messages work with deterministic rules while the model is still installing. Wait for **modello locale pronto** before asking open questions. Press **Invia**, and read Teddy's response in the comic bubble. **Cronologia** opens the persisted chat; **Dettagli modello** reopens installation/verification information. These controls are wired to the running server, not demonstrations.
 
 Try these turns in sequence:
 1. `chi sei?` → Teddy's deterministic adult identity, with one of several stable gruff phrasings.

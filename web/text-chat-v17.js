@@ -5,10 +5,10 @@ export function installTextChat({boot,getAvailability,getConversationId,setConve
   const $=selector=>document.querySelector(selector);
   const form=$('#chatForm'),input=$('#chatInput'),send=$('#sendText'),log=$('#chatLog'),hint=$('#chatHint');
   const history=$('#chatHistoryPanel'),toggle=$('#historyToggle'),historyClose=$('#historyClose'),historyEmpty=$('#chatHistoryEmpty');
-  const bubble=$('#teddyBubble'),bubbleText=$('#teddyBubbleText'),bubbleClose=$('#bubbleClose');
-  if([form,input,send,log,hint,history,toggle,historyClose,historyEmpty,bubble,bubbleText,bubbleClose].some(el=>!el))throw Error('text_chat_surface_missing');
+  const bubble=$('#teddyBubble'),bubbleText=$('#teddyBubbleText'),bubbleClose=$('#bubbleClose'),newChat=$('#newChat');
+  if([form,input,send,log,hint,history,toggle,historyClose,historyEmpty,bubble,bubbleText,bubbleClose,newChat].some(el=>!el))throw Error('text_chat_surface_missing');
   const local=boot.ai.provider==='local';
-  let busy=false,controller=null,historyOpen=false,closed=false,lastCompact=null;
+  let busy=false,controller=null,historyOpen=false,closed=false,lastCompact=null,explicitSessionChoice=false;
   function applyGeometry(){
     const g=chatLayout(window.innerWidth,window.innerHeight);
     document.documentElement.style.setProperty('--teddy-history-width',g.historyWidth+'px');
@@ -24,13 +24,16 @@ export function installTextChat({boot,getAvailability,getConversationId,setConve
   window.addEventListener('resize',applyGeometry);
   window.visualViewport?.addEventListener('resize',applyGeometry);
   const seenIds=new Set();
-  const ready=()=>local?Boolean(boot.ai.mock||getAvailability()?.textReady===true):Boolean(boot.secret?.configured);
+  // Step 1 social replies run without Qwen; the server denies unsupported model requests.
+  const ready=()=>true;
   function update(){
     const available=ready();
     input.disabled=!available||busy;
     send.disabled=!available&&!busy;
+    newChat.disabled=busy;
     send.textContent=busy?'Annulla':'Invia';
-    hint.textContent=busy?'Teddy sta rispondendo…':local?(boot.ai.mock?'Modalità di prova · nessun modello reale':(available?'Modello locale pronto · nessuna rete necessaria':'Modello locale non pronto · verifica installazione')):(available?'OpenAI API collegata':'Chiave OpenAI richiesta');
+    const modelReady=local?Boolean(boot.ai.mock||getAvailability()?.textReady===true):Boolean(boot.secret?.configured);
+    hint.textContent=busy?'Teddy sta rispondendo…':local?(boot.ai.mock?'Modalità di prova · nessun modello reale':(modelReady?'Modello locale pronto':getAvailability()?.installPhase==='failed'?'Chat base pronta · Qwen non pronto':'Chat base pronta · Qwen in preparazione')):(modelReady?'OpenAI API collegata':'Chat base pronta · OpenAI non collegata');
   }
   function showBubble(text){
     if(typeof text!=='string'||!text.trim())return;
@@ -46,11 +49,11 @@ export function installTextChat({boot,getAvailability,getConversationId,setConve
     if(historyOpen){window.dispatchEvent(new Event('teddy:history-open'));if(focus)historyClose.focus()}
     else if(focus)toggle.focus();
   }
-  function append(role,text,id=null){
+  function append(role,text,id=null,conversationId=null){
     if(typeof text!=='string'||!text.trim()||!['user','assistant'].includes(role))return;
     if(id!=null){if(seenIds.has(id))return;seenIds.add(id)}
     const item=document.createElement(role==='assistant'?'button':'article');
-    if(role==='assistant'){item.type='button';item.setAttribute('aria-label','Rileggi la risposta di Teddy');item.addEventListener('click',()=>showBubble(text))}
+    if(role==='assistant'){item.type='button';item.setAttribute('aria-label','Riapri questa conversazione e rileggi Teddy');item.addEventListener('click',()=>{if(busy)return;if(conversationId){explicitSessionChoice=true;setConversationId(conversationId)}showBubble(text);input.focus()})}
     item.className='chat-message '+role;
     const who=document.createElement('small');who.textContent=role==='user'?'Tu':'Teddy';
     const message=document.createElement('p');message.textContent=text;
@@ -74,9 +77,9 @@ export function installTextChat({boot,getAvailability,getConversationId,setConve
         if(turns.length<500)break;
         before=oldest;
       }
-      for(let i=pages.length-1;i>=0;i--)for(const turn of pages[i])append(turn.role,turn.text,turn.id);
+      for(let i=pages.length-1;i>=0;i--)for(const turn of pages[i])append(turn.role,turn.text,turn.id,turn.conversation_id);
       const latest=pages[0]?.at(-1);
-      if(latest?.conversation_id&&!getConversationId())setConversationId(latest.conversation_id);
+      if(latest?.conversation_id&&!getConversationId()&&!explicitSessionChoice)setConversationId(latest.conversation_id);
       // Do not auto-display a stored answer as if Teddy had just replied.
       return pageCount;
     }catch(error){
@@ -90,14 +93,13 @@ export function installTextChat({boot,getAvailability,getConversationId,setConve
     if(busy){controller?.abort();return}
     const text=input.value.trim();
     if(!text)return;
-    if(!ready()){if(local)showProblem({error:'local_text_not_ready',kind:'local'});else showKeyDialog();return}
     busy=true;controller=new AbortController();const own=controller;update();
     try{
       const response=await fetch('/api/text/turn',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({text,conversationId:getConversationId()}),signal:own.signal});
       const body=await response.json();
       if(!response.ok||typeof body.reply!=='string'||!body.reply.trim()||typeof body.conversationId!=='string')throw Object.assign(new Error('text_turn_failed'),{code:body.error||'text_turn_failed'});
       setConversationId(body.conversationId);
-      append('user',text);append('assistant',body.reply);
+      append('user',text,null,body.conversationId);append('assistant',body.reply,null,body.conversationId);
       showBubble(body.reply);
       input.value='';setState('pronto a leggere');
     }catch(error){
@@ -107,6 +109,15 @@ export function installTextChat({boot,getAvailability,getConversationId,setConve
       if(controller===own){busy=false;controller=null;update();if(!input.disabled)input.focus()}
     }
   }
+  newChat.addEventListener('click',()=>{
+    if(busy)return;
+    explicitSessionChoice=true;
+    setConversationId(null);
+    hideBubble();
+    input.value='';
+    hint.textContent='Nuova conversazione · scrivi pure';
+    input.focus();
+  });
   toggle.addEventListener('click',()=>setHistory(!historyOpen,{focus:true}));
   historyClose.addEventListener('click',()=>setHistory(false,{focus:true}));
   bubbleClose.addEventListener('click',hideBubble);
