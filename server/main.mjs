@@ -40,7 +40,7 @@ const bootstrap=()=>({
   persistence:{engine:'sqlite',durable:true,wal:true},
   security:{mode:policy.mode,authenticated:!!AUTH_PASSWORD,publicOrigin:policy.publicOrigin},
   interaction:{mode:'text',voiceUi:false,voiceEndpoints:VOICE_ENDPOINTS_ENABLED},
-  render:{backend:'client-negotiated',webgl2:true,canvas2dFallback:true,webgpuOptional:true,presenceRig:'v4',morphology:'v5',anatomy:'v6',correctedDepth:true,audioReactive:true,adaptiveNoise:true},
+  render:{backend:'client-negotiated',webgl2:true,canvas2dFallback:true,webgpuOptional:true,presenceRig:'v4',morphology:'v5',anatomy:'v6',correctedDepth:true,audioReactive:false,adaptiveNoise:true},
   install:{id:String(state.getSetting('install_id')).slice(0,8)}
 });
 
