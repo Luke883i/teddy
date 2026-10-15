@@ -5,14 +5,15 @@ import os from 'node:os';
 import path from 'node:path';
 import {spawnSync} from 'node:child_process';
 import {assembleEvidenceVideo} from '../tools/assemble-evidence-video-v27.mjs';
-const ffmpeg=spawnSync('ffmpeg',['-version'],{encoding:'utf8'});
+const executable=process.env.TEDDY_EVIDENCE_FFMPEG||'ffmpeg';
+const ffmpeg=spawnSync(executable,['-version'],{encoding:'utf8'});
 test('real ffmpeg normalizes contrasting desktop and portrait browser frames before MP4 encoding',{skip:Boolean(ffmpeg.error)||ffmpeg.status!==0,timeout:40000},()=>{
  const root=fs.mkdtempSync(path.join(os.tmpdir(),'teddy-video-v27-'));
  try{
    const frames=[];
    for(const [i,shape] of ['1280x800','390x844'].entries()){
      const out=path.join(root,'in-'+i+'.png');
-     const src=spawnSync('ffmpeg',['-hide_banner','-nostdin','-y','-loglevel','error','-f','lavfi','-i','color=c=tan:s='+shape+':r=1','-frames:v','1',out],{encoding:'utf8',timeout:10000});
+     const src=spawnSync(executable,['-hide_banner','-nostdin','-y','-loglevel','error','-f','lavfi','-i','color=c=tan:s='+shape+':r=1','-frames:v','1',out],{encoding:'utf8',timeout:10000});
      assert.equal(src.status,0,src.stderr||String(src.error));frames.push(out);
    }
    const output=path.join(root,'evidence.mp4');
