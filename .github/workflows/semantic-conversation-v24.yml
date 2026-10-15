@@ -1,0 +1,42 @@
+name: semantic-conversation-v24
+on:
+  pull_request:
+    paths:
+      - 'server/lib/semantic-spine.mjs'
+      - 'server/lib/state.mjs'
+      - 'server/lib/local-engines.mjs'
+      - 'server/lib/text-service.mjs'
+      - 'server/main.mjs'
+      - 'tests/*v24*'
+      - 'tools/*semantic-v24*'
+      - '.github/workflows/semantic-conversation-v24.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'server/lib/semantic-spine.mjs'
+      - 'server/lib/state.mjs'
+      - 'server/main.mjs'
+      - '.github/workflows/semantic-conversation-v24.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  conversation:
+    name: deterministic-to-LLM / SQLite atomic E2E contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: contract units and real SQLite transactions
+        run: node --test tests/semantic-spine-v24.test.mjs tests/semantic-state-v24.test.mjs tests/text-turn-v17.test.mjs tests/local-context-v9.test.mjs
+      - name: screen 1000 architectural contracts
+        run: node tools/search-semantic-v24.mjs
+      - name: one million adaptive, deterministic semantic mutations
+        run: node tools/mutate-semantic-v24.mjs
+      - name: actual sequential human HTTP chat with SQLite receipts
+        run: node tools/prove-semantic-chat-v24.mjs
+      - name: actual HTTP chat + persisted UI state in Chromium
+        run: node tools/browser-text-v17.mjs --desktop

@@ -7,6 +7,40 @@
 
 # Teddy
 
+## Start here — written conversation (current v24)
+
+Teddy is a local-first bear you can **type to**, even without internet **after** installing his small model. Start from the repository directory:
+
+```bash
+./teddy.sh
+```
+
+Wait for **modello locale pronto**. Type in the bottom box, press **Invia**, and read the comic reply. **Cronologia** opens the persisted chat; **Dettagli modello** reopens installation/verification information. These controls are wired to the running server, not demonstrations.
+
+Try these turns in sequence:
+1. `chi sei?` → Teddy's deterministic adult identity, with one of several stable gruff phrasings.
+2. `Mi chiamo Luca` → stores that message as part of the current conversation, not as a global permanent profile.
+3. `come mi chiamo?` → answers from *this conversation's* recorded prior turns.
+4. `spiega perché il cielo è blu` → uses the actual local Qwen3-0.6B GGUF, subject to its language and factual limits.
+
+**Plain-language architecture:** Step 0 keeps each conversation separate and stores the real exchange safely. Step 1 checks the intent and lets deterministic rules handle narrow social tasks; complex questions go to Qwen. Both paths return through the same HTTP endpoint and SQLite receipt. Step 2 (spoken conversation) is future work, not required for typed chat.
+
+**Initial setup requires a connection** to download the ~484 MB verified model and `llama.cpp`. Normal local inference and text replies use loopback after installation; no OpenAI account is required. OpenAI API is an explicit alternative with `TEDDY_PROVIDER=openai ./teddy.sh`; Teddy never silently changes providers.
+
+**Personality:** concise, burbero, dry-witted, receptive to praise, adult vocabulary and an occasional conceptual metaphor. Never degrading or threatening. The system does not claim human consciousness, complete factual reliability, automatic memory of everything, or a verified world model.
+
+**Verify the implementation:**
+```bash
+node --test tests/semantic-spine-v24.test.mjs tests/semantic-state-v24.test.mjs
+node tools/search-semantic-v24.mjs
+node tools/mutate-semantic-v24.mjs
+node tools/prove-semantic-chat-v24.mjs
+```
+
+These run deterministic contract checks and an actual HTTP/SQLite user-turn loop, with a labelled mock language provider *only* for open questions in the last integration test. The separate `text-real-model-v20` workflow proves authentic GGUF inference. The one-million mutation count is not one million Qwen generations. Technical contracts: [v24 Step 0/1 DoD](docs/v24-interaction-semantic-dod.md).
+
+### Archived earlier voice-first guide
+
 Teddy is a local-first realtime web character. `./teddy.sh` opens the animated bear, persists configuration/history/memory locally, and defaults to an account-free local speech provider.
 
 ## Launch

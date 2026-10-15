@@ -3,6 +3,9 @@ on:
   pull_request:
     paths:
       - 'server/lib/runtime-manager.mjs'
+      - 'server/lib/state.mjs'
+      - 'server/main.mjs'
+      - 'server/lib/semantic-spine.mjs'
       - 'server/lib/local-service.mjs'
       - 'tools/prove-real-text-v20.mjs'
       - '.github/workflows/text-real-model-v20.yml'

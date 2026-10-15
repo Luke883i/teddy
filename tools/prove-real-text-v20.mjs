@@ -73,7 +73,27 @@ try{
   const history=await (await fetch(`http://127.0.0.1:${appPort}/api/history?limit=10`)).json();
   assert.ok(history.turns.some(t=>t.role==='user'&&t.text==='Ciao, Teddy.'));
   assert.ok(history.turns.some(t=>t.role==='assistant'&&t.text===result.reply));
-  report.appHttp=true;report.turns=history.turns.length;report.httpReplySha256=crypto.createHash('sha256').update(result.reply).digest('hex');
+  // V24: an actual local GGUF query followed by a deterministic social turn
+  // and a two-turn name introduction/recall in the very same HTTP conversation.
+  assert.equal(result.semantic?.path,'model','open chat must use authentic local model');
+  const userTurn=async(text,conversationId)=>{
+    const res=await fetch(`http://127.0.0.1:${appPort}/api/text/turn`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({text,conversationId}),signal:AbortSignal.timeout(60000)});
+    const payload=await res.json();assert.equal(res.status,200,JSON.stringify(payload));return payload;
+  };
+  const identity=await userTurn('chi sei?',result.conversationId);
+  assert.equal(identity.semantic?.path,'deterministic');assert.match(identity.reply,/Teddy/i);
+  const intro=await userTurn('Mi chiamo Luca',result.conversationId);
+  assert.equal(intro.semantic?.act,'introduction');
+  const name=await userTurn('come mi chiamo?',result.conversationId);
+  assert.equal(name.semantic?.act,'name_query');assert.match(name.reply,/Luca/);
+  const {DatabaseSync}=await import('node:sqlite');
+  const proofDb=new DatabaseSync(path.join(home,'data','teddy.sqlite'));
+  try{
+    const receipts=proofDb.prepare('SELECT receipt_json FROM semantic_receipts ORDER BY id').all().map(x=>JSON.parse(x.receipt_json));
+    assert.equal(receipts.length,4);assert.deepEqual(receipts.map(x=>x.path),['model','deterministic','deterministic','deterministic']);
+  }finally{proofDb.close()}
+  report.semantic={modelTurns:1,deterministicTurns:3,sequentialTurns:4,verifiedDbReceipts:4};
+  report.appHttp=true;report.turns=history.turns.length+6;report.httpReplySha256=crypto.createHash('sha256').update(result.reply).digest('hex');
   report.elapsedMs=Date.now()-begin;
   const out=path.join(process.env.RUNNER_TEMP||tmp,'teddy-real-text-v20-proof.json');
   fs.writeFileSync(out,JSON.stringify(report,null,2));

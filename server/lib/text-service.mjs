@@ -14,11 +14,11 @@ export function extractOpenAIText(payload){
   if(!output||output.length>4000)throw Object.assign(new Error('openai_text_invalid_reply'),{code:'openai_text_invalid_reply',status:502});
   return output;
 }
-export async function openAITextTurn({apiKey,text,config,memories=[],history=[],model='gpt-4.1-mini',signal,fetchImpl=fetch}={}){
+export async function openAITextTurn({apiKey,text,config,memories=[],history=[],model='gpt-4.1-mini',signal,fetchImpl=fetch,semanticDirective=''}={}){
   if(!apiKey)throw Object.assign(new Error('openai_key_missing'),{code:'openai_key_missing',status:409});
   if(!/^[a-z0-9][a-z0-9._-]{2,79}$/i.test(model))throw Object.assign(new Error('openai_text_model_invalid'),{code:'openai_text_model_invalid',status:500});
   const prior=history.slice(-10).filter(x=>['user','assistant'].includes(x?.role)&&typeof x.text==='string').map(x=>({role:x.role,content:x.text.slice(0,2000)}));
-  const payload={model,store:false,max_output_tokens:256,instructions:buildInstructions(config,memories),input:[...prior,{role:'user',content:normalizeUserText(text)}]};
+  const payload={model,store:false,max_output_tokens:256,instructions:buildInstructions(config,memories)+(semanticDirective?' '+semanticDirective.slice(0,1800):''),input:[...prior,{role:'user',content:normalizeUserText(text)}]};
   const combined=AbortSignal.any([AbortSignal.timeout(25000),...(signal?[signal]:[])]);
   let response;
   try{response=await fetchImpl('https://api.openai.com/v1/responses',{method:'POST',headers:{authorization:`Bearer ${apiKey}`,'content-type':'application/json'},body:JSON.stringify(payload),signal:combined})}
