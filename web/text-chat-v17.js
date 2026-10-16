@@ -9,6 +9,7 @@ export function installTextChat({boot,getAvailability,getConversationId,setConve
   if([form,input,send,log,hint,history,toggle,historyClose,historyEmpty,bubble,bubbleText,bubbleClose,bubbleReadAll,newChat].some(el=>!el))throw Error('text_chat_surface_missing');
   const local=boot.ai.provider==='local';
   let busy=false,controller=null,historyOpen=false,closed=false,lastCompact=null,explicitSessionChoice=false,lastBubbleConversationId=null;
+  let historyLoad=null,historyLoadError=false;
   function applyGeometry(){
     const g=chatLayout(window.innerWidth,window.innerHeight);
     document.documentElement.style.setProperty('--teddy-history-width',g.historyWidth+'px');
@@ -55,7 +56,12 @@ export function installTextChat({boot,getAvailability,getConversationId,setConve
     historyOpen=Boolean(open);
     history.classList.toggle('hidden',!historyOpen);
     toggle.setAttribute('aria-expanded',String(historyOpen));
-    if(historyOpen){window.dispatchEvent(new Event('teddy:history-open'));if(focus)historyClose.focus()}
+    if(historyOpen){
+      window.dispatchEvent(new Event('teddy:history-open'));
+      // The previous failure message promises a retry: opening the drawer must actually retry.
+      if(historyLoadError&&!historyLoad){historyLoad=restoreHistory().finally(()=>{historyLoad=null})}
+      if(focus)historyClose.focus();
+    }
     else if(focus)toggle.focus();
   }
   function append(role,text,id=null,conversationId=null){
@@ -90,9 +96,13 @@ export function installTextChat({boot,getAvailability,getConversationId,setConve
       const latest=pages[0]?.at(-1);
       if(latest?.conversation_id&&!getConversationId()&&!explicitSessionChoice)setConversationId(latest.conversation_id);
       // Do not auto-display a stored answer as if Teddy had just replied.
+      historyLoadError=false;
+      historyEmpty.textContent='La prima chiacchiera inizia qui.';
+      if(pages.length)historyEmpty.classList.add('hidden');
       return pageCount;
     }catch(error){
-      historyEmpty.textContent='Cronologia non disponibile. Riapri per riprovare.';
+      historyLoadError=true;
+      historyEmpty.textContent='Cronologia non disponibile. Chiudi e riapri per riprovare.';
       historyEmpty.classList.remove('hidden');
       return 0;
     }
@@ -157,7 +167,8 @@ export function installTextChat({boot,getAvailability,getConversationId,setConve
     if(settled.compact && historyOpen)setHistory(false);
   });
   update();
-  const hydrated=restoreHistory();
+  historyLoad=restoreHistory();
+  const hydrated=historyLoad.finally(()=>{historyLoad=null});
   return {
     update,
     openHistory:()=>setHistory(true,{focus:true}),
