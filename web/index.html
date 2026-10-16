@@ -12,7 +12,7 @@
     <div id="chatLog" class="chat-log" role="log" aria-live="polite" aria-relevant="additions"></div>
     <p id="chatHistoryEmpty" class="chat-history-empty">La prima chiacchiera inizia qui.</p>
   </aside>
-  <section id="teddyBubble" class="teddy-bubble hidden" aria-label="Ultima risposta di Teddy" aria-live="polite">
+  <section id="teddyBubble" class="teddy-bubble hidden" role="status" aria-label="Ultima risposta di Teddy" aria-live="polite" aria-atomic="true">
     <div class="teddy-bubble-head"><strong>Teddy</strong><button id="bubbleClose" type="button" aria-label="Nascondi la risposta">✕</button></div>
     <p id="teddyBubbleText"></p><button id="bubbleReadAll" class="bubble-read-all hidden" type="button" aria-controls="chatHistoryPanel">Leggi tutta la risposta ↗</button>
   </section>
