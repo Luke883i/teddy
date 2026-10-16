@@ -122,3 +122,9 @@ header .icon{margin-left:0}
 .teddy-bubble .bubble-read-all:hover{background:#e8c5a1}
 .teddy-bubble .bubble-read-all:focus-visible{outline:2px solid #5e3721;outline-offset:2px}
 @media(max-width:560px){.teddy-bubble p{font-size:15px;line-height:1.52}.teddy-bubble{width:min(220px,54vw)}}
+
+/* v28-step-1: balloon legibility must not rely on rendering frame rate. */
+.teddy-bubble{isolation:isolate}
+.teddy-bubble p{hyphens:auto;overflow-wrap:anywhere;min-height:1.55em;touch-action:pan-y;scrollbar-gutter:stable}
+.teddy-bubble:focus-within{box-shadow:0 0 0 2px #f6d6ac,0 12px 36px #0006}
+@media (max-height:480px){.teddy-bubble{top:84px;max-height:calc(100vh - 168px)}.teddy-bubble p{max-height:calc(100vh - 242px)}.chat-history-panel{top:105px;bottom:100px}}

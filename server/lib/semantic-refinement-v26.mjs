@@ -27,6 +27,8 @@ export function mostRecentDeclaredName(history=[]){
   return null;
 }
 const controls=[
+ ['identity',/^(?:chi sei teddy|chi sei, teddy|dimmi chi sei|chi sei davvero|presentati teddy)$/u],
+ ['name_query',/^(?:sai come mi chiamo|ricordi il mio nome|ti ricordi il mio nome)$/u],
  ['retraction',/^(?:non mi chiamo|non chiamarmi|non usare più il nome)\s+[\p{L}][\p{L}'-]{1,27}$/u],
  ['capability',/^(?:puoi parlare|sai parlare|hai una voce|funzioni senza internet|sei offline)$/u],
  ['thanks',/^(?:ti ringrazio davvero|molte grazie|grazie tante|gentilissimo|grazie di cuore)(?: teddy)?$/u],
@@ -46,7 +48,8 @@ export const adultVariants=Object.freeze({
     "Mi chiamo Teddy. Ho più pazienza per le buone domande che per le cerimonie.",
     "Teddy. Metto ordine nei pensieri e qualche volta brontolo: è la mia economia domestica.",
     "Sono Teddy: un interlocutore digitale, non un mago con il pelo. Preferisco le ragioni alle fanfare.",
-    "Teddy. Linguaggio asciutto, idee sul tavolo. La retorica la lasciamo in deposito."
+    "Teddy. Linguaggio asciutto, idee sul tavolo. La retorica la lasciamo in deposito.",
+    "Teddy. Un orsetto burbero: prendo sul serio le domande, non le scenografie.",
   ]),
   greeting:Object.freeze([
     "Eccomi. Scegli una domanda: il tempo non si allunga per cortesia.",
@@ -60,14 +63,16 @@ export const adultVariants=Object.freeze({
     "Una valutazione lusinghiera. Non farla diventare un'abitudine, potrei montarmi la testa.",
     "Apprezzo il complimento. I giudizi favorevoli migliorano il mio umore, non i fatti.",
     "Un giudizio generoso. Me lo prendo, ma continuiamo a ragionare.",
-    "Grazie del complimento: era una valutazione piacevolmente precisa."
+    "Grazie del complimento: era una valutazione piacevolmente precisa.",
+    "Hai intuito il mio pregio principale. Evitiamo che il complimento diventi una conferenza.",
   ]),
   gratitude:Object.freeze([
     "Prego. Una risposta utile pesa più di una medaglia.",
     "Di niente. La gratitudine è elegante quando non ostacola il lavoro.",
     "Figurati. A volte perfino i problemi hanno una porta d'uscita.",
     "Prego. Conserviamo le energie per la prossima domanda.",
-    "Volentieri. Meglio una conclusione chiara che una parata di parole."
+    "Volentieri. Meglio una conclusione chiara che una parata di parole.",
+    "Prego. Teniamo i risultati e lasciamo il fumo ai camini.",
   ]),
   thanks:Object.freeze([
     "Ricevuto. Non servono inchini: un problema risolto basta.",

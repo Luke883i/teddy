@@ -7,6 +7,7 @@ import crypto from 'node:crypto';
 import {spawn,spawnSync} from 'node:child_process';
 import {DatabaseSync} from 'node:sqlite';
 import {assembleEvidenceVideo} from './assemble-evidence-video-v27.mjs';
+import {responseQualitySignals} from './response-quality-v28.mjs';
 
 const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const sha=v=>crypto.createHash('sha256').update(v).digest('hex');
@@ -97,7 +98,7 @@ export async function proveThirtyBrowser({appPort,home,root=process.cwd()}){
        if(!full.open||!full.found)throw Error('full-text disclosure broken '+i);
      }
      mark(i+1,3,'session_verified');
-     report.sessions.push({n:i+1,conversationDigest:sha(id).slice(0,16),mobile,turns:3,modelTurns:1,ruleTurns:2,elapsedMs:Math.round(performance.now()-start),replyCharacters:rendered.length,replyDigest:sha(rendered),metrics,frame:path.basename(filename)});
+     report.sessions.push({n:i+1,conversationDigest:sha(id).slice(0,16),mobile,turns:3,modelTurns:1,ruleTurns:2,elapsedMs:Math.round(performance.now()-start),replyCharacters:rendered.length,replyDigest:sha(rendered),quality:responseQualitySignals(prompts[i],rendered),metrics,frame:path.basename(filename)});
      console.log('TEDDY_REAL_BROWSER_SESSION_PASS',JSON.stringify({session:i+1,mobile,latencyMs:report.sessions.at(-1).elapsedMs,chars:rendered.length,font:metrics.fontPx,overflow:metrics.overflow}));
    }
    if(new Set(report.sessions.map(s=>s.conversationDigest)).size!==30)throw Error('30 sessions not distinct');
@@ -106,6 +107,7 @@ export async function proveThirtyBrowser({appPort,home,root=process.cwd()}){
    report.latency={p50:lat[15],p95:lat[28],max:lat[29]};
    report.overflowSessions=report.sessions.filter(s=>s.metrics.overflow).length;
    report.minFontPx=Math.min(...report.sessions.map(s=>s.metrics.fontPx));
+   report.qualityReview={flaggedSessions:report.sessions.filter(s=>s.quality.reviewFlags.length).map(s=>s.n),duplicateResponseDigests:30-new Set(report.sessions.map(s=>s.replyDigest)).size,meanCharacters:Math.round(report.sessions.reduce((v,s)=>v+s.replyCharacters,0)/30),authority:'review heuristics only; not a factual correctness score'};
    report.visualEvidence='30 actual browser screenshots; mp4 is a sampled-frame storyboard, NOT continuous screen recording';
    const json=path.join(out,'teddy-v27-30-session-proof.json');
    fs.writeFileSync(json,JSON.stringify(report,null,2));

@@ -103,7 +103,10 @@ try{
       states.push({routine:e.detail?.routine?.name||null,world:e.detail?.world,action:a?.name||null});
     });
     button.click();
-    await sleep(1300);
+    // Demand the same >3 real motion frames, but allow headless CI CPU jitter.
+    const greetDeadline=Date.now()+6500;
+    while(Date.now()<greetDeadline&&amounts.length<=3)await sleep(100);
+    await sleep(150);
     const after=canvas.toDataURL('image/png');
     if(${probeGreet})return {success:before!==after&&amounts.length>3,pixelChanged:before!==after,frames:amounts.length};
     const complex=document.querySelector('.motion-tabs button:nth-child(2)');
