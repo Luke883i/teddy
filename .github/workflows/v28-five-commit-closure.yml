@@ -1,0 +1,48 @@
+name: v28-five-commit-closure
+on:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  semantic-lattice:
+    name: five isolated commits then integrated product
+    runs-on: ubuntu-latest
+    timeout-minutes: 17
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.19.0'
+      - name: Check and falsify each committed state
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE=d934eb1fe08e85ca3209ee994b0861d6a790de65
+          FINAL=$(git rev-parse HEAD)
+          mapfile -t COMMITS < <(git rev-list --reverse "$BASE..HEAD")
+          test "${#COMMITS[@]}" -eq 5
+          for i in 1 2 3 4 5; do
+            SHA="${COMMITS[$((i-1))]}"
+            git show --no-patch --format='%s' "$SHA" | grep -q "v28-step-$i"
+            git checkout --detach "$SHA"
+            node --test tests/v28-step-"$i"-*.test.mjs
+            echo "V28_STEP_${i}_LOCAL_PASS=$SHA"
+          done
+          git checkout --detach "$FINAL"
+      - name: Prove all five contracts combined
+        run: node --test tests/v28-step-*.test.mjs
+      - name: One million quality review mutations
+        run: node tools/mutate-v28-quality.mjs
+      - name: One million semantic context mutations
+        run: node tools/mutate-semantic-v26.mjs
+      - name: Actual HTTP dialogue and negative tests
+        run: node tools/prove-ten-interactions-v26.mjs
+      - name: Real Chromium chat desktop
+        run: node tools/browser-text-v17.mjs --desktop
+      - name: Real Chromium chat mobile
+        run: node tools/browser-text-v17.mjs --mobile
