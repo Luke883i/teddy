@@ -10,7 +10,7 @@ export function installTextChat({boot,getAvailability,getConversationId,setConve
   if([form,input,send,log,hint,history,toggle,historyClose,historyEmpty,bubble,bubbleText,bubbleClose,bubbleReadAll,newChat].some(el=>!el))throw Error('text_chat_surface_missing');
   const local=boot.ai.provider==='local';
   let busy=false,controller=null,historyOpen=false,closed=false,lastCompact=null,explicitSessionChoice=false,lastBubbleConversationId=null;
-  let historyLoad=null,historyLoadError=false;
+  let historyLoad=null,historyLoadError=false,pendingRequest=null;
   function applyGeometry(){
     const g=chatLayout(window.innerWidth,window.innerHeight);
     document.documentElement.style.setProperty('--teddy-history-width',g.historyWidth+'px');
@@ -134,24 +134,36 @@ export function installTextChat({boot,getAvailability,getConversationId,setConve
     if(busy){controller?.abort();return}
     const text=input.value.trim();
     if(!text)return;
+    const targetConversation=getConversationId()||null;
+    // Retain this identity after an uncertain network failure. A second click
+    // must fetch the committed reply, not ask Qwen to create a duplicate.
+    if(!pendingRequest||pendingRequest.text!==text||pendingRequest.conversationId!==targetConversation)
+      pendingRequest={text,conversationId:targetConversation,requestId:crypto.randomUUID()};
+    const requestId=pendingRequest.requestId;
     busy=true;controller=new AbortController();const own=controller;
     const started=performance.now();
     startThinking();
     update();
     try{
-      const response=await fetch('/api/text/turn',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({text,conversationId:getConversationId()}),signal:own.signal});
+      const response=await fetch('/api/text/turn',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({text,conversationId:targetConversation,requestId}),signal:own.signal});
       const body=await response.json();
       if(!response.ok||typeof body.reply!=='string'||!body.reply.trim()||typeof body.conversationId!=='string')throw Object.assign(new Error('text_turn_failed'),{code:body.error||'text_turn_failed'});
       await settleThinking({started,signal:own.signal,minimum:minimumThinkingMs(body.semantic?.path,body.reply.length)});
       if(own.signal.aborted)return;
+      if(body.requestId!==requestId)throw Object.assign(new Error('text_request_identity_mismatch'),{code:'text_request_identity_mismatch'});
       setConversationId(body.conversationId);
+      pendingRequest=null;
       append('user',text,null,body.conversationId);append('assistant',body.reply,null,body.conversationId);
       showBubble(body.reply,body.conversationId);
       input.value='';setState('pronto a leggere');
     }catch(error){
       hideBubble();
-      if(error.name==='AbortError')setState('messaggio interrotto · controlla la cronologia');
-      else showProblem({error:error.code||'text_turn_failed',kind:'text'});
+      if(error.name==='AbortError')setState('Invio interrotto. Riprova lo stesso testo oppure controlla la cronologia.');
+      else{
+        if(error.code==='text_request_conflict'||error.code==='text_request_identity_mismatch')pendingRequest=null;
+        showProblem({error:error.code||'text_turn_failed',kind:'text'});
+        hint.textContent='Risposta non confermata: riprova lo stesso messaggio senza creare duplicati.';
+      }
     }finally{
       if(controller===own){busy=false;controller=null;update();if(!input.disabled)input.focus()}
     }
@@ -159,6 +171,7 @@ export function installTextChat({boot,getAvailability,getConversationId,setConve
   newChat.addEventListener('click',()=>{
     if(busy)return;
     explicitSessionChoice=true;
+    pendingRequest=null;
     setConversationId(null);
     hideBubble();
     bubbleText.textContent='';
