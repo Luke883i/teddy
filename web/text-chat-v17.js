@@ -1,5 +1,6 @@
 import {chatLayout} from './chat-layout-v21.js';
 import {comicGeometry,minimumThinkingMs,settleThinking} from './dialogue-pacing-v29.js';
+import {cognitiveMotionIntent} from './teddy/cognitive-motion-v31.js';
 // Teddy v21: HTTP-backed conversation, persistent paginated history, comic reply placement.
 // No synthetic dialogue. The bubble displays only text returned from /api/text/turn or /api/history.
 export function installTextChat({boot,getAvailability,getConversationId,setConversationId,showProblem,showKeyDialog,setState}){
@@ -156,6 +157,10 @@ export function installTextChat({boot,getAvailability,getConversationId,setConve
       pendingRequest=null;recoveryHint=null;
       append('user',text,null,body.conversationId);append('assistant',body.reply,null,body.conversationId);
       showBubble(body.reply,body.conversationId);
+      // Embodiment is strictly downstream of the genuine persisted HTTP answer.
+      const reducedMotion=window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches===true;
+      const gesture=cognitiveMotionIntent(body.semantic,{replayed:body.replayed===true,reducedMotion});
+      if(gesture)window.dispatchEvent(new CustomEvent('teddy:motion-intent',{detail:gesture}));
       input.value='';setState('pronto a leggere');
     }catch(error){
       hideBubble();

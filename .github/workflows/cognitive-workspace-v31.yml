@@ -6,6 +6,9 @@ on:
       - 'server/lib/semantic-spine.mjs'
       - 'server/lib/local-engines.mjs'
       - 'server/main.mjs'
+      - 'web/text-chat-v17.js'
+      - 'web/teddy/cognitive-motion-v31.js'
+      - 'tests/cognitive-motion-v31.test.mjs'
       - 'tests/cognitive-workspace-v31.test.mjs'
       - 'tools/mutate-cognition-v31.mjs'
       - 'tools/mutate-code-v31.mjs'
@@ -27,7 +30,7 @@ jobs:
         with:
           node-version: 24.19.0
       - name: new cognitive workspace + inherited dialogue tests
-        run: node --test tests/cognitive-workspace-v31.test.mjs tests/semantic-spine-v24.test.mjs tests/semantic-refinement-v26.test.mjs tests/v29-comic-language.test.mjs tests/text-recovery-v30.test.mjs
+        run: node --test tests/cognitive-workspace-v31.test.mjs tests/cognitive-motion-v31.test.mjs tests/motion-routing-v8.test.mjs tests/semantic-spine-v24.test.mjs tests/semantic-refinement-v26.test.mjs tests/v29-comic-language.test.mjs tests/text-recovery-v30.test.mjs
       - name: 10000 semantic mutations (independent oracles)
         run: node tools/mutate-cognition-v31.mjs
       - name: targeted source-level mutation score
