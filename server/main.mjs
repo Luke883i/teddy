@@ -107,7 +107,7 @@ async function route(req,res){
         if(!apiKey)return json(res,409,{error:'openai_key_missing'});
       }
       const effectivePlan=useRules?plan:{...plan,path:'model'};
-      const modelContext={turns:history,memories,semanticDirective:plan.directive,extended:plan.extended};
+      const modelContext={turns:history,memories,semanticDirective:plan.directive,extended:plan.extended,depth:plan.depth};
       const raw=useRules?plan.reply:PROVIDER==='local'
         ?await localService.text(text,{signal:controller.signal,context:modelContext})
         :await openAITextTurn({apiKey,text,config,memories,history,semanticDirective:plan.directive,signal:controller.signal,model:process.env.TEDDY_OPENAI_TEXT_MODEL||'gpt-4.1-mini'});
