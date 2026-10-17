@@ -1,0 +1,39 @@
+name: teddy-text-recovery-v30
+on:
+  pull_request:
+    paths:
+      - 'server/lib/state.mjs'
+      - 'server/main.mjs'
+      - 'web/text-chat-v17.js'
+      - 'tests/text-recovery-v30.test.mjs'
+      - 'tools/prove-replay-v30.mjs'
+      - 'tools/mutate-replay-v30.mjs'
+      - '.github/workflows/text-recovery-v30.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'server/lib/state.mjs'
+      - 'server/main.mjs'
+      - 'web/text-chat-v17.js'
+      - '.github/workflows/text-recovery-v30.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  replay:
+    name: durable request replay / no duplicate answer
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: v30 SQLite mutation and legacy semantic regressions
+        run: node --test tests/text-recovery-v30.test.mjs tests/semantic-state-v24.test.mjs tests/text-turn-v17.test.mjs
+      - name: 1 million adversarial request-ID mutations
+        run: node tools/mutate-replay-v30.mjs
+      - name: genuine HTTP, model seam and restart replay
+        run: node tools/prove-replay-v30.mjs
+      - name: existing real Chromium comic + typed conversation
+        run: node tools/browser-text-v17.mjs --desktop
