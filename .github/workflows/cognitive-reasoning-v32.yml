@@ -7,10 +7,12 @@ on:
       - 'tests/grounded-reasoner-v32.test.mjs'
       - 'tools/prove-hundred-sessions-v32.mjs'
       - 'tools/prove-real-text-v20.mjs'
+      - 'tools/report-v32-readback.mjs'
       - '.github/workflows/cognitive-reasoning-v32.yml'
   workflow_dispatch:
 permissions:
   contents: read
+  issues: write
 jobs:
   microkernel:
     runs-on: ubuntu-latest
@@ -48,6 +50,13 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: node tools/prove-real-text-v20.mjs
+      - name: publish bounded semantic readback as PR comment
+        if: always() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node tools/report-v32-readback.mjs > "$RUNNER_TEMP/teddy-v32-readback.md"
+          gh issue comment "${{ github.event.pull_request.number }}" --repo "$GITHUB_REPOSITORY" --body-file "$RUNNER_TEMP/teddy-v32-readback.md" || true
       - name: archive dialogue outcomes and failure partials
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
