@@ -149,7 +149,17 @@ try{
     const close=document.querySelector('#closeDrawer');if(!close)throw Error('drawer cannot close');
     close.click();if(!document.querySelector('#drawer').classList.contains('hidden'))throw Error('drawer failed to close');
     menu.click();document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));if(!nav.classList.contains('hidden'))throw Error('Escape did not close menu');
-    return {success:true,turns,menuClosed:true,localCloudFake:false,chatInputVisible:input.getBoundingClientRect().width>120};
+    // A second real turn must use the deterministic semantic path but the SAME
+    // pending->HTTP->bubble contract; do not mistake a fast rule for fake speech.
+    const priorCount=document.querySelectorAll('.chat-message').length;
+    input.value='chi sei?';form.requestSubmit();
+    if(!bubble.classList.contains('is-thinking')||document.querySelector('#teddyBubbleText').textContent.trim())throw Error('deterministic reply skipped real pending state');
+    for(let i=0;i<75&&document.querySelectorAll('.chat-message').length<priorCount+2;i++)await sleep(80);
+    const rendered=[...document.querySelectorAll('.chat-message')];
+    if(rendered.length!==priorCount+2||!rendered.at(-1).textContent.includes('Teddy'))throw Error('second deterministic reply not rendered');
+    if(bubble.classList.contains('is-thinking')||!bubbleTextContainsTeddy())throw Error('deterministic balloon did not settle into genuine HTTP reply');
+    function bubbleTextContainsTeddy(){return document.querySelector('#teddyBubbleText').textContent.includes('Teddy')}
+    return {success:true,turns,deterministicReply:true,menuClosed:true,localCloudFake:false,chatInputVisible:input.getBoundingClientRect().width>120};
   })()`;
   const result=await Promise.race([command('Runtime.evaluate',{expression,awaitPromise:true,returnByValue:true}),sleep(45000).then(()=>{throw Error('text browser smoke timeout')})]);
   if(result.exceptionDetails)throw Error('Real browser failure: '+(result.exceptionDetails.exception?.description||result.exceptionDetails.text));
