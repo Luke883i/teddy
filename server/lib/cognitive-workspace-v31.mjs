@@ -10,7 +10,7 @@ export function conceptTerms(v,limit=8){
 function intent(v){
   const s=fold(v);
   if(/^(?:non ho capito|spiegati meglio|spiega meglio|puoi chiarire|che intendi|in che senso|non ti seguo|ripeti in modo semplice|puoi essere più chiaro|non è chiaro)\b/u.test(s))return 'repair';
-  if(/^(?:perché|perche|come mai|e quindi|e allora|continua|approfondisci|e invece|e se|ma perché)\b/u.test(s)&&words(s).length<=10)return 'followup';
+  if(/^(?:perché|perche|come mai|e quindi|e allora|continua|approfondisci|e invece|e se|ma perché)(?=$|[^\p{L}\p{N}])/u.test(s)&&words(s).length<=10)return 'followup';
   if(/\b(?:confronta|differenza|rispetto a|versus|meglio fra|meglio tra)\b/u.test(s))return 'compare';
   if(/\b(?:correggi|sbagliato|non è vero|non sono d.accordo|rettifica)\b/u.test(s))return 'challenge';
   if(/\b(?:passaggi|piano|come posso|come faccio|aiutami a|organizza)\b/u.test(s))return 'plan';
