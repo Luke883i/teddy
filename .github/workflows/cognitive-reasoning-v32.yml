@@ -50,6 +50,11 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: node tools/prove-real-text-v20.mjs
+      - name: fail closed unless 100 real sessions and 140 model generations were committed
+        run: |
+          test -s "$RUNNER_TEMP/teddy-v32-real-100/readback-100.json"
+          node -e 'const fs=require("fs"),p=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP+"/teddy-v32-real-100/readback-100.json"));if(p.realModel!==true||p.realHttp!==true||p.actualSessions!==100||p.uniqueConversationIds!==100||p.genuineInitialGenerations!==100||p.additionalContextModelGenerations!==40||p.records.length!==100)process.exit(1)'
+          node -e 'const fs=require("fs"),p=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP+"/teddy-real-text-v20-proof.json"));if(p.hundredSessionSummary?.actualSessions!==100||p.hundredSessionSummary.modelGenerations!==140)process.exit(1)'
       - name: publish bounded semantic readback as PR comment
         if: always() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
         env:
