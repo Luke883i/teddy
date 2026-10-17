@@ -25,8 +25,14 @@ export function buildCognitiveWorkspace({text,history=[]}={}){
   const current=norm(text).slice(0,2000);
   const turns=(Array.isArray(history)?history:[]).filter(t=>['user','assistant'].includes(t?.role)&&typeof t.text==='string').slice(-12);
   const move=intent(current),needsContext=move==='repair'||move==='followup';
-  const prior=[...turns].reverse().find(t=>t.role==='user'&&substantive(t.text));
-  const latestAnswer=[...turns].reverse().find(t=>t.role==='assistant');
+  // Link an answer to the question it actually followed. The last assistant
+  // message may be an unrelated greeting/name acknowledgement after the topic.
+  const priorIndex=turns.findLastIndex(t=>t.role==='user'&&substantive(t.text));
+  const prior=priorIndex>=0?turns[priorIndex]:null;
+  const after=priorIndex>=0?turns.slice(priorIndex+1):[];
+  const nextUser=after.findIndex(t=>t.role==='user');
+  const answerWindow=nextUser<0?after:after.slice(0,nextUser);
+  const latestAnswer=answerWindow.findLast(t=>t.role==='assistant')||null;
   const anchor=needsContext?norm(prior?.text).slice(0,420):'';
   const focus=anchor||current;
   const focusTerms=conceptTerms(focus,8);

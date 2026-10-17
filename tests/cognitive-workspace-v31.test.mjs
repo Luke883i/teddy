@@ -23,7 +23,9 @@ test('followups relate the current goal to a concrete, prior user question',()=>
  assert.ok(p.workspace.edges.some(e=>e.type==='follows_up'));
  const m=buildLocalMessages('perché?',{workspace:p.workspace,semanticDirective:p.directive,turns:history});
  assert.ok(m.some(x=>x.content.includes('FOCUS CONVERSAZIONALE')));
- assert.equal(m.at(-1).content,'perché?');
+ assert.ok(m.at(-1).content.includes('FOCUS CONVERSAZIONALE'));
+ assert.ok(m.at(-1).content.endsWith('perché?'));
+ assert.equal(m.filter(x=>x.role==='user'&&x.content.includes('FOCUS CONVERSAZIONALE')).length,1);
 });
 test('topic switch is not polluted by an unrelated antecedent',()=>{
  const p=buildCognitiveWorkspace({text:'Confronta due materiali isolanti.',history});
@@ -56,4 +58,36 @@ test('workspace receipts disclose structure only, never raw human utterances',()
  assert.ok(receipt.cognitive.nodes>0);
  assert.ok(!JSON.stringify(receipt).includes('fenomeno fisico'));
  assert.equal(receipt.cognitive.readback.reason,'needs_human_or_model_review');
+});
+
+test('complete why questions remain self-contained even after irrelevant social history',()=>{
+ const questions=['Perché il cielo appare blu?','Perché la luna cambia aspetto?','Perché il ghiaccio galleggia?','Come mai il ferro arrugginisce?','Perche la luce attraversa il vetro?'];
+ const prior=[{role:'user',text:'Mi chiamo Luca'},{role:'assistant',text:'Piacere Luca.'}];
+ for(const text of questions){
+   for(const h of [[],prior,history]){
+     const p=planSemanticTurn({text,history:h,conversationId:'A'});
+     assert.equal(p.path,'model');
+     assert.equal(p.workspace.move,'explain',text);
+     assert.equal(p.workspace.unresolved,false);
+     assert.equal(p.workspace.antecedent,null);
+     assert.ok(!p.directive.includes('Manca un antecedente'));
+     const messages=buildLocalMessages(text,{workspace:p.workspace,semanticDirective:p.directive,turns:h});
+     assert.equal(messages.at(-1).content,text);
+     assert.ok(!messages.some(m=>m.content.includes('FOCUS CONVERSAZIONALE')));
+   }
+ }
+});
+test('anaphoric why without antecedent requests clarification rather than hallucination',()=>{
+ for(const question of ['perché?','e quindi?','come mai?']){
+   const w=buildCognitiveWorkspace({text:question});
+   assert.equal(w.move,'followup');assert.equal(w.unresolved,true);
+   assert.equal(w.antecedent,null);
+ }
+});
+test('repair binds the answer actually paired with the prior substantive question',()=>{
+ const h=[...history,{role:'user',text:'Mi chiamo Luca'},{role:'assistant',text:'Ti chiamerò Luca.'}];
+ const w=buildCognitiveWorkspace({text:'non ho capito',history:h});
+ assert.match(w.antecedent,/coperta/i);
+ assert.match(w.previousAnswer,/scambio di energia/i);
+ assert.doesNotMatch(w.previousAnswer,/chiamerò Luca/i);
 });

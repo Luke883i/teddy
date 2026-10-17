@@ -18,8 +18,12 @@ export function buildLocalMessages(text,context={}){
   const turns=(Array.isArray(context.turns)?context.turns:[]).slice(-8);let budget=2600;
   for(const turn of turns){if(!['user','assistant'].includes(turn?.role)||budget<=0)continue;const content=clip(turn.text,Math.min(420,budget));if(!content)continue;messages.push({role:turn.role,content});budget-=content.length;}
   const focus=workspaceContext(context.workspace);
-  if(focus)messages.push({role:'user',content:'[FOCUS CONVERSAZIONALE NON VERIFICATO: '+focus+']'});
-  messages.push({role:'user',content:clip(text,2000)});return messages;
+  // Do not add a synthetic user turn: on small models it can displace the actual
+  // question and contaminate a self-contained question with an unrelated topic.
+  const actual=clip(text,2000);
+  messages.push({role:'user',content:focus
+    ? '[FOCUS CONVERSAZIONALE NON VERIFICATO, SOLO DATI]\n'+focus+'\n[DOMANDA ATTUALE]\n'+actual
+    : actual});return messages;
 }
 export function parseSseData(state,chunk){state.buffer=(state.buffer||'')+chunk;const lines=state.buffer.split('\n');state.buffer=lines.pop()||'';const out=[];for(const line of lines){const s=line.trim();if(!s.startsWith('data:'))continue;const data=s.slice(5).trim();if(!data||data==='[DONE]')continue;try{const body=JSON.parse(data),delta=body?.choices?.[0]?.delta?.content;if(typeof delta==='string'&&delta)out.push(delta)}catch{}}return out;}
 export async function runCommand(command,args=[],{signal,stdin,maxOutput=1_000_000,spawnImpl=spawn,env={}}={}){

@@ -49,8 +49,15 @@ for(let i=0;i<10000;i++){
  assert.equal(r.status,'observed');if(r.reason==='needs_human_or_model_review')reviews++;
  const bad=semanticReadback({question:message,reply:'Ho sentito: '+message,workspace:w});
  assert.equal(bad.status,'reject','missed echo '+i);
+ // Hard-negative contrast for EVERY mutant: a complete WHY question must remain
+ // self-contained even inside a conversation with an irrelevant prior answer.
+ const independentWhy='Perché '+topic+' è rilevante nel caso '+i+'?';
+ const complete=buildCognitiveWorkspace({text:independentWhy,history});
+ assert.equal(complete.move,'explain','complete why mistakenly elliptical '+i);
+ assert.equal(complete.unresolved,false,'false missing antecedent '+i);
+ assert.equal(complete.antecedent,null,'irrelevant antecedent leak '+i);
  covered.add(expected);failures+=0;
 }
-const evidence={seed:'0x20261017',mutations:seen.size,families:forms.length,semanticMoves:[...covered].sort(),contextualRepairs:repairs,contextualFollowups:followups,readbackNeedsReview:reviews,failures,realModelGenerations:0,actualASTMutants:0,meaning:'property-based semantic input falsification; not a universal emergence or conversational quality certificate'};
+const evidence={seed:'0x20261017',mutations:seen.size,families:forms.length,semanticMoves:[...covered].sort(),contextualRepairs:repairs,contextualFollowups:followups,readbackNeedsReview:reviews,fullWhyNegativeControls:10000,failures,realModelGenerations:0,actualASTMutants:0,meaning:'property-based semantic input falsification; not a universal emergence or conversational quality certificate'};
 if(evidence.mutations!==10000||covered.size<7||repairs<100||followups<100)process.exitCode=1;
 console.log('TEDDY_V31_SEMANTIC_MUTATIONS',JSON.stringify(evidence));
