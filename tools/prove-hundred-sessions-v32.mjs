@@ -43,7 +43,7 @@ export async function proveHundredSessions({appPort,home}={}){
   const body=await res.json();
   assert.equal(res.status,200,JSON.stringify({error:body.error,text}).slice(0,300));
   assert.equal(body.requestId,requestId);assert.equal(body.replayed,false);
-  assert.ok(typeof body.reply==='string'&&body.reply.length>=8&&body.reply.length<=4000);
+  assert.ok(typeof body.reply==='string'&&body.reply.trim().length>=2&&body.reply.length<=4000,'bounded nonempty HTTP reply, including brief exact answers');
   return {body,latencyMs:Math.round(performance.now()-started)};
  }
  try{
@@ -52,6 +52,7 @@ export async function proveHundredSessions({appPort,home}={}){
    const question=variant+base;
    const first=await turn(question);
    assert.equal(first.body.semantic.path,'model','model routing must be authentic session '+i);
+   assert.ok(first.body.reply.length>=8,'genuine explanatory model answer too short in session '+i);
    assert.equal(first.body.provider,'local');
    const id=first.body.conversationId;assert.ok(!conversations.has(id),'session must be isolated '+i);conversations.add(id);
    const quality=responseQualitySignals(question,first.body.reply);
