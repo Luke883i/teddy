@@ -80,7 +80,7 @@ export class StateStore{
     if(row.input_sha256!==digest||(row.requested_conversation_id||null)!==requested)
       throw Object.assign(new Error('text_request_conflict'),{code:'text_request_conflict',status:409});
     const receipt=JSON.parse(row.receipt_json);
-    return {conversationId:row.conversation_id,reply:row.reply,provider:receipt.provider,
+    return {conversationId:row.conversation_id,reply:row.reply,provider:receipt.provider==='test_mock'?'local':receipt.provider,
       semantic:{act:receipt.act,path:receipt.path,schema:receipt.schema},requestId,replayed:true};
   }
   getSetting(key){const r=this.db.prepare('SELECT value FROM settings WHERE key=?').get(key);if(!r)return null;try{return JSON.parse(r.value)}catch{throw Error(`setting_corrupt:${key}`)}}
