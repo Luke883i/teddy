@@ -1,4 +1,5 @@
 import {chatLayout} from './chat-layout-v21.js';
+import {comicGeometry,minimumThinkingMs,settleThinking} from './dialogue-pacing-v29.js';
 // Teddy v21: HTTP-backed conversation, persistent paginated history, comic reply placement.
 // No synthetic dialogue. The bubble displays only text returned from /api/text/turn or /api/history.
 export function installTextChat({boot,getAvailability,getConversationId,setConversationId,showProblem,showKeyDialog,setState}){
@@ -36,6 +37,24 @@ export function installTextChat({boot,getAvailability,getConversationId,setConve
     const modelReady=local?Boolean(boot.ai.mock||getAvailability()?.textReady===true):Boolean(boot.secret?.configured);
     hint.textContent=busy?'Teddy sta rispondendo…':local?(boot.ai.mock?'Modalità di prova · nessun modello reale':(modelReady?'Modello locale pronto':getAvailability()?.installPhase==='failed'?'Chat base pronta · Qwen non pronto':'Chat base pronta · Qwen in preparazione')):(modelReady?'OpenAI API collegata':'Chat base pronta · OpenAI non collegata');
   }
+  function positionBalloon(length=0){
+    const pos=comicGeometry(window.innerWidth,window.innerHeight,length);
+    bubble.style.setProperty('--comic-left',pos.left+'px');
+    bubble.style.setProperty('--comic-top',pos.top+'px');
+    bubble.style.setProperty('--comic-width',pos.bubbleWidth+'px');
+    bubble.style.setProperty('--comic-max-height',pos.maxHeight+'px');
+    bubble.style.setProperty('--comic-text-height',pos.textMaxHeight+'px');
+    return pos;
+  }
+  function startThinking(){
+    positionBalloon(20);
+    bubble.classList.remove('hidden');
+    bubble.classList.add('is-thinking');
+    bubble.setAttribute('aria-busy','true');
+    bubble.setAttribute('aria-label','Teddy sta pensando');
+    bubbleText.textContent='';
+    bubbleReadAll.classList.add('hidden');
+  }
   function refreshBubbleOverflow(){
     if(bubble.classList.contains('hidden'))return;
     const overflow=bubbleText.scrollHeight>bubbleText.clientHeight+2;
@@ -45,13 +64,16 @@ export function installTextChat({boot,getAvailability,getConversationId,setConve
   function showBubble(text,conversationId=null){
     if(typeof text!=='string'||!text.trim())return;
     lastBubbleConversationId=conversationId||getConversationId();
+    positionBalloon(text.length);
     bubbleText.textContent=text;
-    bubble.classList.remove('hidden');
+    bubble.classList.remove('is-thinking','hidden');
+    bubble.setAttribute('aria-busy','false');
+    bubble.setAttribute('aria-label','Ultima risposta di Teddy');
     bubbleText.scrollTop=0;
     refreshBubbleOverflow();
     requestAnimationFrame(refreshBubbleOverflow);
   }
-  function hideBubble(){bubble.classList.add('hidden');bubbleReadAll.classList.add('hidden')}
+  function hideBubble(){bubble.classList.remove('is-thinking');bubble.setAttribute('aria-busy','false');bubble.classList.add('hidden');bubbleReadAll.classList.add('hidden')}
   function setHistory(open,{focus=false}={}){
     historyOpen=Boolean(open);
     history.classList.toggle('hidden',!historyOpen);
@@ -112,16 +134,22 @@ export function installTextChat({boot,getAvailability,getConversationId,setConve
     if(busy){controller?.abort();return}
     const text=input.value.trim();
     if(!text)return;
-    busy=true;controller=new AbortController();const own=controller;update();
+    busy=true;controller=new AbortController();const own=controller;
+    const started=performance.now();
+    startThinking();
+    update();
     try{
       const response=await fetch('/api/text/turn',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({text,conversationId:getConversationId()}),signal:own.signal});
       const body=await response.json();
       if(!response.ok||typeof body.reply!=='string'||!body.reply.trim()||typeof body.conversationId!=='string')throw Object.assign(new Error('text_turn_failed'),{code:body.error||'text_turn_failed'});
+      await settleThinking({started,signal:own.signal,minimum:minimumThinkingMs(body.semantic?.path,body.reply.length)});
+      if(own.signal.aborted)return;
       setConversationId(body.conversationId);
       append('user',text,null,body.conversationId);append('assistant',body.reply,null,body.conversationId);
       showBubble(body.reply,body.conversationId);
       input.value='';setState('pronto a leggere');
     }catch(error){
+      hideBubble();
       if(error.name==='AbortError')setState('messaggio interrotto · controlla la cronologia');
       else showProblem({error:error.code||'text_turn_failed',kind:'text'});
     }finally{
@@ -148,7 +176,8 @@ export function installTextChat({boot,getAvailability,getConversationId,setConve
     const matches=Array.from(log.querySelectorAll('.chat-message.assistant'));
     matches.reverse().find(el=>el.querySelector('p')?.textContent===bubbleText.textContent)?.scrollIntoView({block:'nearest'});
   });
-  window.addEventListener('resize',refreshBubbleOverflow);
+  const resizeBalloon=()=>{if(!bubble.classList.contains('hidden'))positionBalloon(bubbleText.textContent.length);refreshBubbleOverflow()};
+  window.addEventListener('resize',resizeBalloon);
   function onKeydown(event){
     if(event.key!=='Escape')return;
     // Foreground drawers/menu/dialogs own Escape before the transcript and balloon.
@@ -174,6 +203,6 @@ export function installTextChat({boot,getAvailability,getConversationId,setConve
     openHistory:()=>setHistory(true,{focus:true}),
     closeHistory:()=>setHistory(false),
     hydrated,
-    close:()=>{if(closed)return;closed=true;controller?.abort();form.removeEventListener('submit',submit);document.removeEventListener('keydown',onKeydown);window.removeEventListener('resize',applyGeometry);window.removeEventListener('resize',refreshBubbleOverflow);window.visualViewport?.removeEventListener('resize',applyGeometry)}
+    close:()=>{if(closed)return;closed=true;controller?.abort();form.removeEventListener('submit',submit);document.removeEventListener('keydown',onKeydown);window.removeEventListener('resize',applyGeometry);window.removeEventListener('resize',resizeBalloon);window.visualViewport?.removeEventListener('resize',applyGeometry)}
   };
 }

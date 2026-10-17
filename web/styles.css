@@ -128,3 +128,12 @@ header .icon{margin-left:0}
 .teddy-bubble p{hyphens:auto;overflow-wrap:anywhere;min-height:1.55em;touch-action:pan-y;scrollbar-gutter:stable}
 .teddy-bubble:focus-within{box-shadow:0 0 0 2px #f6d6ac,0 12px 36px #0006}
 @media (max-height:480px){.teddy-bubble{top:84px;max-height:calc(100vh - 168px)}.teddy-bubble p{max-height:calc(100vh - 242px)}.chat-history-panel{top:105px;bottom:100px}}
+
+/* v29 comic: size depends on message length and follows Teddy's side, not the screen edge. */
+.teddy-bubble{left:var(--comic-left,calc(50% + 90px));right:auto;top:var(--comic-top,21vh);width:var(--comic-width,250px);max-width:calc(100vw - 24px);max-height:var(--comic-max-height,330px);transition:width .16s ease,top .16s ease;contain:layout style}
+.teddy-bubble p{max-height:var(--comic-text-height,250px);overflow-y:auto}
+.teddy-bubble.is-thinking{min-height:102px}
+.teddy-bubble.is-thinking #teddyBubbleText,.teddy-bubble.is-thinking #bubbleReadAll{display:none}
+.teddy-bubble.is-thinking .teddy-bubble-head strong::after{content:' ···';display:inline-block;letter-spacing:3px;animation:teddy-thinking-pulse .95s ease-in-out infinite alternate}
+@keyframes teddy-thinking-pulse{from{opacity:.25;transform:translateY(1px)}to{opacity:1;transform:translateY(-2px)}}
+@media(prefers-reduced-motion:reduce){.teddy-bubble,.teddy-bubble.is-thinking .teddy-bubble-head strong::after{transition:none;animation:none}}
