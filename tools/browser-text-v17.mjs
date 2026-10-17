@@ -91,6 +91,9 @@ try{
     if(input.disabled)throw Error('text input not ready in real mock provider');
     if(${probeBootstrap})return {success:true,chatInputVisible:input.getBoundingClientRect().width>120};
     input.value='Come stai Teddy?';form.requestSubmit();
+    const pending=document.querySelector('#teddyBubble');
+    if(!pending.classList.contains('is-thinking')||pending.getAttribute('aria-busy')!=='true')throw Error('thinking state absent at actual submit');
+    if(document.querySelector('#teddyBubbleText').textContent.trim())throw Error('fake pre-completion text leaked into balloon');
     for(let i=0;i<160&&document.querySelectorAll('.chat-message').length<2;i++)await sleep(80);
     const turns=[...document.querySelectorAll('.chat-message')].map(x=>x.textContent);
     if(turns.length!==2||!turns[0].includes('Come stai Teddy?')||!turns[1].includes('Ho sentito'))throw Error('chat was not actually rendered: '+JSON.stringify(turns));
@@ -99,6 +102,11 @@ try{
     const history=document.querySelector('#chatHistoryPanel'),bubble=document.querySelector('#teddyBubble');
     if(!history||!bubble||bubble.classList.contains('hidden'))throw Error('history dock or real-reply balloon absent');
     if(!document.querySelector('#teddyBubbleText').textContent.includes('Ho sentito'))throw Error('balloon is not wired to real reply');
+    if(bubble.classList.contains('is-thinking')||bubble.getAttribute('aria-busy')!=='false')throw Error('thinking state persisted after valid real response');
+    if(innerWidth>=900){
+      const rect=bubble.getBoundingClientRect();
+      if(rect.left<innerWidth/2+75||rect.left>innerWidth*.75)throw Error('comic not anchored near Teddy: '+rect.left);
+    }
     if(globalThis.__teddyMicAttempts!==0||globalThis.__teddyVoiceFetchAttempts!==0||globalThis.__teddyAudioContextAttempts!==0||globalThis.__teddyMediaPlayAttempts!==0)throw Error('voice side-effect during actual chat turn');
     if(${probeBalloon})return {success:true,chatInputVisible:true,stage:'balloon'};
     const compact=innerWidth<900;
