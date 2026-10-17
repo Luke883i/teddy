@@ -12,7 +12,7 @@ export function comicGeometry(width,height,charCount=0){
   const bubbleWidth=bound(ideal,minWidth,maxWidth);
   // On a wide display the balloon starts just to the RIGHT of Teddy's central stage,
   // not at the distant screen edge. On phones it is a small dismissible sidecard.
-  const desired=compact?w-bubbleWidth-12:Math.max(Math.round(w*.53),Math.round(w/2+86));
+  const desired=compact?w-bubbleWidth-12:Math.max(Math.round(w*.53),Math.round(w/2+Math.min(178,Math.max(116,w*.13))));
   const left=bound(desired,12,w-bubbleWidth-12);
   const top=compact?bound(Math.round(h*.19),104,178):bound(Math.round(h*.21),118,220);
   const maxHeight=bound(Math.round(h*.47),90,360);
