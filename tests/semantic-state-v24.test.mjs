@@ -16,7 +16,7 @@ test('Step 0 migration and atomic transcript + provenance receipt survives cold 
   assert.equal(s.state.conversationHistory(id).length,2);
   assert.equal(s.state.semanticReceipts(id).length,1);
   assert.equal(s.state.semanticReceipts(id)[0].inputDigest,p.inputDigest);
-  assert.equal(s.state.db.prepare('PRAGMA user_version').get().user_version,2);
+  assert.equal(s.state.db.prepare('PRAGMA user_version').get().user_version,3);
   s.state.close();
   s.state=new StateStore(s.home);
   assert.equal(s.state.conversationHistory(id)[1].text,p.reply);
