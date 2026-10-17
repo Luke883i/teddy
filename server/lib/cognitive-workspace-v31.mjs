@@ -14,7 +14,7 @@ function intent(v){
   if(/\b(?:confronta|differenza|rispetto a|versus|meglio fra|meglio tra)\b/u.test(s))return 'compare';
   if(/\b(?:correggi|sbagliato|non è vero|non sono d.accordo|rettifica)\b/u.test(s))return 'challenge';
   if(/\b(?:passaggi|piano|come posso|come faccio|aiutami a|organizza)\b/u.test(s))return 'plan';
-  if(/\b(?:spiega|perché|perche|come funziona|dimostra|analizza)\b/u.test(s))return 'explain';
+  if(/\b(?:spiega|perché|perche|come mai|come funziona|dimostra|analizza)\b/u.test(s))return 'explain';
   return 'answer';
 }
 function substantive(v){
