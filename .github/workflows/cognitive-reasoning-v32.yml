@@ -62,11 +62,16 @@ jobs:
         run: |
           node tools/report-v32-readback.mjs > "$RUNNER_TEMP/teddy-v32-readback.md"
           gh issue comment "${{ github.event.pull_request.number }}" --repo "$GITHUB_REPOSITORY" --body-file "$RUNNER_TEMP/teddy-v32-readback.md" || true
+      - name: expose bounded failure diagnosis in artifact label
+        if: always()
+        id: forensic
+        run: |
+          node -e 'const fs=require("fs"),p=process.env.RUNNER_TEMP+"/teddy-v32-real-100/",f=fs.existsSync(p+"readback-100.json")?p+"readback-100.json":p+"readback-100-partial.json";let r={complete:0,failures:["missing-report"]};try{r=JSON.parse(fs.readFileSync(f))}catch{}const n=r.actualSessions??r.complete??0;const raw=String((r.failures||[])[0]||"ok").split("\n")[0];const slug=("n"+n+"-"+raw).toLowerCase().replace(/[^a-z0-9-]/g,"-").slice(0,90);fs.appendFileSync(process.env.GITHUB_OUTPUT,"slug="+slug+"\n")'
       - name: archive dialogue outcomes and failure partials
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: teddy-v32-real-100-dialogue-readback
+          name: teddy-v32-real-100-dialogue-readback-${{ steps.forensic.outputs.slug }}
           path: ${{ runner.temp }}/teddy-v32-real-100/
           if-no-files-found: ignore
           retention-days: 14
