@@ -73,9 +73,10 @@ export async function proveHundredSessions({appPort,home}={}){
     assert.equal(name.body.semantic.act,'name_query');assert.match(name.body.reply,/non me lo|non lo ritrovo/i);
     sample.followup={prompt:'name_query_without_evidence',answer:name.body.reply,route:name.body.semantic.path};
    }else {
-    const intro=await turn('Mi chiamo Persona'+(i+1),id);
+    const safeName='Persona'+String.fromCharCode(65+Math.floor(i/26))+String.fromCharCode(65+i%26);
+    const intro=await turn('Mi chiamo '+safeName,id);
     assert.equal(intro.body.semantic.act,'introduction');
-    const recall=await turn('come mi chiamo?',id);assert.match(recall.body.reply,new RegExp('Persona'+(i+1)));
+    const recall=await turn('come mi chiamo?',id);assert.match(recall.body.reply,new RegExp(safeName));
     sample.followup={prompt:'name_recall',answer:recall.body.reply,route:recall.body.semantic.path};
    }
    const stored=db.prepare('SELECT role,text FROM turns WHERE conversation_id=? ORDER BY id').all(id);

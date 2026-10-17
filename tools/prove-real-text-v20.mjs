@@ -116,7 +116,7 @@ try{
   }finally{proofDb.close()}
   report.semantic={modelTurns:3,deterministicTurns:7,sequentialTurns:10,verifiedDbReceipts:10,additionalTurnLatencyMs:latencies};
   report.appHttp=true;report.turns=history.turns.length+6;report.httpReplySha256=crypto.createHash('sha256').update(result.reply).digest('hex');
-  report.thirtySessionSummary=await proveThirtyBrowser({appPort,home,root}).then(({sessions,latency,minFontPx,overflowSessions,videoCreated})=>({sessions:sessions.length,latency,minFontPx,overflowSessions,videoCreated}));
+  if(process.env.TEDDY_V32_SKIP_BROWSER_30!=='1')report.thirtySessionSummary=await proveThirtyBrowser({appPort,home,root}).then(({sessions,latency,minFontPx,overflowSessions,videoCreated})=>({sessions:sessions.length,latency,minFontPx,overflowSessions,videoCreated}));
   report.elapsedMs=Date.now()-begin;
   const out=path.join(process.env.RUNNER_TEMP||tmp,'teddy-real-text-v20-proof.json');
   fs.writeFileSync(out,JSON.stringify(report,null,2));
