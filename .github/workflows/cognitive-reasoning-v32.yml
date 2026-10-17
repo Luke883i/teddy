@@ -1,0 +1,66 @@
+name: cognitive-reasoning-v32
+on:
+  pull_request:
+    paths:
+      - 'server/lib/grounded-reasoner-v32.mjs'
+      - 'server/lib/semantic-spine.mjs'
+      - 'tests/grounded-reasoner-v32.test.mjs'
+      - 'tools/prove-hundred-sessions-v32.mjs'
+      - 'tools/prove-real-text-v20.mjs'
+      - '.github/workflows/cognitive-reasoning-v32.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  microkernel:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 24.19.0
+      - name: verify semantic source syntax
+        run: node --check server/lib/grounded-reasoner-v32.mjs && node --check server/lib/semantic-spine.mjs && node --check tools/prove-hundred-sessions-v32.mjs
+      - name: 10000 inference and arithmetic contracts plus previous cognitive regressions
+        run: node --test tests/grounded-reasoner-v32.test.mjs tests/cognitive-workspace-v31.test.mjs tests/semantic-spine-v24.test.mjs
+      - name: inherited 10000 workspace mutations
+        run: node tools/mutate-cognition-v31.mjs
+  real-hundred:
+    needs: microkernel
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    env:
+      TEDDY_V32_REAL_100: '1'
+      TEDDY_V32_SKIP_BROWSER_30: '1'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 24.19.0
+      - name: install dependencies
+        run: npm ci --ignore-scripts
+      - name: actual pinned Qwen GGUF plus 100 distinct genuine HTTP conversations
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node tools/prove-real-text-v20.mjs
+      - name: archive dialogue outcomes and failure partials
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: teddy-v32-real-100-dialogue-readback
+          path: ${{ runner.temp }}/teddy-v32-real-100/
+          if-no-files-found: ignore
+          retention-days: 14
+      - name: archive model manifest without model weights
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: teddy-v32-real-100-model-receipt
+          path: ${{ runner.temp }}/teddy-real-text-v20-proof.json
+          if-no-files-found: ignore
+          retention-days: 14
