@@ -1,0 +1,40 @@
+name: teddy-comic-language-v29
+on:
+  pull_request:
+    paths:
+      - 'web/dialogue-pacing-v29.js'
+      - 'web/text-chat-v17.js'
+      - 'web/styles.css'
+      - 'server/lib/semantic-adaptation-v29.mjs'
+      - 'server/lib/semantic-spine.mjs'
+      - 'server/lib/local-engines.mjs'
+      - 'server/main.mjs'
+      - 'tests/v29-comic-language.test.mjs'
+      - 'tools/screen-v29.mjs'
+      - 'tools/mutate-v29.mjs'
+      - '.github/workflows/teddy-comic-language-v29.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'web/dialogue-pacing-v29.js'
+      - 'server/lib/semantic-adaptation-v29.mjs'
+      - '.github/workflows/teddy-comic-language-v29.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  boundary:
+    name: adaptive comic + real Qwen request budgets
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: runtime and adversarial contracts
+        run: node --test tests/v29-comic-language.test.mjs tests/local-text-budgets-v27.test.mjs tests/semantic-refinement-v26.test.mjs
+      - name: constrained search over 1000 design choices
+        run: node tools/screen-v29.mjs
+      - name: one million real shared-policy mutations
+        run: node tools/mutate-v29.mjs
