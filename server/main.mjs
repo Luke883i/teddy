@@ -86,6 +86,15 @@ async function route(req,res){
     requireContentType(req,'application/json');
     const body=await readJson(req,8_000);
     let text;try{text=normalizeUserText(body?.text)}catch{return json(res,400,{error:'text_input_invalid'})}
+    // Resolve replay BEFORE the single-flight model lock and before checking provider readiness.
+    // A response already written to SQLite is recoverable after connection loss or restart.
+    const requestedId=body?.requestId;
+    if(requestedId!==undefined&&requestedId!==null){
+      try{
+        const committed=state.findTextRequest({requestId:requestedId,text,conversationId:body?.conversationId});
+        if(committed)return json(res,200,committed);
+      }catch(error){return json(res,error?.status||400,{error:error?.code||'text_request_id_invalid'})}
+    }
     if(textBusy)return json(res,429,{error:'text_turn_in_progress'});
     const controller=new AbortController(),abort=()=>controller.abort();
     req.once('aborted',abort);res.once('close',()=>{if(!res.writableEnded)abort()});
@@ -114,8 +123,8 @@ async function route(req,res){
       if(controller.signal.aborted)return;
       const reply=finalizeSemanticReply(effectivePlan,raw);
       const receipt=semanticReceipt(effectivePlan,PROVIDER==='local'&&localService.status().mock?'test_mock':PROVIDER,reply);
-      const conversationId=state.commitTextTurn({conversationId:existing,text,reply,receipt});
-      return json(res,200,{conversationId,reply,provider:PROVIDER,semantic:{act:receipt.act,path:receipt.path,schema:receipt.schema}});
+      const conversationId=state.commitTextTurn({conversationId:existing,text,reply,receipt,requestId:requestedId??null});
+      return json(res,200,{conversationId,reply,provider:PROVIDER,semantic:{act:receipt.act,path:receipt.path,schema:receipt.schema},...(requestedId?{requestId:requestedId,replayed:false}:{})});
     }catch(e){
       if(controller.signal.aborted)return;
       const code=e?.code||'text_turn_failed';
