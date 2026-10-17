@@ -5,6 +5,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import {localOnlyUrl} from './local-policy.mjs';
 import {sanitizeSpokenText} from './local-runtime.mjs';
+import {localGenerationSettings} from './semantic-adaptation-v29.mjs';
 
 const abortError=()=>Object.assign(new Error('local_aborted'),{name:'AbortError',code:'local_aborted'});
 const clip=(value,max)=>String(value??'').replace(/\s+/g,' ').trim().slice(0,max);
@@ -35,7 +36,7 @@ export async function runCommand(command,args=[],{signal,stdin,maxOutput=1_000_0
 
 export function createLocalEngines({llamaUrl='http://127.0.0.1:8080',asrCommand,asrArgs=[],ttsCommand,ttsArgs=[],tmpDir=os.tmpdir(),fetchImpl=fetch,run=runCommand}={}){
   const base=localOnlyUrl(llamaUrl),temp=suffix=>path.join(tmpDir,`teddy-${process.pid}-${crypto.randomUUID()}${suffix}`);
-  const requestBody=(text,context,stream)=>({model:'local',stream,max_tokens:context?.extended?160:112,temperature:.35,chat_template_kwargs:{enable_thinking:false},messages:buildLocalMessages(text,context)});
+  const requestBody=(text,context,stream)=>({model:'local',stream,...localGenerationSettings(context?.depth??(context?.extended?1:0)),chat_template_kwargs:{enable_thinking:false},messages:buildLocalMessages(text,context)});
   async function* streamCompletion(text,{signal,context}={}){
     const url=new URL('/v1/chat/completions',base),response=await fetchImpl(url,{method:'POST',headers:{'content-type':'application/json','accept':'text/event-stream'},body:JSON.stringify(requestBody(text,context,true)),signal});
     if(!response.ok||!response.body)throw Object.assign(new Error('local_llm_failed'),{code:'local_llm_failed',status:response.status});

@@ -91,6 +91,9 @@ try{
     if(input.disabled)throw Error('text input not ready in real mock provider');
     if(${probeBootstrap})return {success:true,chatInputVisible:input.getBoundingClientRect().width>120};
     input.value='Come stai Teddy?';form.requestSubmit();
+    const pending=document.querySelector('#teddyBubble');
+    if(!pending.classList.contains('is-thinking')||pending.getAttribute('aria-busy')!=='true')throw Error('thinking state absent at actual submit');
+    if(document.querySelector('#teddyBubbleText').textContent.trim())throw Error('fake pre-completion text leaked into balloon');
     for(let i=0;i<160&&document.querySelectorAll('.chat-message').length<2;i++)await sleep(80);
     const turns=[...document.querySelectorAll('.chat-message')].map(x=>x.textContent);
     if(turns.length!==2||!turns[0].includes('Come stai Teddy?')||!turns[1].includes('Ho sentito'))throw Error('chat was not actually rendered: '+JSON.stringify(turns));
@@ -99,6 +102,11 @@ try{
     const history=document.querySelector('#chatHistoryPanel'),bubble=document.querySelector('#teddyBubble');
     if(!history||!bubble||bubble.classList.contains('hidden'))throw Error('history dock or real-reply balloon absent');
     if(!document.querySelector('#teddyBubbleText').textContent.includes('Ho sentito'))throw Error('balloon is not wired to real reply');
+    if(bubble.classList.contains('is-thinking')||bubble.getAttribute('aria-busy')!=='false')throw Error('thinking state persisted after valid real response');
+    if(innerWidth>=900){
+      const rect=bubble.getBoundingClientRect();
+      if(rect.left<innerWidth/2+75||rect.left>innerWidth*.75)throw Error('comic not anchored near Teddy: '+rect.left);
+    }
     if(globalThis.__teddyMicAttempts!==0||globalThis.__teddyVoiceFetchAttempts!==0||globalThis.__teddyAudioContextAttempts!==0||globalThis.__teddyMediaPlayAttempts!==0)throw Error('voice side-effect during actual chat turn');
     if(${probeBalloon})return {success:true,chatInputVisible:true,stage:'balloon'};
     const compact=innerWidth<900;
@@ -141,7 +149,17 @@ try{
     const close=document.querySelector('#closeDrawer');if(!close)throw Error('drawer cannot close');
     close.click();if(!document.querySelector('#drawer').classList.contains('hidden'))throw Error('drawer failed to close');
     menu.click();document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));if(!nav.classList.contains('hidden'))throw Error('Escape did not close menu');
-    return {success:true,turns,menuClosed:true,localCloudFake:false,chatInputVisible:input.getBoundingClientRect().width>120};
+    // A second real turn must use the deterministic semantic path but the SAME
+    // pending->HTTP->bubble contract; do not mistake a fast rule for fake speech.
+    const priorCount=document.querySelectorAll('.chat-message').length;
+    input.value='chi sei?';form.requestSubmit();
+    if(!bubble.classList.contains('is-thinking')||document.querySelector('#teddyBubbleText').textContent.trim())throw Error('deterministic reply skipped real pending state');
+    for(let i=0;i<75&&document.querySelectorAll('.chat-message').length<priorCount+2;i++)await sleep(80);
+    const rendered=[...document.querySelectorAll('.chat-message')];
+    if(rendered.length!==priorCount+2||!rendered.at(-1).textContent.includes('Teddy'))throw Error('second deterministic reply not rendered');
+    if(bubble.classList.contains('is-thinking')||!bubbleTextContainsTeddy())throw Error('deterministic balloon did not settle into genuine HTTP reply');
+    function bubbleTextContainsTeddy(){return document.querySelector('#teddyBubbleText').textContent.includes('Teddy')}
+    return {success:true,turns,deterministicReply:true,menuClosed:true,localCloudFake:false,chatInputVisible:input.getBoundingClientRect().width>120};
   })()`;
   const result=await Promise.race([command('Runtime.evaluate',{expression,awaitPromise:true,returnByValue:true}),sleep(45000).then(()=>{throw Error('text browser smoke timeout')})]);
   if(result.exceptionDetails)throw Error('Real browser failure: '+(result.exceptionDetails.exception?.description||result.exceptionDetails.text));

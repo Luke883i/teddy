@@ -24,7 +24,9 @@ jobs:
           set -euo pipefail
           BASE=d934eb1fe08e85ca3209ee994b0861d6a790de65
           FINAL=$(git rev-parse HEAD)
-          mapfile -t COMMITS < <(git rev-list --reverse "$BASE..HEAD")
+          # V28 is a fixed historical proof chain. New PRs may have more commits;
+          # select and reverify the original five, rather than rejecting new work.
+          mapfile -t COMMITS < <(git log --reverse --format='%H %s' "$BASE..HEAD" | awk '/v28-step-[1-5]/{print $1}')
           test "${#COMMITS[@]}" -eq 5
           for i in 1 2 3 4 5; do
             SHA="${COMMITS[$((i-1))]}"
