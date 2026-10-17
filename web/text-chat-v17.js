@@ -10,7 +10,7 @@ export function installTextChat({boot,getAvailability,getConversationId,setConve
   if([form,input,send,log,hint,history,toggle,historyClose,historyEmpty,bubble,bubbleText,bubbleClose,bubbleReadAll,newChat].some(el=>!el))throw Error('text_chat_surface_missing');
   const local=boot.ai.provider==='local';
   let busy=false,controller=null,historyOpen=false,closed=false,lastCompact=null,explicitSessionChoice=false,lastBubbleConversationId=null;
-  let historyLoad=null,historyLoadError=false,pendingRequest=null;
+  let historyLoad=null,historyLoadError=false,pendingRequest=null,recoveryHint=null;
   function applyGeometry(){
     const g=chatLayout(window.innerWidth,window.innerHeight);
     document.documentElement.style.setProperty('--teddy-history-width',g.historyWidth+'px');
@@ -35,7 +35,7 @@ export function installTextChat({boot,getAvailability,getConversationId,setConve
     newChat.disabled=busy;
     send.textContent=busy?'Annulla':'Invia';
     const modelReady=local?Boolean(boot.ai.mock||getAvailability()?.textReady===true):Boolean(boot.secret?.configured);
-    hint.textContent=busy?'Teddy sta rispondendo…':local?(boot.ai.mock?'Modalità di prova · nessun modello reale':(modelReady?'Modello locale pronto':getAvailability()?.installPhase==='failed'?'Chat base pronta · Qwen non pronto':'Chat base pronta · Qwen in preparazione')):(modelReady?'OpenAI API collegata':'Chat base pronta · OpenAI non collegata');
+    hint.textContent=busy?'Teddy sta rispondendo…':recoveryHint?recoveryHint:local?(boot.ai.mock?'Modalità di prova · nessun modello reale':(modelReady?'Modello locale pronto':getAvailability()?.installPhase==='failed'?'Chat base pronta · Qwen non pronto':'Chat base pronta · Qwen in preparazione')):(modelReady?'OpenAI API collegata':'Chat base pronta · OpenAI non collegata');
   }
   function positionBalloon(length=0){
     const pos=comicGeometry(window.innerWidth,window.innerHeight,length);
@@ -140,6 +140,7 @@ export function installTextChat({boot,getAvailability,getConversationId,setConve
     if(!pendingRequest||pendingRequest.text!==text||pendingRequest.conversationId!==targetConversation)
       pendingRequest={text,conversationId:targetConversation,requestId:crypto.randomUUID()};
     const requestId=pendingRequest.requestId;
+    recoveryHint=null;
     busy=true;controller=new AbortController();const own=controller;
     const started=performance.now();
     startThinking();
@@ -152,17 +153,17 @@ export function installTextChat({boot,getAvailability,getConversationId,setConve
       if(own.signal.aborted)return;
       if(body.requestId!==requestId)throw Object.assign(new Error('text_request_identity_mismatch'),{code:'text_request_identity_mismatch'});
       setConversationId(body.conversationId);
-      pendingRequest=null;
+      pendingRequest=null;recoveryHint=null;
       append('user',text,null,body.conversationId);append('assistant',body.reply,null,body.conversationId);
       showBubble(body.reply,body.conversationId);
       input.value='';setState('pronto a leggere');
     }catch(error){
       hideBubble();
-      if(error.name==='AbortError')setState('Invio interrotto. Riprova lo stesso testo oppure controlla la cronologia.');
+      if(error.name==='AbortError')recoveryHint='Invio interrotto: riprova lo stesso testo oppure controlla la cronologia.';
       else{
         if(error.code==='text_request_conflict'||error.code==='text_request_identity_mismatch')pendingRequest=null;
         showProblem({error:error.code||'text_turn_failed',kind:'text'});
-        hint.textContent='Risposta non confermata: riprova lo stesso messaggio senza creare duplicati.';
+        recoveryHint='Risposta non confermata: riprova lo stesso messaggio senza creare duplicati.';
       }
     }finally{
       if(controller===own){busy=false;controller=null;update();if(!input.disabled)input.focus()}
@@ -171,7 +172,7 @@ export function installTextChat({boot,getAvailability,getConversationId,setConve
   newChat.addEventListener('click',()=>{
     if(busy)return;
     explicitSessionChoice=true;
-    pendingRequest=null;
+    pendingRequest=null;recoveryHint=null;
     setConversationId(null);
     hideBubble();
     bubbleText.textContent='';
@@ -179,6 +180,12 @@ export function installTextChat({boot,getAvailability,getConversationId,setConve
     input.value='';
     hint.textContent='Nuova conversazione · scrivi pure';
     input.focus();
+  });
+  // A corrected/edited message is a NEW intention and must receive a fresh ID.
+  input.addEventListener('input',()=>{
+    if(pendingRequest&&input.value.trim()!==pendingRequest.text){
+      pendingRequest=null;recoveryHint=null;update();
+    }
   });
   toggle.addEventListener('click',()=>setHistory(!historyOpen,{focus:true}));
   historyClose.addEventListener('click',()=>setHistory(false,{focus:true}));
