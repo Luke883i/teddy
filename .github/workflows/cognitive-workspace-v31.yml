@@ -1,0 +1,41 @@
+name: teddy-cognitive-workspace-v31
+on:
+  pull_request:
+    paths:
+      - 'server/lib/cognitive-workspace-v31.mjs'
+      - 'server/lib/semantic-spine.mjs'
+      - 'server/lib/local-engines.mjs'
+      - 'server/main.mjs'
+      - 'web/text-chat-v17.js'
+      - 'web/teddy/cognitive-motion-v31.js'
+      - 'tests/cognitive-motion-v31.test.mjs'
+      - 'tests/cognitive-workspace-v31.test.mjs'
+      - 'tools/mutate-cognition-v31.mjs'
+      - 'tools/mutate-code-v31.mjs'
+      - '.github/workflows/cognitive-workspace-v31.yml'
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  cognitive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 16
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 24.19.0
+      - name: new cognitive workspace + inherited dialogue tests
+        run: node --test tests/cognitive-workspace-v31.test.mjs tests/cognitive-motion-v31.test.mjs tests/motion-routing-v8.test.mjs tests/semantic-spine-v24.test.mjs tests/semantic-refinement-v26.test.mjs tests/v29-comic-language.test.mjs tests/text-recovery-v30.test.mjs
+      - name: 10000 semantic mutations (independent oracles)
+        run: node tools/mutate-cognition-v31.mjs
+      - name: targeted source-level mutation score
+        run: node tools/mutate-code-v31.mjs
+      - name: authentic server and SQLite mock-labelled recovery regression
+        run: node tools/prove-replay-v30.mjs
+      - name: real Chromium UI and full balloon text contract
+        run: node tools/browser-text-v17.mjs --desktop

@@ -11,6 +11,7 @@ import { normalizeProvider, providerCapabilities } from './lib/provider.mjs';
 import { createLocalService } from './lib/local-service.mjs';
 import {openAITextTurn,normalizeUserText} from './lib/text-service.mjs';
 import {planSemanticTurn,finalizeSemanticReply,semanticReceipt} from './lib/semantic-spine.mjs';
+import {semanticReadback} from './lib/cognitive-workspace-v31.mjs';
 import { createRuntimeManager } from './lib/runtime-manager.mjs';
 import { recoverManagedRuntime, recoveryCooldown, shouldAttemptRuntimeRecovery } from './lib/runtime-recovery.mjs';
 
@@ -116,13 +117,23 @@ async function route(req,res){
         if(!apiKey)return json(res,409,{error:'openai_key_missing'});
       }
       const effectivePlan=useRules?plan:{...plan,path:'model'};
-      const modelContext={turns:history,memories,semanticDirective:plan.directive,extended:plan.extended,depth:plan.depth};
-      const raw=useRules?plan.reply:PROVIDER==='local'
+      const modelContext={turns:history,memories,semanticDirective:plan.directive,extended:plan.extended,depth:plan.depth,workspace:plan.workspace};
+      let raw=useRules?plan.reply:PROVIDER==='local'
         ?await localService.text(text,{signal:controller.signal,context:modelContext})
         :await openAITextTurn({apiKey,text,config,memories,history,semanticDirective:plan.directive,signal:controller.signal,model:process.env.TEDDY_OPENAI_TEXT_MODEL||'gpt-4.1-mini'});
       if(controller.signal.aborted)return;
+      const mockModel=PROVIDER==='local'&&localService.status().mock;
+      let readback=!useRules&&!mockModel?semanticReadback({question:text,reply:raw,workspace:plan.workspace}):null;
+      // Repair only objectively invalid echoes/meta replies. Lexical non-overlap alone never triggers a retry.
+      if(readback?.status==='reject'&&PROVIDER==='local'){
+        const retryContext={...modelContext,semanticDirective:plan.directive+' Non ripetere la domanda e non parlare del tuo ruolo: rispondi al contenuto, in modo specifico.'};
+        raw=await localService.text(text,{signal:controller.signal,context:retryContext});
+        if(controller.signal.aborted)return;
+        readback=semanticReadback({question:text,reply:raw,workspace:plan.workspace});
+      }
+      if(readback?.status==='reject')throw Object.assign(new Error('semantic_unresponsive_reply'),{code:'semantic_unresponsive_reply',status:502});
       const reply=finalizeSemanticReply(effectivePlan,raw);
-      const receipt=semanticReceipt(effectivePlan,PROVIDER==='local'&&localService.status().mock?'test_mock':PROVIDER,reply);
+      const receipt=semanticReceipt(effectivePlan,PROVIDER==='local'&&mockModel?'test_mock':PROVIDER,reply,readback);
       const conversationId=state.commitTextTurn({conversationId:existing,text,reply,receipt,requestId:requestedId??null});
       return json(res,200,{conversationId,reply,provider:PROVIDER,semantic:{act:receipt.act,path:receipt.path,schema:receipt.schema},...(requestedId?{requestId:requestedId,replayed:false}:{})});
     }catch(e){

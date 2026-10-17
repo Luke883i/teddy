@@ -2,6 +2,7 @@
 // Data from past turns and memories never becomes an instruction source.
 import crypto from 'node:crypto';
 import {chooseNovelVariant,semanticDepth,semanticDepthDirective} from './semantic-adaptation-v29.mjs';
+import {buildCognitiveWorkspace,workspaceDirective} from './cognitive-workspace-v31.mjs';
 import {selfDeclaredName,mostRecentDeclaredName,extendedSocialAct,adultVariants,chooseSocialVariant} from './semantic-refinement-v26.mjs';
 const hash=v=>crypto.createHash('sha256').update(String(v)).digest('hex');
 const normalize=s=>String(s??'').normalize('NFKC').trim().replace(/\s+/g,' ').slice(0,2000);
@@ -69,7 +70,10 @@ function pick(choices,seed,history){return chooseNovelVariant(choices,hash(seed)
 export function planSemanticTurn({text,history=[],memories=[],conversationId=null}={}){
   if(typeof text!=='string'||!text.trim()||text.length>2000)throw Object.assign(new Error('semantic_input_invalid'),{code:'semantic_input_invalid'});
   const recent=Array.isArray(history)?history.filter(t=>['user','assistant'].includes(t?.role)&&typeof t.text==='string').slice(-12):[];
-  const classification=classifyInteraction(text,recent),act=classification.act;
+  const classification=classifyInteraction(text,recent);
+  const workspace=buildCognitiveWorkspace({text,history:recent});
+  // Only a contextual repair is model-routed. Standalone 'non ho capito' remains backward compatible.
+  const act=classification.act==='clarify'&&workspace.antecedent?'clarify_context':classification.act;
   const seed=[conversationId||'new',recent.length,act,lexical(text)].join('|');
   let reply=null;
   if(act==='introduction')reply=`Piacere, ${classification.name}. Lo tengo a mente in questa conversazione; niente cerimonie.`;
@@ -80,7 +84,7 @@ export function planSemanticTurn({text,history=[],memories=[],conversationId=nul
   else if(templates[act])reply=pick(templates[act],seed,recent);
   const extended=/\b(?:spiega|analizza|perché|perche|confronta|approfondisci|argomenta|passaggi)\b/iu.test(text);
   const caution=Boolean(classification.caution);
-  const depth=semanticDepth(text,act);
+  const depth=semanticDepth(text,act==='clarify_context'?'followup':act);
   const directive=[
     'Sei Teddy: un orsetto adulto, burbero, asciutto, arguto, affettuosamente insofferente. Il carattere non giustifica mai insulti, disprezzo o minacce.',
     'Rispondi in italiano adulto e naturale; niente baby-talk, sermoni, markdown o frasi stereotipate.',
@@ -90,11 +94,12 @@ export function planSemanticTurn({text,history=[],memories=[],conversationId=nul
     'Non attribuirti ricordi non disponibili, accesso a internet, sensori o capacità inesistenti.',
     caution?'Se la domanda richiede fatti attuali o specialistici e non hai fonti affidabili, indica il limite; non fabbricare certezze.':'Non inventare fatti o esperienze.',
     semanticDepthDirective(depth),
+    workspaceDirective(workspace),
     '/no_think'
   ].join(' ');
   return Object.freeze({
     schema:'teddy.semantic.v1',act,path:reply?'deterministic':'model',
-    reply,directive,extended,caution,depth,
+    reply,directive,extended,caution,depth,workspace,
     inputDigest:hash(normalize(text)),contextTurns:recent.length,memoryCount:Math.min(Array.isArray(memories)?memories.length:0,6),
     variant:parseInt(hash(seed).slice(0,8),16)%(adultVariants[act]?.length||3)
   });
@@ -105,8 +110,9 @@ export function finalizeSemanticReply(plan,raw){
   if(!answer||answer.length>4000||/<\/?think\b/i.test(answer))throw Object.assign(new Error('semantic_invalid_reply'),{code:'semantic_invalid_reply',status:502});
   return answer;
 }
-export function semanticReceipt(plan,provider,reply){
+export function semanticReceipt(plan,provider,reply,readback=null){
   return {schema:plan.schema,act:plan.act,path:plan.path,provider,
     inputDigest:plan.inputDigest,outputDigest:hash(reply),contextTurns:plan.contextTurns,
-    caution:plan.caution,variant:plan.variant};
+    caution:plan.caution,variant:plan.variant,
+    cognitive:{schema:'teddy.workspace.v1',move:plan.workspace?.move||'unknown',nodes:plan.workspace?.nodes?.length||0,edges:plan.workspace?.edges?.length||0,unresolved:Boolean(plan.workspace?.unresolved),readback:readback?{status:readback.status,reason:readback.reason}:null}};
 }
