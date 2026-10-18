@@ -48,6 +48,8 @@ jobs:
       - name: install dependencies
         run: npm ci --ignore-scripts
       - name: run actual pinned Qwen GGUF plus 100 generative conversations plus 10k live HTTP sessions
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: node tools/prove-real-text-v20.mjs
       - name: fail closed on real receipts without provider substitution
         run: |
@@ -59,7 +61,7 @@ jobs:
         if: always()
         id: evidence
         run: |
-          node -e 'const fs=require("fs"),p=process.env.RUNNER_TEMP+"/teddy-v33-10k/",f=fs.existsSync(p+"readback-10k.json")?p+"readback-10k.json":p+"readback-10k-partial.json";let r={realSessions:0,failures:["no-report"]};try{r=JSON.parse(fs.readFileSync(f))}catch{}const code=String((r.failures||[])[0]||"ok").split("\n")[0].toLowerCase().replace(/[^a-z0-9-]/g,"-").slice(0,65);fs.appendFileSync(process.env.GITHUB_OUTPUT,"slug=n"+r.realSessions+"-"+code+"\n")'
+          node -e 'const fs=require("fs"),p=process.env.RUNNER_TEMP+"/teddy-v33-10k/",f=fs.existsSync(p+"readback-10k.json")?p+"readback-10k.json":p+"readback-10k-partial.json";let r={realSessions:0,failures:["no-report"]};try{r=JSON.parse(fs.readFileSync(f))}catch{}if(r.failures?.[0]==="no-report"){try{const m=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP+"/teddy-real-text-v20-proof.json"));r.failures=[m.failure?.message||"model-initialization-failed"]}catch{}}const code=String((r.failures||[])[0]||"ok").split("\n")[0].toLowerCase().replace(/[^a-z0-9-]/g,"-").slice(0,65);fs.appendFileSync(process.env.GITHUB_OUTPUT,"slug=n"+r.realSessions+"-"+code+"\n")'
       - name: archive real Qwen, live HTTP and SQLite evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
