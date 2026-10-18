@@ -5,6 +5,8 @@ import {chooseNovelVariant,semanticDepth,semanticDepthDirective} from './semanti
 import {buildCognitiveWorkspace,workspaceDirective} from './cognitive-workspace-v31.mjs';
 import {groundedTurn} from './grounded-reasoner-v32.mjs';
 import {dialogueGoal,goalDirective,scopeExplicitPremises} from './goal-ledger-v33.mjs';
+import {lexicalDirective,lexicalReadback} from './lexical-contract-v34.mjs';
+import {contextualMathRepair} from './contextual-repair-v34.mjs';
 import {selfDeclaredName,mostRecentDeclaredName,extendedSocialAct,adultVariants,chooseSocialVariant} from './semantic-refinement-v26.mjs';
 const hash=v=>crypto.createHash('sha256').update(String(v)).digest('hex');
 const normalize=s=>String(s??'').normalize('NFKC').trim().replace(/\s+/g,' ').slice(0,2000);
@@ -69,25 +71,26 @@ export function classifyInteraction(text,history=[]){
   return {act:followup&&history.some(t=>t?.role==='assistant')?'followup':'open',caution};
 }
 function pick(choices,seed,history){return chooseNovelVariant(choices,hash(seed),history)}
-export function planSemanticTurn({text,history=[],memories=[],conversationId=null}={}){
+export function planSemanticTurn({text,history=[],memories=[],conversationId=null,requestId=null}={}){
   if(typeof text!=='string'||!text.trim()||text.length>2000)throw Object.assign(new Error('semantic_input_invalid'),{code:'semantic_input_invalid'});
   const recent=Array.isArray(history)?history.filter(t=>['user','assistant'].includes(t?.role)&&typeof t.text==='string').slice(-12):[];
   const classification=classifyInteraction(text,recent);
-  const scopedHistory=scopeExplicitPremises(recent);
+  const scopedHistory=scopeExplicitPremises(recent,{currentText:text});
   const workspace=buildCognitiveWorkspace({text,history:scopedHistory.turns});
   // Only a contextual repair is model-routed. Standalone 'non ho capito' remains backward compatible.
   const goal=dialogueGoal({text,history:recent,workspace});
-  const reasoning=groundedTurn({text,history:scopedHistory.turns});
+  const reasoning=groundedTurn({text,history:scopedHistory.turns})||contextualMathRepair({text,history:scopedHistory.turns});
   // A complete current question cannot be a follow-up merely because the
   // conversation contains an old assistant message.
   const selectedAct=goal.completeQuestion&&classification.act==='followup'?'open':classification.act;
   const act=reasoning?.act||(selectedAct==='clarify'&&workspace.antecedent?'clarify_context':selectedAct);
-  const seed=[conversationId||'new',recent.length,act,lexical(text)].join('|');
+  // Use first-turn request identity to diversify wording without changing replay semantics.
+  const seed=[conversationId||requestId||'new',recent.length,act,lexical(text)].join('|');
   let reply=reasoning?.reply||null;
-  if(act==='introduction')reply=`Piacere, ${classification.name}. Lo tengo a mente in questa conversazione; niente cerimonie.`;
+  if(act==='introduction')reply=`Piacere, ${classification.name}. Terrò a mente il tuo nome in questa conversazione.`;
   else if(act==='name_query'){
     const name=mostRecentDeclaredName(recent);
-    reply=name?`Ti chiami ${name}. Vedi? Non sono soltanto pelliccia e cattivo umore.`:'Non me lo hai detto in questa conversazione, oppure non lo ritrovo. Come ti chiami?';
+    reply=name?`Ti chiami ${name}.`:'Non trovo il tuo nome in questa conversazione. Come preferisci che ti chiami?';
   }else if(adultVariants[act])reply=chooseNovelVariant(adultVariants[act],hash(seed),recent);
   else if(templates[act])reply=pick(templates[act],seed,recent);
   const extended=/\b(?:spiega|analizza|perché|perche|confronta|approfondisci|argomenta|passaggi)\b/iu.test(text);
@@ -104,6 +107,7 @@ export function planSemanticTurn({text,history=[],memories=[],conversationId=nul
     semanticDepthDirective(depth),
     workspaceDirective(workspace),
     goalDirective(goal),
+    lexicalDirective(),
     '/no_think'
   ].join(' ');
   return Object.freeze({
@@ -123,5 +127,5 @@ export function semanticReceipt(plan,provider,reply,readback=null){
   return {schema:plan.schema,act:plan.act,path:plan.path,provider,
     inputDigest:plan.inputDigest,outputDigest:hash(reply),contextTurns:plan.contextTurns,
     caution:plan.caution,variant:plan.variant,
-    cognitive:{schema:'teddy.workspace.v1',move:plan.workspace?.move||'unknown',nodes:plan.workspace?.nodes?.length||0,edges:plan.workspace?.edges?.length||0,unresolved:Boolean(plan.workspace?.unresolved),readback:readback?{status:readback.status,reason:readback.reason}:null,reasoning:plan.reasoning||null,goal:plan.goal?{move:plan.goal.move,completeQuestion:plan.goal.completeQuestion,changedPremises:plan.goal.changedPremises,contextPriority:plan.goal.contextPriority}:null}};
+    cognitive:{schema:'teddy.workspace.v1',move:plan.workspace?.move||'unknown',nodes:plan.workspace?.nodes?.length||0,edges:plan.workspace?.edges?.length||0,unresolved:Boolean(plan.workspace?.unresolved),readback:readback?{status:readback.status,reason:readback.reason}:null,reasoning:plan.reasoning||null,lexical:lexicalReadback({act:plan.act,text:reply}),goal:plan.goal?{move:plan.goal.move,completeQuestion:plan.goal.completeQuestion,changedPremises:plan.goal.changedPremises,contextPriority:plan.goal.contextPriority}:null}};
 }

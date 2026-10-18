@@ -7,30 +7,43 @@ const retraction=/^(?:ritiro|revoco|annulla|annullo|non vale più)\s+(?:la\s+)?p
 const fact=/^(?:premessa|dato|assumi|considera vero|consideriamo vero)\s*:\s*(.+)$/iu;
 const key=s=>fold(s).replace(/[!?.,;:]+$/gu,'').trim();
 const isUser=x=>x?.role==='user'&&typeof x.text==='string';
-export function scopeExplicitPremises(history=[]){
+// V34: chronological evidence repair. A withdrawal invalidates previous instances,
+// never future reassertions; the current turn may begin a new cognitive episode.
+export function scopeExplicitPremises(history=[],{currentText=''}={}){
  const turns=(Array.isArray(history)?history:[]).filter(t=>(t?.role==='assistant'||isUser(t))&&typeof t.text==='string').slice(-12);
+ const currentReset=reset.test(tidy(currentText));
  let from=0;
  for(let i=0;i<turns.length;i++)if(isUser(turns[i])&&reset.test(tidy(turns[i].text)))from=i+1;
- const active=turns.slice(from),revoked=new Set();
- for(const t of active){if(!isUser(t))continue;
-  for(const clause of t.text.split(/[.;\n]+/u)){const m=tidy(clause).match(retraction);if(m)revoked.add(key(m[1]));}
+ const active=currentReset?[]:turns.slice(from);
+ const lastRevocation=new Map();
+ for(let i=0;i<active.length;i++){
+  if(!isUser(active[i]))continue;
+  const parts=active[i].text.split(/[.;\n]+/u);
+  for(let j=0;j<parts.length;j++){
+   const m=tidy(parts[j]).match(retraction);
+   if(m)lastRevocation.set(key(m[1]),[i,j]);
+  }
  }
- if(!revoked.size)return Object.freeze({turns:active,resetCount:from?1:0,revokedCount:0,suppressed:0,authority:'explicit_user_turns_only'});
+ const resetCount=Number(currentReset||from>0);
+ if(!lastRevocation.size)return Object.freeze({turns:active,resetCount,revokedCount:0,suppressed:0,authority:'explicit_user_turns_only'});
  let suppressed=0;
- const scoped=active.map(t=>{
+ const scoped=active.map((t,i)=>{
   if(!isUser(t))return t;
   let changed=false;
   const segments=t.text.split(/[.;\n]+/u);
-  const kept=segments.filter(s=>{
-   const r=tidy(s).match(retraction);
-   if(r){changed=true;return false}
-   const m=tidy(s).match(fact);
-   if(m&&revoked.has(key(m[1]))){suppressed++;changed=true;return false}
+  const kept=segments.filter((fragment,j)=>{
+   const clause=tidy(fragment),withdrawal=clause.match(retraction);
+   if(withdrawal){changed=true;return false}
+   const m=clause.match(fact);
+   if(m){
+     const at=lastRevocation.get(key(m[1]));
+     if(at&&(i<at[0]||(i===at[0]&&j<at[1]))){suppressed++;changed=true;return false}
+   }
    return true;
   });
   return changed?{...t,text:kept.join('. ')}:t;
  });
- return Object.freeze({turns:scoped,resetCount:from?1:0,revokedCount:revoked.size,suppressed,authority:'explicit_user_turns_only'});
+ return Object.freeze({turns:scoped,resetCount,revokedCount:lastRevocation.size,suppressed,authority:'explicit_user_turns_only'});
 }
 const completeQuestion=/^(?:(?:perché|perche|come mai|in che modo|come funziona|per quale motivo)\s+[\s\S]{9,})[?!.]?$/iu;
 const unresolved=/^(?:perché|perche|come mai|e quindi|e allora|non ho capito|spiegati meglio|continua)[?!.]?$/iu;
