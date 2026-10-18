@@ -1,0 +1,23 @@
+// Mirrors Lumen's static Blueprint gate; no external account or cloud changes.
+import fs from 'node:fs';
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
+const root=fileURLToPath(new URL('../',import.meta.url));
+const read=p=>fs.readFileSync(path.join(root,p),'utf8');
+const y=read('render.yaml'),pkg=JSON.parse(read('package.json'));
+const checks=[],line=(k,v)=>y.split('\n').some(s=>s.trim().replace(/^-\s+/,'')===k+': '+v);
+const test=(name,pass)=>checks.push({name,status:pass?'PASS':'FAIL'});
+test('node24',read('.node-version').trim()==='24.19.0'&&pkg.engines.node.startsWith('>=24'));
+test('service-type',line('type','web')&&line('runtime','node')&&line('plan','2c-4g'));
+test('ci-gated-deploy',line('autoDeployTrigger','checksPass'));
+test('build-verify',y.includes('node scripts/verify-render-v35.mjs')&&y.includes('node --test tests/render-deployment-v35.test.mjs'));
+test('run-preflight',line('startCommand','node scripts/render-start-v35.mjs'));
+test('health',line('healthCheckPath','/api/health'));
+test('disk',line('mountPath','/var/data')&&line('sizeGB','5')&&line('value','/var/data/teddy'));
+test('auth-secret',/key:\s*TEDDY_AUTH_PASSWORD\s*\n\s*sync:\s*false/.test(y));
+test('master-secret',/key:\s*TEDDY_RENDER_MASTER_B64\s*\n\s*generateValue:\s*true/.test(y));
+test('model-runtime-only',!y.includes('preDeployCommand:')&&!y.includes('initialDeployHook:')&&line('value','production'));
+test('voice-off',/key:\s*TEDDY_ENABLE_VOICE_ENDPOINTS\s*\n\s*value:\s*'0'/.test(y));
+const result={schema:'teddy.render.static.v35',valid:checks.every(x=>x.status==='PASS'),checks,liveRenderDeployVerified:false};
+console.log(JSON.stringify(result));
+if(!result.valid)process.exitCode=1;

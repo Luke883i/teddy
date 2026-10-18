@@ -1,0 +1,35 @@
+# Teddy, single-instance paid Render pilot with persistent SQLite and verified local model.
+services:
+  - type: web
+    name: teddy-bear
+    runtime: node
+    region: frankfurt
+    plan: 2c-4g
+    autoDeployTrigger: checksPass
+    buildCommand: npm ci --ignore-scripts && node scripts/verify-render-v35.mjs && node --test tests/render-deployment-v35.test.mjs
+    startCommand: node scripts/render-start-v35.mjs
+    healthCheckPath: /api/health
+    maxShutdownDelaySeconds: 45
+    disk:
+      name: teddy-data
+      mountPath: /var/data
+      sizeGB: 5
+    envVars:
+      - key: NODE_VERSION
+        value: 24.19.0
+      - key: NODE_ENV
+        value: production
+      - key: TEDDY_PROVIDER
+        value: local
+      - key: TEDDY_HOME
+        value: /var/data/teddy
+      - key: TEDDY_TEXT_ONLY
+        value: '1'
+      - key: TEDDY_RUNTIME_AUTOINSTALL
+        value: '1'
+      - key: TEDDY_ENABLE_VOICE_ENDPOINTS
+        value: '0'
+      - key: TEDDY_RENDER_MASTER_B64
+        generateValue: true
+      - key: TEDDY_AUTH_PASSWORD
+        sync: false
