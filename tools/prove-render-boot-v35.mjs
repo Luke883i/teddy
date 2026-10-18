@@ -5,6 +5,7 @@ import {setTimeout as sleep} from 'node:timers/promises';
 import fs from 'node:fs';
 import crypto from 'node:crypto';
 import net from 'node:net';
+import {request as httpRequest} from 'node:http';
 import assert from 'node:assert/strict';
 const port=await new Promise((resolve,reject)=>{
  const s=net.createServer();s.once('error',reject);s.listen(0,'127.0.0.1',()=>{const p=s.address().port;s.close(()=>resolve(p))});
@@ -34,9 +35,19 @@ async function stop(){
 }
 async function hit(route,{auth=true,method='GET',body,host='teddy-render-smoke.onrender.com'}={}){
  const headers={host,...(auth?{authorization:basic}:{})};
- if(body)headers['content-type']='application/json';
- const r=await fetch('http://127.0.0.1:'+port+route,{method,headers,body:body?JSON.stringify(body):undefined,signal:AbortSignal.timeout(3000)});
- return {status:r.status,payload:await r.json().catch(()=>({}))};
+ const payload=body?JSON.stringify(body):null;
+ if(payload){headers['content-type']='application/json';headers['content-length']=Buffer.byteLength(payload)}
+ // Undici/fetch ignores custom Host; use native HTTP to reproduce Render's proxy.
+ return await new Promise((resolve,reject)=>{
+  const req=httpRequest({hostname:'127.0.0.1',port,path:route,method,headers},res=>{
+   const chunks=[];res.on('data',c=>chunks.push(c));res.on('end',()=>{
+    let value={};try{value=JSON.parse(Buffer.concat(chunks).toString('utf8'))}catch{}
+    resolve({status:res.statusCode,payload:value});
+   });
+  });
+  req.once('error',reject);req.setTimeout(3000,()=>req.destroy(Error('http_timeout')));
+  req.end(payload||undefined);
+ });
 }
 const checks=[];
 const check=(name,valid)=>{assert.equal(valid,true,name);checks.push(name)};
