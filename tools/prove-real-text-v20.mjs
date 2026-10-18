@@ -11,6 +11,7 @@ import {createRuntimeManager,QWEN_SHA256} from '../server/lib/runtime-manager.mj
 import {createLocalService} from '../server/lib/local-service.mjs';
 import {fileURLToPath} from 'node:url';
 import {proveThirtyBrowser} from './prove-thirty-browser-v27.mjs';
+import {proveHundredSessions} from './prove-hundred-sessions-v32.mjs';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'teddy-real-text-v20-')),home=path.join(tmp,'home');
@@ -116,7 +117,14 @@ try{
   }finally{proofDb.close()}
   report.semantic={modelTurns:3,deterministicTurns:7,sequentialTurns:10,verifiedDbReceipts:10,additionalTurnLatencyMs:latencies};
   report.appHttp=true;report.turns=history.turns.length+6;report.httpReplySha256=crypto.createHash('sha256').update(result.reply).digest('hex');
-  report.thirtySessionSummary=await proveThirtyBrowser({appPort,home,root}).then(({sessions,latency,minFontPx,overflowSessions,videoCreated})=>({sessions:sessions.length,latency,minFontPx,overflowSessions,videoCreated}));
+  if(process.env.TEDDY_V32_SKIP_BROWSER_30!=='1')report.thirtySessionSummary=await proveThirtyBrowser({appPort,home,root}).then(({sessions,latency,minFontPx,overflowSessions,videoCreated})=>({sessions:sessions.length,latency,minFontPx,overflowSessions,videoCreated}));
+  if(process.env.TEDDY_V32_REAL_100==='1'){
+    const hundred=await proveHundredSessions({appPort,home});
+    assert.equal(hundred.actualSessions,100,'v32 genuine 100 session campaign not complete');
+    assert.equal(hundred.uniqueConversationIds,100);
+    assert.equal(hundred.genuineInitialGenerations+hundred.additionalContextModelGenerations,140);
+    report.hundredSessionSummary={actualSessions:hundred.actualSessions,modelGenerations:140,genericOrEcho:hundred.genericOrEcho,needsHumanReview:hundred.needsHumanReview,latency:hundred.modelLatency};
+  }
   report.elapsedMs=Date.now()-begin;
   const out=path.join(process.env.RUNNER_TEMP||tmp,'teddy-real-text-v20-proof.json');
   fs.writeFileSync(out,JSON.stringify(report,null,2));
