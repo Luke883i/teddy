@@ -16,6 +16,7 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+  issues: write
 jobs:
   lexical-cognitive:
     runs-on: ubuntu-latest
@@ -36,7 +37,7 @@ jobs:
         if: always()
         id: diagnosis
         run: |
-          node -e 'const fs=require("fs"),f=process.env.RUNNER_TEMP+"/teddy-v34-node.log";const txt=fs.existsSync(f)?fs.readFileSync(f,"utf8"):"missing-log";const first=txt.match(/not ok \d+ - ([^\n]+)/)?.[1]||"all-pass";const slug=first.toLowerCase().replace(/[^a-z0-9-]/g,"-").slice(0,75);fs.appendFileSync(process.env.GITHUB_OUTPUT,"slug="+slug+"\n")'
+          node -e 'const fs=require("fs"),f=process.env.RUNNER_TEMP+"/teddy-v34-node.log";const txt=fs.existsSync(f)?fs.readFileSync(f,"utf8"):"missing-log";const first=txt.match(/not ok \d+ - ([^\n]+)/)?.[1]||txt.match(/(?:Error:|error:|ERR_[A-Z_]+)[^\n]*/)?.[0]||txt.trim().slice(0,100)||"empty-log";const slug=first.toLowerCase().replace(/[^a-z0-9-]/g,"-").slice(0,75);fs.appendFileSync(process.env.GITHUB_OUTPUT,"slug="+slug+"\n")'
       - name: publish diagnostic test output
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -45,6 +46,14 @@ jobs:
           path: ${{ runner.temp }}/teddy-v34-node.log
           if-no-files-found: ignore
           retention-days: 7
+      - name: publish bounded failing test excerpt to PR
+        if: failure() && github.event_name == 'pull_request'
+        env:
+          GH_${{ github.token }}: TOKEN
+        run: |
+          tail -n 80 "$RUNNER_TEMP/teddy-v34-node.log" > "$RUNNER_TEMP/v34-comment.log" || true
+          { echo '### V34 lexical test diagnostic'; echo 'Synthetic, non-private test stdout (last 80 lines):'; echo '~~~'; cat "$RUNNER_TEMP/v34-comment.log"; echo '~~~'; } > "$RUNNER_TEMP/v34-comment.md"
+          gh issue comment ${{ github.event.pull_request.number }} --repo "$GITHUB_REPOSITORY" --body-file "$RUNNER_TEMP/v34-comment.md" || true
       - name: 10000 inherited semantic mutations
         run: node tools/mutate-cognition-v31.mjs
       - name: targeted source-level mutation coverage
