@@ -54,6 +54,8 @@ const check=(name,valid)=>{assert.equal(valid,true,name);checks.push(name)};
 try{
  await launch();
  let r=await hit('/api/health',{auth:false});check('liveness',r.status===200&&r.payload.liveness==='up');
+ r=await hit('/api/health',{auth:false,host:'internal-health-check'});check('render-internal-probe',r.status===200);
+ r=await hit('/api/version',{auth:false,host:'internal-health-check'});check('probe-does-not-bypass-auth',r.status===421);
  r=await hit('/api/version',{auth:false});check('version-protected',r.status===401);
  r=await hit('/api/version');check('exact-sha',r.status===200&&r.payload.revision===sha);
  r=await hit('/api/ready');check('model-not-faked',r.status===503);

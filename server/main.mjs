@@ -59,6 +59,11 @@ async function checkRuntimeRecovery(){
 }
 
 async function route(req,res){
+  // Render may use an internal Host header for HTTP probes. Only the minimal,
+  // non-sensitive liveness endpoint bypasses host checks, never UI or APIs.
+  if(process.env.TEDDY_RENDER_HEALTH_PROBE==='1'&&req.method==='GET'&&
+     new URL(req.url,'http://localhost').pathname==='/api/health')
+    return json(res,200,{ok:true,service:'teddy',version:VERSION,provider:PROVIDER,security:policy.mode,liveness:'up'});
   const guard=guardRequest(req,{listenHost:HOST,publicOrigin:PUBLIC_ORIGIN,authPassword:AUTH_PASSWORD});if(!guard.ok)return json(res,guard.status,{error:guard.error},guard.headers||{});
   const u=new URL(req.url,'http://localhost');
   if(req.method==='GET'&&u.pathname==='/api/health')return json(res,200,{ok:true,service:'teddy',version:VERSION,provider:PROVIDER,security:policy.mode,liveness:'up'});
