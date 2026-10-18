@@ -1,0 +1,57 @@
+name: teddy-render-v35
+on:
+  pull_request:
+    paths:
+      - 'render.yaml'
+      - '.node-version'
+      - 'server/lib/render-deployment-v35.mjs'
+      - 'server/main.mjs'
+      - 'scripts/render-start-v35.mjs'
+      - 'scripts/verify-render-v35.mjs'
+      - 'scripts/verify-render-remote-v35.mjs'
+      - 'tools/mutate-render-v35.mjs'
+      - 'tools/prove-render-boot-v35.mjs'
+      - 'tests/render-deployment-v35.test.mjs'
+      - '.github/workflows/render-v35.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  render-proofs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 24.19.0
+      - name: lockfile-only install
+        run: npm ci --ignore-scripts
+      - name: verify immutable blueprint and Node runtime
+        run: node scripts/verify-render-v35.mjs
+      - name: node checks and pure deployment tests
+        run: |
+          node --check scripts/render-start-v35.mjs
+          node --check scripts/verify-render-remote-v35.mjs
+          node --check tools/prove-render-boot-v35.mjs
+          node --test tests/render-deployment-v35.test.mjs
+      - name: one million independently falsified deployment configurations
+        run: |
+          node tools/mutate-render-v35.mjs > "$RUNNER_TEMP/render-million.json"
+          node -e 'const fs=require("fs"),r=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP+"/render-million.json"));if(r.checked!==1000000||r.status!=="PASS"||r.pass<20000||r.fail<100000||r.sha256.length!==64)process.exit(1);console.log(JSON.stringify(r))'
+      - name: prepare test-only volume (not cloud durability proof)
+        run: |
+          sudo mkdir -p /var/data
+          sudo chown "$(id -u):$(id -g)" /var/data
+      - name: run real Render entrypoint plus HTTP, auth, revision and cold SQLite replay
+        run: node tools/prove-render-boot-v35.mjs
+      - name: archive actual million-mutation receipt
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: teddy-v35-render-million-configurations
+          path: ${{ runner.temp }}/render-million.json
+          if-no-files-found: ignore
+          retention-days: 14
