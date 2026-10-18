@@ -5,7 +5,7 @@ import {fileURLToPath} from 'node:url';
 const root=fileURLToPath(new URL('../',import.meta.url));
 const read=p=>fs.readFileSync(path.join(root,p),'utf8');
 const y=read('render.yaml'),pkg=JSON.parse(read('package.json'));
-const checks=[],line=(k,v)=>y.split('\n').some(s=>s.trim()===k+': '+v);
+const checks=[],line=(k,v)=>y.split('\n').some(s=>s.trim().replace(/^-\s+/,'')===k+': '+v);
 const test=(name,pass)=>checks.push({name,status:pass?'PASS':'FAIL'});
 test('node24',read('.node-version').trim()==='24.19.0'&&pkg.engines.node.startsWith('>=24'));
 test('service-type',line('type','web')&&line('runtime','node')&&line('plan','2c-4g'));
