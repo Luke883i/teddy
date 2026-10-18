@@ -46,7 +46,21 @@ jobs:
           sudo mkdir -p /var/data
           sudo chown "$(id -u):$(id -g)" /var/data
       - name: run real Render entrypoint plus HTTP, auth, revision and cold SQLite replay
-        run: node tools/prove-render-boot-v35.mjs
+        run: |
+          node tools/prove-render-boot-v35.mjs > "$RUNNER_TEMP/render-boot.log" 2>&1 || { cat "$RUNNER_TEMP/render-boot.log"; exit 1; }
+      - name: name first runtime failure without dumping secrets
+        if: always()
+        id: boot
+        run: |
+          node -e 'const fs=require("fs"),f=process.env.RUNNER_TEMP+"/render-boot.log";const s=fs.existsSync(f)?fs.readFileSync(f,"utf8"):"missing-log";const m=s.match(/(?:AssertionError|Error):\s*([^\n]+)/)?.[1]||s.trim().slice(-150)||"missing";fs.appendFileSync(process.env.GITHUB_OUTPUT,"slug="+m.toLowerCase().replace(/[^a-z0-9-]/g,"-").slice(0,75)+"\n")'
+      - name: archive boot diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: teddy-v35-render-boot-${{ steps.boot.outputs.slug }}
+          path: ${{ runner.temp }}/render-boot.log
+          if-no-files-found: ignore
+          retention-days: 7
       - name: archive actual million-mutation receipt
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
