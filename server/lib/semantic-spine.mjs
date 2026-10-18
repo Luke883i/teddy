@@ -4,6 +4,7 @@ import crypto from 'node:crypto';
 import {chooseNovelVariant,semanticDepth,semanticDepthDirective} from './semantic-adaptation-v29.mjs';
 import {buildCognitiveWorkspace,workspaceDirective} from './cognitive-workspace-v31.mjs';
 import {groundedTurn} from './grounded-reasoner-v32.mjs';
+import {dialogueGoal,goalDirective,scopeExplicitPremises} from './goal-ledger-v33.mjs';
 import {selfDeclaredName,mostRecentDeclaredName,extendedSocialAct,adultVariants,chooseSocialVariant} from './semantic-refinement-v26.mjs';
 const hash=v=>crypto.createHash('sha256').update(String(v)).digest('hex');
 const normalize=s=>String(s??'').normalize('NFKC').trim().replace(/\s+/g,' ').slice(0,2000);
@@ -72,10 +73,15 @@ export function planSemanticTurn({text,history=[],memories=[],conversationId=nul
   if(typeof text!=='string'||!text.trim()||text.length>2000)throw Object.assign(new Error('semantic_input_invalid'),{code:'semantic_input_invalid'});
   const recent=Array.isArray(history)?history.filter(t=>['user','assistant'].includes(t?.role)&&typeof t.text==='string').slice(-12):[];
   const classification=classifyInteraction(text,recent);
-  const workspace=buildCognitiveWorkspace({text,history:recent});
+  const scopedHistory=scopeExplicitPremises(recent);
+  const workspace=buildCognitiveWorkspace({text,history:scopedHistory.turns});
   // Only a contextual repair is model-routed. Standalone 'non ho capito' remains backward compatible.
-  const reasoning=groundedTurn({text,history:recent});
-  const act=reasoning?.act||(classification.act==='clarify'&&workspace.antecedent?'clarify_context':classification.act);
+  const goal=dialogueGoal({text,history:recent,workspace});
+  const reasoning=groundedTurn({text,history:scopedHistory.turns});
+  // A complete current question cannot be a follow-up merely because the
+  // conversation contains an old assistant message.
+  const selectedAct=goal.completeQuestion&&classification.act==='followup'?'open':classification.act;
+  const act=reasoning?.act||(selectedAct==='clarify'&&workspace.antecedent?'clarify_context':selectedAct);
   const seed=[conversationId||'new',recent.length,act,lexical(text)].join('|');
   let reply=reasoning?.reply||null;
   if(act==='introduction')reply=`Piacere, ${classification.name}. Lo tengo a mente in questa conversazione; niente cerimonie.`;
@@ -97,11 +103,12 @@ export function planSemanticTurn({text,history=[],memories=[],conversationId=nul
     caution?'Se la domanda richiede fatti attuali o specialistici e non hai fonti affidabili, indica il limite; non fabbricare certezze.':'Non inventare fatti o esperienze.',
     semanticDepthDirective(depth),
     workspaceDirective(workspace),
+    goalDirective(goal),
     '/no_think'
   ].join(' ');
   return Object.freeze({
     schema:'teddy.semantic.v1',act,path:reply?'deterministic':'model',
-    reply,directive,extended,caution,depth,workspace,reasoning:reasoning?.proof||null,
+    reply,directive,extended,caution,depth,workspace,goal,reasoning:reasoning?.proof||null,
     inputDigest:hash(normalize(text)),contextTurns:recent.length,memoryCount:Math.min(Array.isArray(memories)?memories.length:0,6),
     variant:parseInt(hash(seed).slice(0,8),16)%(adultVariants[act]?.length||3)
   });
@@ -116,5 +123,5 @@ export function semanticReceipt(plan,provider,reply,readback=null){
   return {schema:plan.schema,act:plan.act,path:plan.path,provider,
     inputDigest:plan.inputDigest,outputDigest:hash(reply),contextTurns:plan.contextTurns,
     caution:plan.caution,variant:plan.variant,
-    cognitive:{schema:'teddy.workspace.v1',move:plan.workspace?.move||'unknown',nodes:plan.workspace?.nodes?.length||0,edges:plan.workspace?.edges?.length||0,unresolved:Boolean(plan.workspace?.unresolved),readback:readback?{status:readback.status,reason:readback.reason}:null,reasoning:plan.reasoning||null}};
+    cognitive:{schema:'teddy.workspace.v1',move:plan.workspace?.move||'unknown',nodes:plan.workspace?.nodes?.length||0,edges:plan.workspace?.edges?.length||0,unresolved:Boolean(plan.workspace?.unresolved),readback:readback?{status:readback.status,reason:readback.reason}:null,reasoning:plan.reasoning||null,goal:plan.goal?{move:plan.goal.move,completeQuestion:plan.goal.completeQuestion,changedPremises:plan.goal.changedPremises,contextPriority:plan.goal.contextPriority}:null}};
 }

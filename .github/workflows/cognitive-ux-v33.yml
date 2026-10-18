@@ -1,0 +1,75 @@
+name: cognitive-ux-v33
+on:
+  pull_request:
+    paths:
+      - 'server/lib/goal-ledger-v33.mjs'
+      - 'server/lib/semantic-spine.mjs'
+      - 'tests/goal-ledger-v33.test.mjs'
+      - 'tools/prove-ten-thousand-v33.mjs'
+      - 'tools/prove-real-text-v20.mjs'
+      - '.github/workflows/cognitive-ux-v33.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  cognitive-15k:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 24.19.0
+      - name: syntax of new source and existing runner
+        run: node --check server/lib/goal-ledger-v33.mjs && node --check server/lib/semantic-spine.mjs && node --check tools/prove-ten-thousand-v33.mjs && node --check tools/prove-real-text-v20.mjs
+      - name: 15k new mutants and inherited cognitive regression tests
+        run: node --test tests/goal-ledger-v33.test.mjs tests/grounded-reasoner-v32.test.mjs tests/cognitive-workspace-v31.test.mjs tests/semantic-spine-v24.test.mjs
+      - name: inherited 10k v31 mutations
+        run: node tools/mutate-cognition-v31.mjs
+      - name: targeted v31 source mutation score
+        run: node tools/mutate-code-v31.mjs
+  genuine-10k:
+    needs: cognitive-15k
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    env:
+      TEDDY_V32_SKIP_BROWSER_30: '1'
+      TEDDY_V32_REAL_100: '1'
+      TEDDY_V33_REAL_10K: '1'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 24.19.0
+      - name: install dependencies
+        run: npm ci --ignore-scripts
+      - name: run actual pinned Qwen GGUF plus 100 generative conversations plus 10k live HTTP sessions
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node tools/prove-real-text-v20.mjs
+      - name: fail closed on real receipts without provider substitution
+        run: |
+          test -s "$RUNNER_TEMP/teddy-v32-real-100/readback-100.json"
+          test -s "$RUNNER_TEMP/teddy-v33-10k/readback-10k.json"
+          node -e 'const fs=require("fs");const a=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP+"/teddy-v32-real-100/readback-100.json")),b=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP+"/teddy-v33-10k/readback-10k.json"));if(a.realModel!==true||a.actualSessions!==100||a.uniqueConversationIds!==100||a.genuineInitialGenerations+a.additionalContextModelGenerations!==140||b.realSessions!==10000||b.realUserTurns!==20000||b.server!=="real-node-http"||b.sqlite!=="real"||b.llmInThisCampaign!==0)process.exit(1)'
+          node -e 'const fs=require("fs"),r=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP+"/teddy-real-text-v20-proof.json"));if(r.v33TenThousandSummary?.realSessions!==10000||r.hundredSessionSummary?.actualSessions!==100)process.exit(1)'
+      - name: artifact diagnostic slug
+        if: always()
+        id: evidence
+        run: |
+          node -e 'const fs=require("fs"),p=process.env.RUNNER_TEMP+"/teddy-v33-10k/",f=fs.existsSync(p+"readback-10k.json")?p+"readback-10k.json":p+"readback-10k-partial.json";let r={realSessions:0,failures:["no-report"]};try{r=JSON.parse(fs.readFileSync(f))}catch{}if(r.failures?.[0]==="no-report"){try{const m=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP+"/teddy-real-text-v20-proof.json"));r.failures=[m.failure?.message||"model-initialization-failed"]}catch{}}const code=String((r.failures||[])[0]||"ok").split("\n")[0].toLowerCase().replace(/[^a-z0-9-]/g,"-").slice(0,65);fs.appendFileSync(process.env.GITHUB_OUTPUT,"slug=n"+r.realSessions+"-"+code+"\n")'
+      - name: archive real Qwen, live HTTP and SQLite evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: teddy-v33-real-http-${{ steps.evidence.outputs.slug }}
+          path: |
+            ${{ runner.temp }}/teddy-v33-10k/
+            ${{ runner.temp }}/teddy-v32-real-100/
+            ${{ runner.temp }}/teddy-real-text-v20-proof.json
+          if-no-files-found: warn
+          retention-days: 14

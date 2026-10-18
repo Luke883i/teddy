@@ -12,6 +12,7 @@ import { createLocalService } from './lib/local-service.mjs';
 import {openAITextTurn,normalizeUserText} from './lib/text-service.mjs';
 import {planSemanticTurn,finalizeSemanticReply,semanticReceipt} from './lib/semantic-spine.mjs';
 import {semanticReadback} from './lib/cognitive-workspace-v31.mjs';
+import {scopeExplicitPremises} from './lib/goal-ledger-v33.mjs';
 import { createRuntimeManager } from './lib/runtime-manager.mjs';
 import { recoverManagedRuntime, recoveryCooldown, shouldAttemptRuntimeRecovery } from './lib/runtime-recovery.mjs';
 
@@ -117,10 +118,11 @@ async function route(req,res){
         if(!apiKey)return json(res,409,{error:'openai_key_missing'});
       }
       const effectivePlan=useRules?plan:{...plan,path:'model'};
-      const modelContext={turns:history,memories,semanticDirective:plan.directive,extended:plan.extended,depth:plan.depth,workspace:plan.workspace};
+      const relevantHistory=scopeExplicitPremises(history).turns;
+      const modelContext={turns:relevantHistory,memories,semanticDirective:plan.directive,extended:plan.extended,depth:plan.depth,workspace:plan.workspace};
       let raw=useRules?plan.reply:PROVIDER==='local'
         ?await localService.text(text,{signal:controller.signal,context:modelContext})
-        :await openAITextTurn({apiKey,text,config,memories,history,semanticDirective:plan.directive,signal:controller.signal,model:process.env.TEDDY_OPENAI_TEXT_MODEL||'gpt-4.1-mini'});
+        :await openAITextTurn({apiKey,text,config,memories,history:relevantHistory,semanticDirective:plan.directive,signal:controller.signal,model:process.env.TEDDY_OPENAI_TEXT_MODEL||'gpt-4.1-mini'});
       if(controller.signal.aborted)return;
       const mockModel=PROVIDER==='local'&&localService.status().mock;
       let readback=!useRules&&!mockModel?semanticReadback({question:text,reply:raw,workspace:plan.workspace}):null;
