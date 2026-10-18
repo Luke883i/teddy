@@ -53,7 +53,7 @@ export function dialogueGoal({text='',history=[],workspace=null}={}){
  const shortReference=unresolved.test(s);
  const hasAntecedent=typeof workspace?.antecedent==='string'&&Boolean(workspace.antecedent);
  const move=complete?'self_contained':shortReference&&hasAntecedent?'contextual':shortReference?'missing_context':'self_contained';
- const scope=scopeExplicitPremises(history);
+ const scope=scopeExplicitPremises(history,{currentText:text});
  const why=(/^(?:perché|perche|come mai)\b/iu.test(s));
  const claim={schema:'teddy.goal.v33',move,hasAntecedent:move==='contextual',completeQuestion:complete,
   shouldAskClarification:move==='missing_context',contextPriority:move==='contextual'?'antecedent':'current',
