@@ -74,3 +74,13 @@ test('15,000 seeded metamorphic, adversarial semantic mutations',()=>{
  assert.deepEqual(found,{self:3000,context:3000,revoked:3000,reset:3000,arith:3000});
  console.log('TEDDY_V33_MUTATIONS',JSON.stringify({seed:'0x33c0de',cases:15000,independentFamilies:5,found,realLLMCalls:0,sourceASTMutants:0}));
 });
+
+test('new logical episode cannot leak a stale workspace antecedent into either model',()=>{
+ const hist=[...human,{role:'user',text:'Nuovo problema: ripartiamo da zero.'}];
+ const p=planSemanticTurn({text:'perché?',history:hist});
+ assert.equal(p.workspace.antecedent,null);
+ assert.equal(p.goal.move,'missing_context');
+ assert.equal(p.goal.shouldAskClarification,true);
+ const scoped=scopeExplicitPremises(hist);
+ assert.equal(scoped.turns.some(t=>/cielo blu|Rayleigh/u.test(t.text)),false);
+});

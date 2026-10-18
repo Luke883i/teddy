@@ -73,11 +73,11 @@ export function planSemanticTurn({text,history=[],memories=[],conversationId=nul
   if(typeof text!=='string'||!text.trim()||text.length>2000)throw Object.assign(new Error('semantic_input_invalid'),{code:'semantic_input_invalid'});
   const recent=Array.isArray(history)?history.filter(t=>['user','assistant'].includes(t?.role)&&typeof t.text==='string').slice(-12):[];
   const classification=classifyInteraction(text,recent);
-  const workspace=buildCognitiveWorkspace({text,history:recent});
+  const scopedHistory=scopeExplicitPremises(recent);
+  const workspace=buildCognitiveWorkspace({text,history:scopedHistory.turns});
   // Only a contextual repair is model-routed. Standalone 'non ho capito' remains backward compatible.
   const goal=dialogueGoal({text,history:recent,workspace});
-  const premises=scopeExplicitPremises(recent);
-  const reasoning=groundedTurn({text,history:premises.turns});
+  const reasoning=groundedTurn({text,history:scopedHistory.turns});
   // A complete current question cannot be a follow-up merely because the
   // conversation contains an old assistant message.
   const selectedAct=goal.completeQuestion&&classification.act==='followup'?'open':classification.act;
