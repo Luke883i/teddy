@@ -62,6 +62,7 @@ async function route(req,res){
   const guard=guardRequest(req,{listenHost:HOST,publicOrigin:PUBLIC_ORIGIN,authPassword:AUTH_PASSWORD});if(!guard.ok)return json(res,guard.status,{error:guard.error},guard.headers||{});
   const u=new URL(req.url,'http://localhost');
   if(req.method==='GET'&&u.pathname==='/api/health')return json(res,200,{ok:true,service:'teddy',version:VERSION,provider:PROVIDER,security:policy.mode,liveness:'up'});
+  if(req.method==='GET'&&u.pathname==='/api/version')return json(res,200,{service:'teddy',revision:/^[0-9a-f]{40}$/i.test(process.env.RENDER_GIT_COMMIT||'')?process.env.RENDER_GIT_COMMIT:'unbound',version:VERSION,mode:policy.mode});
   if(req.method==='GET'&&u.pathname==='/api/availability'){const a=PROVIDER==='local'?localAvailability():bootstrap().availability;return json(res,200,a)}
   if(req.method==='GET'&&u.pathname==='/api/ready'){const a=PROVIDER==='local'?localAvailability():bootstrap().availability;return json(res,a.ready?200:503,a)}
   if(req.method==='GET'&&u.pathname==='/api/bootstrap')return json(res,200,bootstrap());
