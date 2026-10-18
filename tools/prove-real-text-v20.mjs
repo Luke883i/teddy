@@ -12,6 +12,7 @@ import {createLocalService} from '../server/lib/local-service.mjs';
 import {fileURLToPath} from 'node:url';
 import {proveThirtyBrowser} from './prove-thirty-browser-v27.mjs';
 import {proveHundredSessions} from './prove-hundred-sessions-v32.mjs';
+import {proveTenThousandTurns} from './prove-ten-thousand-v33.mjs';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'teddy-real-text-v20-')),home=path.join(tmp,'home');
@@ -124,6 +125,12 @@ try{
     assert.equal(hundred.uniqueConversationIds,100);
     assert.equal(hundred.genuineInitialGenerations+hundred.additionalContextModelGenerations,140);
     report.hundredSessionSummary={actualSessions:hundred.actualSessions,modelGenerations:140,genericOrEcho:hundred.genericOrEcho,needsHumanReview:hundred.needsHumanReview,latency:hundred.modelLatency};
+  }
+  if(process.env.TEDDY_V33_REAL_10K==='1'){
+    const proof=await proveTenThousandTurns({appPort,home});
+    assert.equal(proof.realSessions,10000);
+    assert.equal(proof.realUserTurns,20000);
+    report.v33TenThousandSummary={realSessions:proof.realSessions,realUserTurns:proof.realUserTurns,receiptSamples:proof.verifiedReceipts,modelCalls:0};
   }
   report.elapsedMs=Date.now()-begin;
   const out=path.join(process.env.RUNNER_TEMP||tmp,'teddy-real-text-v20-proof.json');
