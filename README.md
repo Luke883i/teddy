@@ -7,6 +7,13 @@
 
 # Teddy
 
+### Deploy Teddy on Render (paid single-instance pilot)
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/Luke883i/teddy)
+
+After merging the Render deployment PR, use the Blueprint button, supply a strong TEDDY_AUTH_PASSWORD in Render, and sign in as user **teddy**. A persistent disk holds SQLite and the verified local GGUF. **Live** means the HTTP server is running, not that the model is installed; see the availability panel and the authenticated readiness endpoint. Full instructions and cost/privacy/recovery caveats: [Teddy Render deployment runbook](docs/RENDER_V35.md).
+
+
 ## Start here — written conversation (current v24)
 
 Teddy is a local-first bear you can **type to**, even without internet **after** installing his small model. Start from the repository directory:
