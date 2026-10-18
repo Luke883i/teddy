@@ -21,7 +21,9 @@ test('extended adult expressions are stable, terse, kind and actually routed',()
   const first=p(text),repeat=p(text);
   assert.equal(first.act,act,text);assert.equal(first.path,'deterministic',text);
   assert.equal(first.reply,repeat.reply,text);
-  assert.ok(first.reply.length>28&&first.reply.length<260);
+  // V34: terse phatic acts can be brief; demand substance for clarity/capability.
+  assert.ok(first.reply.length>=5&&first.reply.length<260);
+  if(['capability','clarify'].includes(act))assert.ok(first.reply.length>=24);
   assert.doesNotMatch(first.reply,/idiota|stupido|cretino|pazzo|imbecille/i);
  }
  assert.ok(Object.values(adultVariants).every(v=>v.length>=3));

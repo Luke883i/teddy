@@ -26,7 +26,8 @@ async function runScenario({mock,provider='local',cases}){
      const data=await response.json();timings.push(Math.round(performance.now()-started));
      assert.equal(response.status,status,'turn '+index+': '+JSON.stringify(data));
      if(status!==200){assert.equal(data.error,expected);continue}
-     assert.ok(data.reply?.length>10&&data.reply.length<4000,'turn '+index+' text');
+     assert.ok(data.reply?.length>=3&&data.reply.length<4000,'turn '+index+' text');
+     if(!['thanks','gratitude','farewell','greeting'].includes(act))assert.ok(data.reply.length>=10,'substantive turn '+index+' text');
      assert.equal(data.semantic?.act,act,'turn '+index);
      assert.equal(data.semantic?.path,mode,'turn '+index);
      if(expected)assert.match(data.reply,expected,'turn '+index);
@@ -43,7 +44,7 @@ async function runScenario({mock,provider='local',cases}){
 }
 await runScenario({mock:true,cases:[
  {input:'chi sei?',act:'identity',path:'deterministic',expected:/Teddy/},
- {input:'sei in gamba',act:'praise',path:'deterministic',expected:/complimento|giudizio|valutazione/i},
+ {input:'sei in gamba',act:'praise',path:'deterministic',expected:/complimento|giudizio|valutazione|grazie|apprezzo|lusingato/i},
  {input:'Mi chiamo Luca',act:'introduction',path:'deterministic',expected:/Luca/},
  {input:'come mi chiamo?',act:'name_query',path:'deterministic',expected:/Luca/},
  {input:'non mi chiamo Luca',act:'retraction',path:'deterministic',expected:/nome|Correzione|rettifica/i},

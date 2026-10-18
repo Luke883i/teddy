@@ -1,0 +1,60 @@
+name: teddy-lexical-semantic-v34
+on:
+  pull_request:
+    paths:
+      - 'server/lib/goal-ledger-v33.mjs'
+      - 'server/lib/semantic-spine.mjs'
+      - 'server/lib/semantic-refinement-v26.mjs'
+      - 'server/lib/contextual-repair-v34.mjs'
+      - 'server/lib/lexical-contract-v34.mjs'
+      - 'server/main.mjs'
+      - 'tests/lexical-contract-v34.test.mjs'
+      - 'docs/v34-lexical-semantic-audit.md'
+      - '.github/workflows/lexical-semantic-v34.yml'
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+  issues: write
+jobs:
+  lexical-cognitive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 24.19.0
+      - name: check lexical/pragmatic runtime source
+        run: node --check server/lib/lexical-contract-v34.mjs && node --check server/lib/contextual-repair-v34.mjs && node --check server/lib/semantic-spine.mjs
+      - name: 1000 lexical and 1000 semantic repair oracles plus inherited regressions
+        run: |
+          node --test tests/lexical-contract-v34.test.mjs tests/goal-ledger-v33.test.mjs tests/grounded-reasoner-v32.test.mjs tests/cognitive-workspace-v31.test.mjs tests/semantic-refinement-v26.test.mjs tests/semantic-spine-v24.test.mjs > "$RUNNER_TEMP/teddy-v34-node.log" 2>&1 || { tail -n 100 "$RUNNER_TEMP/teddy-v34-node.log"; exit 1; }
+      - name: name first failing test for evidence
+        if: always()
+        id: diagnosis
+        run: |
+          node -e 'const fs=require("fs"),f=process.env.RUNNER_TEMP+"/teddy-v34-node.log";const txt=fs.existsSync(f)?fs.readFileSync(f,"utf8"):"missing-log";const first=txt.match(/not ok \d+ - ([^\n]+)/)?.[1]||txt.match(/(?:Error:|error:|ERR_[A-Z_]+)[^\n]*/)?.[0]||txt.trim().slice(0,100)||"empty-log";const slug=first.toLowerCase().replace(/[^a-z0-9-]/g,"-").slice(0,75);fs.appendFileSync(process.env.GITHUB_OUTPUT,"slug="+slug+"\n")'
+      - name: publish diagnostic test output
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: teddy-v34-lexical-${{ steps.diagnosis.outputs.slug }}
+          path: ${{ runner.temp }}/teddy-v34-node.log
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: publish bounded failing test excerpt to PR
+        if: failure() && github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tail -n 80 "$RUNNER_TEMP/teddy-v34-node.log" > "$RUNNER_TEMP/v34-comment.log" || true
+          { echo '### V34 lexical test diagnostic'; echo 'Synthetic, non-private test stdout (last 80 lines):'; echo '~~~'; cat "$RUNNER_TEMP/v34-comment.log"; echo '~~~'; } > "$RUNNER_TEMP/v34-comment.md"
+          gh issue comment ${{ github.event.pull_request.number }} --repo "$GITHUB_REPOSITORY" --body-file "$RUNNER_TEMP/v34-comment.md" || true
+      - name: 10000 inherited semantic mutations
+        run: node tools/mutate-cognition-v31.mjs
+      - name: targeted source-level mutation coverage
+        run: node tools/mutate-code-v31.mjs

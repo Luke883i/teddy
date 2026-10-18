@@ -108,7 +108,7 @@ async function route(req,res){
       const history=existing?state.conversationHistory(existing,12):[];
       const memories=state.listMemories(6);
       // Step 1: deterministic planning is separate from model-generated language.
-      const plan=planSemanticTurn({text,history,memories,conversationId:existing});
+      const plan=planSemanticTurn({text,history,memories,conversationId:existing,requestId:requestedId});
       const useRules=plan.path==='deterministic';
       // Social rules work before installation; open questions still require a real ready provider.
       if(!useRules&&PROVIDER==='local'&&!localService.status().textReady)return json(res,503,{error:'local_text_not_ready'});
@@ -118,7 +118,7 @@ async function route(req,res){
         if(!apiKey)return json(res,409,{error:'openai_key_missing'});
       }
       const effectivePlan=useRules?plan:{...plan,path:'model'};
-      const relevantHistory=scopeExplicitPremises(history).turns;
+      const relevantHistory=scopeExplicitPremises(history,{currentText:text}).turns;
       const modelContext={turns:relevantHistory,memories,semanticDirective:plan.directive,extended:plan.extended,depth:plan.depth,workspace:plan.workspace};
       let raw=useRules?plan.reply:PROVIDER==='local'
         ?await localService.text(text,{signal:controller.signal,context:modelContext})
