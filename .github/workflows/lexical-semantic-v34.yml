@@ -30,7 +30,7 @@ jobs:
       - name: check lexical/pragmatic runtime source
         run: node --check server/lib/lexical-contract-v34.mjs && node --check server/lib/contextual-repair-v34.mjs && node --check server/lib/semantic-spine.mjs
       - name: 1000 lexical and 1000 semantic repair oracles plus inherited regressions
-        run: node --test tests/lexical-contract-v34.test.mjs tests/goal-ledger-v33.test.mjs tests/grounded-reasoner-v32.test.mjs tests/cognitive-workspace-v31.test.mjs tests/semantic-refinement-v26.test.mjs
+        run: node --test tests/lexical-contract-v34.test.mjs tests/goal-ledger-v33.test.mjs tests/grounded-reasoner-v32.test.mjs tests/cognitive-workspace-v31.test.mjs tests/semantic-refinement-v26.test.mjs tests/semantic-spine-v24.test.mjs
       - name: 10000 inherited semantic mutations
         run: node tools/mutate-cognition-v31.mjs
       - name: targeted source-level mutation coverage

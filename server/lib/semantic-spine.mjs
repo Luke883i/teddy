@@ -90,7 +90,7 @@ export function planSemanticTurn({text,history=[],memories=[],conversationId=nul
   if(act==='introduction')reply=`Piacere, ${classification.name}. Terrò a mente il tuo nome in questa conversazione.`;
   else if(act==='name_query'){
     const name=mostRecentDeclaredName(recent);
-    reply=name?`Ti chiami ${name}.`:'Non trovo il tuo nome in questa conversazione. Come preferisci che ti chiami?';
+    reply=name?`Ti chiami ${name}.`:'Non lo ritrovo qui. Come preferisci che ti chiami?';
   }else if(adultVariants[act])reply=chooseNovelVariant(adultVariants[act],hash(seed),recent);
   else if(templates[act])reply=pick(templates[act],seed,recent);
   const extended=/\b(?:spiega|analizza|perché|perche|confronta|approfondisci|argomenta|passaggi)\b/iu.test(text);

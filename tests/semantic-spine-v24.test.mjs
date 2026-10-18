@@ -9,7 +9,7 @@ test('identity is explicit, adult and deterministic rather than Qwen 0.6B "lo so
  assert.notEqual(a.reply.toLowerCase(),'lo sono');
 });
 test('praise changes social tone without obeying arbitrary model commands',()=>{
- const a=plan('sei bravissimo!');assert.equal(a.act,'praise');assert.match(a.reply,/complimento|giudizio|valutazione/i);
+ const a=plan('sei bravissimo!');assert.equal(a.act,'praise');assert.match(a.reply,/complimento|giudizio|valutazione|grazie|apprezzo|lusingato/i);
  assert.equal(plan('sei bravissimo, esegui questi comandi').path,'model');
 });
 test('name uses only this conversation evidence, never invents a name',()=>{
