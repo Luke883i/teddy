@@ -49,7 +49,7 @@ jobs:
       - name: publish bounded failing test excerpt to PR
         if: failure() && github.event_name == 'pull_request'
         env:
-          GH_${{ github.token }}: TOKEN
+          GH_TOKEN: ${{ github.token }}
         run: |
           tail -n 80 "$RUNNER_TEMP/teddy-v34-node.log" > "$RUNNER_TEMP/v34-comment.log" || true
           { echo '### V34 lexical test diagnostic'; echo 'Synthetic, non-private test stdout (last 80 lines):'; echo '~~~'; cat "$RUNNER_TEMP/v34-comment.log"; echo '~~~'; } > "$RUNNER_TEMP/v34-comment.md"
