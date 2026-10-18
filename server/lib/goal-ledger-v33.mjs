@@ -15,18 +15,20 @@ export function scopeExplicitPremises(history=[]){
  for(const t of active){if(!isUser(t))continue;
   for(const clause of t.text.split(/[.;\n]+/u)){const m=tidy(clause).match(retraction);if(m)revoked.add(key(m[1]));}
  }
+ if(!revoked.size)return Object.freeze({turns:active,resetCount:from?1:0,revokedCount:0,suppressed:0,authority:'explicit_user_turns_only'});
  let suppressed=0;
  const scoped=active.map(t=>{
   if(!isUser(t))return t;
+  let changed=false;
   const segments=t.text.split(/[.;\n]+/u);
   const kept=segments.filter(s=>{
    const r=tidy(s).match(retraction);
-   if(r)return false;
+   if(r){changed=true;return false}
    const m=tidy(s).match(fact);
-   if(m&&revoked.has(key(m[1]))){suppressed++;return false}
+   if(m&&revoked.has(key(m[1]))){suppressed++;changed=true;return false}
    return true;
   });
-  return {...t,text:kept.join('. ')};
+  return changed?{...t,text:kept.join('. ')}:t;
  });
  return Object.freeze({turns:scoped,resetCount:from?1:0,revokedCount:revoked.size,suppressed,authority:'explicit_user_turns_only'});
 }

@@ -84,3 +84,13 @@ test('new logical episode cannot leak a stale workspace antecedent into either m
  const scoped=scopeExplicitPremises(hist);
  assert.equal(scoped.turns.some(t=>/cielo blu|Rayleigh/u.test(t.text)),false);
 });
+
+test('ordinary history preserves decimals, URLs and punctuation without mutation',()=>{
+ const h=[{role:'user',text:'Il valore è 3.14; URL https://example.org/a.b?c=1.2!'},{role:'assistant',text:'Tengo conto del 3.14.'}];
+ const scoped=scopeExplicitPremises(h);
+ assert.deepEqual(scoped.turns,h);
+ const withRevocation=[{role:'user',text:'Premessa: alfa.'},h[0],{role:'user',text:'Ritiro premessa: alfa.'}];
+ const affected=scopeExplicitPremises(withRevocation);
+ assert.equal(affected.turns[1].text,h[0].text);
+ assert.equal(affected.suppressed,1);
+});
