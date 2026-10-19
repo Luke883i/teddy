@@ -1,0 +1,25 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
+const root=fileURLToPath(new URL('../',import.meta.url));
+const read=p=>fs.readFileSync(path.join(root,p),'utf8');
+const pkg=JSON.parse(read('package.json')),render=read('render.yaml');
+const script=read('scripts/start-v36.mjs'),shim=read('teddy.sh'),legacy=read('scripts/render-start-v35.mjs');
+const checks=[];
+function check(name,ok){checks.push({name,status:ok?'PASS':'FAIL'})}
+check('npm-start-canonical',pkg.scripts.start==='node scripts/start-v36.mjs');
+check('npm-local-alias',pkg.scripts['start:local']==='node scripts/start-v36.mjs --open');
+check('npm-render-alias',pkg.scripts['start:render']===pkg.scripts.start);
+check('npm-doctor-retained',pkg.scripts.doctor==='node server/doctor.mjs');
+check('render-invokes-npm',/^\s+startCommand:\s+npm start\s*$/m.test(render));
+check('render-checks-bootstrap',render.includes('node scripts/verify-render-v35.mjs')&&render.includes('node scripts/verify-npm-service-v36.mjs'));
+check('node24-locked',read('.node-version').trim()==='24.19.0'&&pkg.engines.node.includes('>=24'));
+check('render-preflight-before-server',script.includes("resolveRenderEnvironment(process.env)")&&script.indexOf('requireRenderDisk();')<script.indexOf("await import('../server/main.mjs')"));
+check('single-runtime-entry',script.includes("await import('../server/main.mjs')")&&!script.includes("spawn('node'"));
+check('legacy-forwarding',shim.includes('exec npm run start:local -- "$@"')&&legacy.includes("import('./start-v36.mjs')"));
+check('legacy-no-network-bootstrap',!/(?:nodejs\.org\/dist|curl\s|tar\s+-x|SHASUMS256)/.test(shim));
+check('no-direct-main-npm-script',!Object.values(pkg.scripts).some(v=>v==='node server/main.mjs'));
+const ok=checks.every(x=>x.status==='PASS');
+const result={schema:'teddy.npm.lifecycle.v36',pass:ok,checks,noRealCloudClaim:true};
+console.log(JSON.stringify(result));
+if(!ok)process.exitCode=1;
