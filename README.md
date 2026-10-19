@@ -11,7 +11,7 @@
 
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/Luke883i/teddy)
 
-The Render Blueprint runs **npm start** with the same Node.js 24 entrypoint used locally. Supply a strong TEDDY_AUTH_PASSWORD in Render, and sign in as user **teddy**. A persistent disk holds SQLite and the verified local GGUF. **Live** means the HTTP server is running, not that the model is installed; see the availability panel and the authenticated readiness endpoint. Full instructions and cost/privacy/recovery caveats: [Teddy Render deployment runbook](docs/RENDER_V35.md).
+The Render Blueprint runs the same Node.js 24 entry script as **npm start**, directly to preserve graceful SIGTERM/SQLite shutdown. Supply a strong TEDDY_AUTH_PASSWORD in Render, and sign in as user **teddy**. A persistent disk holds SQLite and the verified local GGUF. **Live** means the HTTP server is running, not that the model is installed; see the availability panel and the authenticated readiness endpoint. Full instructions and cost/privacy/recovery caveats: [Teddy Render deployment runbook](docs/RENDER_V35.md).
 
 
 ## Start here — written conversation (current v24)
@@ -25,7 +25,7 @@ npm run doctor
 npm start                  # localhost:8787, server in foreground
 ```
 
-For automatic browser opening use `npm run start:local`. For Render the Blueprint uses the **same `npm start`** with a fail-closed hosted preflight. [Full npm / legacy shell migration guide](docs/STARTUP_V36.md).
+For automatic browser opening use `npm run start:local`. On Render the Blueprint directly runs the **same Node entry script** as `npm start`, preserving SIGTERM and the fail-closed hosted preflight. [Full npm / legacy shell migration guide](docs/STARTUP_V36.md).
 
 **Migration:** `teddy.sh` is deprecated and only forwards legacy options to `npm run start:local`; it no longer downloads Node. Install Node.js 24 and npm first. Historical flags (`--no-open`, `--no-install`, `--doctor`, `--port=N`) remain supported. Use `npm start` for automation and deployment.
 

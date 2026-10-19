@@ -11,7 +11,7 @@ check('npm-start-canonical',pkg.scripts.start==='node scripts/start-v36.mjs');
 check('npm-local-alias',pkg.scripts['start:local']==='node scripts/start-v36.mjs --open');
 check('npm-render-alias',pkg.scripts['start:render']===pkg.scripts.start);
 check('npm-doctor-retained',pkg.scripts.doctor==='node server/doctor.mjs');
-check('render-invokes-npm',/^\s+startCommand:\s+npm start\s*$/m.test(render));
+check('render-shares-npm-entry',render.split('\n').some(s=>s.trim()==='startCommand: '+pkg.scripts.start));
 check('render-checks-bootstrap',render.includes('node scripts/verify-render-v35.mjs')&&render.includes('node scripts/verify-npm-service-v36.mjs'));
 check('node24-locked',read('.node-version').trim()==='24.19.0'&&pkg.engines.node.includes('>=24'));
 check('render-preflight-before-server',script.includes("resolveRenderEnvironment(process.env)")&&script.indexOf('requireRenderDisk();')<script.indexOf("await import('../server/main.mjs')"));
