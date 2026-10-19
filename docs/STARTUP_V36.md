@@ -19,6 +19,8 @@ Varianti supportate: `npm start -- --port=8989`, `npm start -- --no-install`, `n
 
 Il Blueprint `render.yaml` usa **`startCommand: npm start`**, lo stesso entrypoint usato in locale. Se Render imposta `RENDER=true`, il launcher esegue il preflight di sicurezza esistente di v35 prima di importare `server/main.mjs`: HTTPS pubblico, password Basic, chiave master, `PORT`, Node 24, disco scrivibile montato su `/var/data`, provider consentito, niente voce. Le opzioni locali, compreso `--open`, sono rifiutate in modalità Render. `npm run start:render` è un alias esplicito di compatibilità con la stessa logica. Per il deploy vero e proprio e i costi vedere [RENDER_V35.md](RENDER_V35.md).
 
+Il Dockerfile copia lo **stesso** `scripts/start-v36.mjs` utilizzato da `npm start`, ma invoca direttamente `node scripts/start-v36.mjs` come PID 1: così `SIGTERM` raggiunge senza wrapper il gestore di chiusura SQLite. Docker resta non privilegiato, con filesystem applicativo read-only e volume `/data` persistente.
+
 I segreti restano nell'ambiente Render, mai in Git. **Render Live non significa Qwen ready**. Non dichiarare un deploy cloud certificato fino al canary remoto con SHA e `REQUIRE_MODEL_READY=1`.
 
 ## Migrazione da teddy.sh

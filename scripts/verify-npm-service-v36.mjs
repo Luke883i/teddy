@@ -19,6 +19,10 @@ check('single-runtime-entry',script.includes("await import('../server/main.mjs')
 check('legacy-forwarding',shim.includes('exec npm run start:local -- "$@"')&&legacy.includes("import('./start-v36.mjs')"));
 check('legacy-no-network-bootstrap',!/(?:nodejs\.org\/dist|curl\s|tar\s+-x|SHASUMS256)/.test(shim));
 check('no-direct-main-npm-script',!Object.values(pkg.scripts).some(v=>v==='node server/main.mjs'));
+const docker=read('Dockerfile');
+check('docker-uses-same-node-entry',docker.includes('CMD ["node","scripts/start-v36.mjs"]')&&docker.includes('COPY --chown=root:root scripts/start-v36.mjs ./scripts/start-v36.mjs'));
+check('docker-preserves-pid1-sigterm',docker.includes('STOPSIGNAL SIGTERM')&&!docker.includes('CMD ["npm","start"]'));
+check('docker-immutable-nonroot',docker.includes('USER node')&&docker.includes('chmod -R a-w /app')&&docker.includes('VOLUME ["/data"]'));
 const ok=checks.every(x=>x.status==='PASS');
 const result={schema:'teddy.npm.lifecycle.v36',pass:ok,checks,noRealCloudClaim:true};
 console.log(JSON.stringify(result));
