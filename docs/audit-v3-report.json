@@ -27,7 +27,7 @@
     "timeouts": true,
     "networkBackoff": true,
     "doctor": true,
-    "atomicBootstrap": true,
+    "canonicalStartup": true,
     "node24Only": true,
     "readonlyImage": true,
     "safeCache": true,
@@ -37,18 +37,54 @@
     "pinnedActions": true
   },
   "families": {
-    "hardening": {"scenarios": 1000000,"unsafe": 0,"reasons": {}},
-    "enhancement": {"scenarios": 1000000,"unsafe": 0,"reasons": {}},
-    "simplification": {"scenarios": 1000000,"unsafe": 0,"reasons": {}},
-    "cleanup": {"scenarios": 1000000,"unsafe": 0,"reasons": {}}
+    "hardening": {
+      "scenarios": 1000000,
+      "unsafe": 0,
+      "reasons": {}
+    },
+    "enhancement": {
+      "scenarios": 1000000,
+      "unsafe": 0,
+      "reasons": {}
+    },
+    "simplification": {
+      "scenarios": 1000000,
+      "unsafe": 0,
+      "reasons": {}
+    },
+    "cleanup": {
+      "scenarios": 1000000,
+      "unsafe": 0,
+      "reasons": {}
+    }
   },
   "mutation": {
-    "hardening": {"total": 100000,"critical": 100000,"killed": 100000,"survivors": 0},
-    "enhancement": {"total": 100000,"critical": 100000,"killed": 100000,"survivors": 0},
-    "simplification": {"total": 100000,"critical": 100000,"killed": 100000,"survivors": 0},
-    "cleanup": {"total": 100000,"critical": 100000,"killed": 100000,"survivors": 0}
+    "hardening": {
+      "total": 100000,
+      "critical": 100000,
+      "killed": 100000,
+      "survivors": 0
+    },
+    "enhancement": {
+      "total": 100000,
+      "critical": 100000,
+      "killed": 100000,
+      "survivors": 0
+    },
+    "simplification": {
+      "total": 100000,
+      "critical": 100000,
+      "killed": 100000,
+      "survivors": 0
+    },
+    "cleanup": {
+      "total": 100000,
+      "critical": 100000,
+      "killed": 100000,
+      "survivors": 0
+    }
   },
   "criticalUnsafe": 0,
   "criticalMutationSurvivors": 0,
-  "digest": "249b8b80cd115d5782fa2d021f7a4a97c3477d0d77e6d774eca3b50961aa3682"
+  "digest": "c8da2a6a43d435b2bee4726c184e26f71c959c6c5087242cb0e0341a2e3f6c8b"
 }
