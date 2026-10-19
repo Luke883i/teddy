@@ -11,7 +11,7 @@
 
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/Luke883i/teddy)
 
-After merging the Render deployment PR, use the Blueprint button, supply a strong TEDDY_AUTH_PASSWORD in Render, and sign in as user **teddy**. A persistent disk holds SQLite and the verified local GGUF. **Live** means the HTTP server is running, not that the model is installed; see the availability panel and the authenticated readiness endpoint. Full instructions and cost/privacy/recovery caveats: [Teddy Render deployment runbook](docs/RENDER_V35.md).
+The Render Blueprint runs the same Node.js 24 entry script as **npm start**, directly to preserve graceful SIGTERM/SQLite shutdown. Supply a strong TEDDY_AUTH_PASSWORD in Render, and sign in as user **teddy**. A persistent disk holds SQLite and the verified local GGUF. **Live** means the HTTP server is running, not that the model is installed; see the availability panel and the authenticated readiness endpoint. Full instructions and cost/privacy/recovery caveats: [Teddy Render deployment runbook](docs/RENDER_V35.md).
 
 
 ## Start here — written conversation (current v24)
@@ -19,10 +19,15 @@ After merging the Render deployment PR, use the Blueprint button, supply a stron
 Teddy is a local-first bear you can **type to**, even without internet **after** installing his small model. Start from the repository directory:
 
 ```bash
-bash teddy.sh
+node --version             # Node.js 24.x
+npm ci --ignore-scripts
+npm run doctor
+npm start                  # localhost:8787, server in foreground
 ```
 
-Se vedi **Permission denied**, la causa era il bit eseguibile assente in Git. Da V27 lo script è eseguibile anche con `./teddy.sh`; su una vecchia copia puoi usare `chmod +x teddy.sh`.
+For automatic browser opening use `npm run start:local`. On Render the Blueprint directly runs the **same Node entry script** as `npm start`, preserving SIGTERM and the fail-closed hosted preflight. [Full npm / legacy shell migration guide](docs/STARTUP_V36.md).
+
+**Migration:** `teddy.sh` is deprecated and only forwards legacy options to `npm run start:local`; it no longer downloads Node. Install Node.js 24 and npm first. Historical flags (`--no-open`, `--no-install`, `--doctor`, `--port=N`) remain supported. Use `npm start` for automation and deployment.
 
 You can type immediately: simple social messages work with deterministic rules while the model is still installing. Wait for **modello locale pronto** before asking open questions. Press **Invia**, and read Teddy's response in the comic bubble. **Cronologia** opens the persisted chat; **Dettagli modello** reopens installation/verification information. These controls are wired to the running server, not demonstrations.
 
@@ -34,7 +39,7 @@ Try these turns in sequence:
 
 **Plain-language architecture:** Step 0 keeps each conversation separate and stores the real exchange safely. Step 1 checks the intent and lets deterministic rules handle narrow social tasks; complex questions go to Qwen. Both paths return through the same HTTP endpoint and SQLite receipt. Step 2 (spoken conversation) is future work, not required for typed chat.
 
-**Initial setup requires a connection** to download the ~484 MB verified model and `llama.cpp`. Normal local inference and text replies use loopback after installation; no OpenAI account is required. OpenAI API is an explicit alternative with `TEDDY_PROVIDER=openai ./teddy.sh`; Teddy never silently changes providers.
+**Initial setup requires a connection** to download the ~484 MB verified model and `llama.cpp`. Normal local inference and text replies use loopback after installation; no OpenAI account is required. OpenAI API is an explicit alternative with `TEDDY_PROVIDER=openai npm start`; Teddy never silently changes providers.
 
 **Personality:** concise, burbero, dry-witted, receptive to praise, adult vocabulary and an occasional conceptual metaphor. Never degrading or threatening. The system does not claim human consciousness, complete factual reliability, automatic memory of everything, or a verified world model.
 

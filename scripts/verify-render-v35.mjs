@@ -11,7 +11,7 @@ test('node24',read('.node-version').trim()==='24.19.0'&&pkg.engines.node.startsW
 test('service-type',line('type','web')&&line('runtime','node')&&line('plan','2c-4g'));
 test('ci-gated-deploy',line('autoDeployTrigger','checksPass'));
 test('build-verify',y.includes('node scripts/verify-render-v35.mjs')&&y.includes('node --test tests/render-deployment-v35.test.mjs'));
-test('run-preflight',line('startCommand','node scripts/render-start-v35.mjs'));
+test('run-preflight',line('startCommand','node scripts/start-v36.mjs')&&pkg.scripts.start==='node scripts/start-v36.mjs');
 test('health',line('healthCheckPath','/api/health'));
 test('disk',line('mountPath','/var/data')&&line('sizeGB','5')&&line('value','/var/data/teddy'));
 test('auth-secret',/key:\s*TEDDY_AUTH_PASSWORD\s*\n\s*sync:\s*false/.test(y));

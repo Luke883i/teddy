@@ -1,0 +1,51 @@
+name: teddy-npm-start-v36
+on:
+  pull_request:
+    paths:
+      - 'package.json'
+      - 'render.yaml'
+      - 'teddy.sh'
+      - 'scripts/start-v36.mjs'
+      - 'server/lib/startup-contract-v36.mjs'
+      - 'scripts/render-start-v35.mjs'
+      - 'scripts/verify-render-v35.mjs'
+      - 'scripts/verify-npm-service-v36.mjs'
+      - 'tools/prove-render-boot-v35.mjs'
+      - 'tools/prove-npm-start-v36.mjs'
+      - 'tests/start-contract-v36.test.mjs'
+      - '.github/workflows/startup-v36.yml'
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  canonical-start:
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 24.19.0
+      - name: deterministic dependency install
+        run: npm ci --ignore-scripts
+      - name: syntax, standardized npm service and Render Blueprint contracts
+        run: |
+          node --check scripts/start-v36.mjs
+          node --check server/lib/startup-contract-v36.mjs
+          node --check tools/prove-npm-start-v36.mjs
+          node scripts/verify-npm-service-v36.mjs
+          node scripts/verify-render-v35.mjs
+      - name: CLI migration fuzz and deployment policy regression
+        run: node --test tests/start-contract-v36.test.mjs tests/render-deployment-v35.test.mjs
+      - name: actual npm start on localhost, doctor, shim and SQLite restart
+        run: node tools/prove-npm-start-v36.mjs
+      - name: prepare simulated attached volume
+        run: |
+          sudo mkdir -p /var/data
+          sudo chown "$(id -u):$(id -g)" /var/data
+      - name: actual npm start in Render mode, HTTP auth, SHA, disk and restart
+        run: node tools/prove-render-boot-v35.mjs
