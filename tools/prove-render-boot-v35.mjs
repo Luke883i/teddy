@@ -19,7 +19,7 @@ const env={...process.env,RENDER:'true',RENDER_EXTERNAL_URL:'https://teddy-rende
 const basic='Basic '+Buffer.from('teddy:'+password).toString('base64');
 let child;
 async function launch(){
- child=spawn(process.execPath,['scripts/render-start-v35.mjs'],{env,stdio:['ignore','pipe','pipe']});
+ child=spawn('npm',['start'],{env,stdio:['ignore','pipe','pipe'],detached:true});
  let logs='';child.stderr.on('data',b=>{logs+=String(b).slice(-400)});
  for(let i=0;i<120;i++){
   if(child.exitCode!=null)throw Error('render_child_exited:'+child.exitCode+':'+logs.slice(-400));
@@ -31,7 +31,21 @@ async function launch(){
 async function stop(){
  if(!child)return;
  const p=child;child=null;
- if(p.exitCode===null){p.kill('SIGTERM');await Promise.race([new Promise(resolve=>p.once('exit',resolve)),sleep(4500)]);if(p.exitCode===null)p.kill('SIGKILL')}
+ if(p.exitCode===null&&p.signalCode===null){
+  // npm has its own child process. Kill the *process group* so the Node server
+  // receives SIGTERM and closes SQLite rather than lingering across restart.
+  try{process.kill(-p.pid,'SIGTERM')}catch{p.kill('SIGTERM')}
+  await Promise.race([new Promise(resolve=>p.once('exit',resolve)),sleep(4500)]);
+  if(p.exitCode===null&&p.signalCode===null){
+   try{process.kill(-p.pid,'SIGKILL')}catch{p.kill('SIGKILL')}
+  }
+ }
+ let stopped=false;
+ for(let i=0;i<40;i++){
+  try{await hit('/api/health',{auth:false})}catch{stopped=true;break}
+  await sleep(100);
+ }
+ assert.equal(stopped,true,'npm start left a server alive after SIGTERM');
 }
 async function hit(route,{auth=true,method='GET',body,host='teddy-render-smoke.onrender.com'}={}){
  const headers={host,...(auth?{authorization:basic}:{})};

@@ -5,7 +5,9 @@
   "type":"module",
   "engines":{"node":">=24.0.0 <25"},
   "scripts":{
-    "start":"node server/main.mjs",
+    "start":"node scripts/start-v36.mjs",
+    "start:local":"node scripts/start-v36.mjs --open",
+    "start:render":"node scripts/start-v36.mjs",
     "test":"node --test tests/*.test.mjs && node tools/mutate-startup-v8.mjs --full && node tools/fine-tune-saturation-v9.mjs --full",
     "simulate":"node tools/simulate.mjs",
     "simulate:full":"node tools/simulate.mjs --full",

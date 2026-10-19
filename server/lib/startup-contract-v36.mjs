@@ -29,7 +29,7 @@ export function parseStartOptions(argv=[],env={},nodeMajor=process.versions.node
    if(!validPort(value))throw new StartupArgumentError('TEDDY_INVALID_PORT');
    port=value;continue
   }
-  throw new StartupArgumentError('TEDDY_UNKNOWN_OPTION',String(arg).slice(0,70));
+  throw new StartupArgumentError('TEDDY_UNKNOWN_OPTION');
  }
  if(render&&!help&&(open||doctor||noInstall||port!==null))
   throw new StartupArgumentError('TEDDY_RENDER_OPTIONS_FORBIDDEN','Render is configured by the Blueprint and environment');

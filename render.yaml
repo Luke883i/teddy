@@ -6,8 +6,8 @@ services:
     region: frankfurt
     plan: 2c-4g
     autoDeployTrigger: checksPass
-    buildCommand: npm ci --ignore-scripts && node scripts/verify-render-v35.mjs && node --test tests/render-deployment-v35.test.mjs
-    startCommand: node scripts/render-start-v35.mjs
+    buildCommand: npm ci --ignore-scripts && node scripts/verify-render-v35.mjs && node scripts/verify-npm-service-v36.mjs && node --test tests/render-deployment-v35.test.mjs tests/start-contract-v36.test.mjs
+    startCommand: npm start
     healthCheckPath: /api/health
     maxShutdownDelaySeconds: 45
     disk:
