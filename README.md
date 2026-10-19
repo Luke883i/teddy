@@ -7,12 +7,6 @@
 
 # Teddy
 
-### Deploy Teddy on Render (paid single-instance pilot)
-
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/Luke883i/teddy)
-
-The Render Blueprint runs the same Node.js 24 entry script as **npm start**, directly to preserve graceful SIGTERM/SQLite shutdown. Supply a strong TEDDY_AUTH_PASSWORD in Render, and sign in as user **teddy**. A persistent disk holds SQLite and the verified local GGUF. **Live** means the HTTP server is running, not that the model is installed; see the availability panel and the authenticated readiness endpoint. Full instructions and cost/privacy/recovery caveats: [Teddy Render deployment runbook](docs/RENDER_V35.md).
-
 
 ## Start here — written conversation (current v24)
 
