@@ -4,7 +4,7 @@ import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 const ROOT=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..'),full=process.argv.includes('--full');
 const read=p=>{try{return fs.readFileSync(path.join(ROOT,p),'utf8')}catch{return ''}},exists=p=>fs.existsSync(path.join(ROOT,p));
-const source={security:read('server/lib/security.mjs'),http:read('server/lib/http.mjs'),realtime:read('server/lib/realtime.mjs'),secrets:read('server/lib/secrets.mjs'),state:read('server/lib/state.mjs'),main:read('server/main.mjs'),doctor:read('server/doctor.mjs'),shell:read('teddy.sh'),docker:read('Dockerfile'),pkg:read('package.json'),workflow:read('.github/workflows/ci.yml')};
+const source={security:read('server/lib/security.mjs'),http:read('server/lib/http.mjs'),realtime:read('server/lib/realtime.mjs'),secrets:read('server/lib/secrets.mjs'),state:read('server/lib/state.mjs'),main:read('server/main.mjs'),doctor:read('server/doctor.mjs'),shell:read('teddy.sh'),docker:read('Dockerfile'),pkg:read('package.json'),workflow:read('.github/workflows/ci.yml'),startup:read('scripts/start-v36.mjs'),startupContract:read('server/lib/startup-contract-v36.mjs'),npmVerifier:read('scripts/verify-npm-service-v36.mjs'),nodeVersion:read('.node-version'),render:read('render.yaml')};
 const pkgVersion=(()=>{try{return String(JSON.parse(source.pkg).version||'')}catch{return ''}})(),serverVersion=source.main.match(/const VERSION='([^']+)'/)?.[1]||source.main.match(/version:'([^']+)'/)?.[1]||'';
 const semverAtLeast=(value,major,minor)=>{const m=String(value).match(/^(\d+)\.(\d+)\.(\d+)/);if(!m)return false;const M=Number(m[1]),mnr=Number(m[2]);return M>major||(M===major&&mnr>=minor)};
 const cap={
@@ -20,8 +20,22 @@ const cap={
   timeouts:/requestTimeout/.test(source.main)&&/headersTimeout/.test(source.main)&&/maxHeadersCount/.test(source.main),
   networkBackoff:/['"]network['"]/.test(source.main)&&/realtimeGate\.register\(problem\)/.test(source.main),
   doctor:/deployment policy/.test(source.doctor)&&/sqlite quick_check/.test(source.doctor),
-  atomicBootstrap:/mktemp -d/.test(source.shell)&&/Bootstrapped Node version mismatch/.test(source.shell)&&!/seq 1 100/.test(source.shell),
-  node24Only:/major.*24/.test(source.shell)&&/\<25/.test(source.pkg),
+  // v36: historical "atomic Node downloader" is replaced with a single fail-closed,
+  // side-effect bounded npm/Node lifecycle. An obsolete downloader is now unsafe.
+  canonicalStartup:source.pkg.includes('"start":"node scripts/start-v36.mjs"')&&
+    /parseStartOptions\(process\.argv\.slice\(2\),process\.env\)/.test(source.startup)&&
+    /resolveRenderEnvironment\(process\.env\)/.test(source.startup)&&
+    /requireRenderDisk\(\);/.test(source.startup)&&
+    /await import\('\.\.\/server\/main\.mjs'\)/.test(source.startup)&&
+    source.startup.indexOf('requireRenderDisk();')<source.startup.indexOf("await import('../server/main.mjs')")&&
+    /exec npm run start:local -- "\$@"/.test(source.shell)&&
+    !/nodejs\.org\/dist|SHASUMS256|curl\s|tar\s+-x/.test(source.shell)&&
+    /startCommand: node scripts\/start-v36\.mjs/.test(source.render)&&
+    /docker-uses-same-node-entry/.test(source.npmVerifier),
+  node24Only:/String\(nodeMajor\)!=='24'/.test(source.startupContract)&&
+    /"node":">=24\.0\.0 <25"/.test(source.pkg)&&
+    source.nodeVersion.trim()==='24.19.0'&&
+    /FROM node:24\.19\.0-/.test(source.docker),
   readonlyImage:/chmod -R a-w \/app/.test(source.docker)&&!/npm ci/.test(source.docker),
   safeCache:/no-cache, max-age=0, must-revalidate/.test(source.http)&&!/immutable/.test(source.http),
   zeroRuntimeDeps:!/("dependencies"|"devDependencies")\s*:/.test(source.pkg),
@@ -32,7 +46,7 @@ const cap={
 const families={
   hardening:['auth','failClosedHost','exactOrigin','contentType','boundedBody','boundedUpstream','safeEgress','externalMaster','dbHardening','timeouts','pinnedActions'],
   enhancement:['networkBackoff','doctor','dbHardening','timeouts','safeEgress'],
-  simplification:['atomicBootstrap','node24Only','readonlyImage','safeCache','zeroRuntimeDeps'],
+  simplification:['canonicalStartup','node24Only','readonlyImage','safeCache','zeroRuntimeDeps'],
   cleanup:['v02Integrated','v03Aligned','pinnedActions','readonlyImage','node24Only']
 };
 function mix32(x){x|=0;x=Math.imul(x^(x>>>16),0x21f0aaad);x=Math.imul(x^(x>>>15),0x735a2d97);return (x^(x>>>15))>>>0}
