@@ -5,11 +5,15 @@ import path from 'node:path';
 import {execFileSync} from 'node:child_process';
 const root=path.resolve(import.meta.dirname,'..');
 const read=p=>fs.readFileSync(path.join(root,p),'utf8');
-test('launcher is versioned executable and --help needs no model or permissions workarounds',()=>{
+test('standard npm startup and deprecated executable shim expose help without model download',()=>{
  const stat=fs.statSync(path.join(root,'teddy.sh'));
- if(process.platform!=='win32')assert.ok(stat.mode&0o111,'Git must commit 100755, not 100644');
- const help=execFileSync(path.join(root,'teddy.sh'),['--help'],{encoding:'utf8',timeout:4000});
- assert.match(help,/Usage: \.\/teddy\.sh/);
+ if(process.platform!=='win32')assert.ok(stat.mode&0o111,'Git must commit executable shim 100755');
+ const pkg=JSON.parse(read('package.json'));
+ assert.equal(pkg.scripts.start,'node scripts/start-v36.mjs');
+ const help=execFileSync('npm',['start','--','--help'],{cwd:root,encoding:'utf8',timeout:7000});
+ assert.match(help,/npm start/);
+ const compat=execFileSync(path.join(root,'teddy.sh'),['--help'],{cwd:root,encoding:'utf8',timeout:7000});
+ assert.match(compat,/npm start/);
 });
 test('actual comic can reveal its full committed response and meets legibility contract',()=>{
  const html=read('web/index.html'),ui=read('web/text-chat-v17.js'),css=read('web/styles.css');
