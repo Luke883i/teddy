@@ -10,6 +10,7 @@ import { deploymentPolicy, guardRequest, SECURITY_HEADERS } from './lib/security
 import { normalizeProvider, providerCapabilities } from './lib/provider.mjs';
 import { createLocalService } from './lib/local-service.mjs';
 import {openAITextTurn,normalizeUserText} from './lib/text-service.mjs';
+import {vireonixTextTurn} from './lib/vireonix-text.mjs';
 import {planSemanticTurn,finalizeSemanticReply,semanticReceipt} from './lib/semantic-spine.mjs';
 import {semanticReadback} from './lib/cognitive-workspace-v31.mjs';
 import {scopeExplicitPremises} from './lib/goal-ledger-v33.mjs';
@@ -22,13 +23,14 @@ const ROOT=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const HOME=process.env.TEDDY_HOME||path.join(process.env.HOME||process.cwd(),'.teddy');
 const PORT=Number(process.env.TEDDY_PORT||8787),HOST=process.env.TEDDY_HOST||'127.0.0.1';
 const PUBLIC_ORIGIN=process.env.TEDDY_PUBLIC_ORIGIN||'',AUTH_PASSWORD=process.env.TEDDY_AUTH_PASSWORD||'',MASTER_KEY=process.env.TEDDY_SECRET_MASTER_KEY||'';
-const PROVIDER=normalizeProvider(process.env.TEDDY_PROVIDER||'local');
+const DEFAULT_PROVIDER=normalizeProvider(process.env.TEDDY_PROVIDER||'local');
 const policy=deploymentPolicy({listenHost:HOST,publicOrigin:PUBLIC_ORIGIN,authPassword:AUTH_PASSWORD,secretMasterKey:MASTER_KEY});
 if(!policy.ok)throw new Error(`unsafe_deployment:${policy.error}`);
 const REALTIME_URL=validateRealtimeEndpoint(process.env.TEDDY_OPENAI_REALTIME_URL||'https://api.openai.com/v1/realtime/calls');
 // Voice belongs to Step 2, not the text-chat product. Only legacy explicit test environments enable these routes.
 const VOICE_ENDPOINTS_ENABLED=process.env.TEDDY_ENABLE_VOICE_ENDPOINTS==='1';
 const secrets=new SecretStore(HOME,{externalMasterKey:MASTER_KEY}),state=new StateStore(HOME),defaults=readDefaultConfig(ROOT);let config=mergeConfig(defaults,state.getSetting('config')||{});
+let PROVIDER=normalizeProvider(state.getSetting('text_provider')||DEFAULT_PROVIDER);
 const runtimeEnv={...process.env,TEDDY_TEXT_ONLY:process.env.TEDDY_TEXT_ONLY??'1',TEDDY_RUNTIME_AUTOINSTALL:process.env.TEDDY_RUNTIME_AUTOINSTALL??'1'};
 const realtimeGate=new RealtimeBackoff();let closing=false,runtime=createRuntimeManager({home:HOME,env:runtimeEnv}),localService=createLocalService({runtime}),textBusy=false;
 let runtimeWasReady=false,runtimeRecovery=null,recoveryCycles=0,nextRecoveryAt=0;
@@ -37,7 +39,7 @@ const localAvailability=()=>runtime.status();
 const bootstrap=()=>({
   version:VERSION,
   ai:{provider:PROVIDER,...providerCapabilities(PROVIDER),...(PROVIDER==='local'?localService.status():{})},
-  availability:PROVIDER==='local'?localAvailability():{availability:secrets.status().configured?'pronto':'degradato',ready:secrets.status().configured,installPhase:'not_applicable',engines:{}},
+  availability:PROVIDER==='local'?localAvailability():{availability:PROVIDER==='vireonix'?'remoto':'not_applicable',ready:PROVIDER==='vireonix'||secrets.status().configured,installPhase:'not_applicable',engines:{}},
   secret:secrets.status(),config,
   persistence:{engine:'sqlite',durable:true,wal:true},
   security:{mode:policy.mode,authenticated:!!AUTH_PASSWORD,publicOrigin:policy.publicOrigin},
@@ -71,6 +73,16 @@ async function route(req,res){
   if(req.method==='GET'&&u.pathname==='/api/availability'){const a=PROVIDER==='local'?localAvailability():bootstrap().availability;return json(res,200,a)}
   if(req.method==='GET'&&u.pathname==='/api/ready'){const a=PROVIDER==='local'?localAvailability():bootstrap().availability;return json(res,a.ready?200:503,a)}
   if(req.method==='GET'&&u.pathname==='/api/bootstrap')return json(res,200,bootstrap());
+  if(req.method==='PUT'&&u.pathname==='/api/provider'){
+    if(textBusy)return json(res,409,{error:'provider_switch_busy'});
+    const body=await readJson(req,1000);
+    if(!['local','vireonix','openai'].includes(body?.provider))return json(res,400,{error:'provider_invalid'});
+    const before=PROVIDER;
+    PROVIDER=body.provider;
+    state.setSetting('text_provider',PROVIDER);
+    if(PROVIDER==='local'&&before!=='local')runtime.start().catch(e=>console.error('local runtime:',e?.code||e?.message||e));
+    return json(res,200,bootstrap());
+  }
   if(req.method==='GET'&&u.pathname==='/api/local/status')return json(res,200,localService.status());
   if(req.method==='POST'&&u.pathname==='/api/runtime/retry'){
     if(PROVIDER!=='local')return json(res,409,{error:'local_provider_disabled'});
@@ -128,6 +140,8 @@ async function route(req,res){
       const modelContext={turns:relevantHistory,memories,semanticDirective:plan.directive,extended:plan.extended,depth:plan.depth,workspace:plan.workspace};
       let raw=useRules?plan.reply:PROVIDER==='local'
         ?await localService.text(text,{signal:controller.signal,context:modelContext})
+        :PROVIDER==='vireonix'
+        ?await vireonixTextTurn({text,semanticDirective:plan.directive,history:relevantHistory,signal:controller.signal})
         :await openAITextTurn({apiKey,text,config,memories,history:relevantHistory,semanticDirective:plan.directive,signal:controller.signal,model:process.env.TEDDY_OPENAI_TEXT_MODEL||'gpt-4.1-mini'});
       if(controller.signal.aborted)return;
       const mockModel=PROVIDER==='local'&&localService.status().mock;
