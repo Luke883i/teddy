@@ -1,0 +1,20 @@
+name: Vireonix v37 contract and HTTP proof
+on:
+  pull_request:
+  push:
+    branches: [main, 'feat/vireonix-explicit-language-v37']
+jobs:
+  vireonix-proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.19.0'
+      - name: Unit and contract tests
+        run: node --test tests/vireonix-v37.test.mjs tests/text-turn-v17.test.mjs
+      - name: 30 separate HTTP/SQLite sessions with upstream MOCK
+        run: node tools/prove-vireonix-v37.mjs
+      - name: One-million deterministic contract mutations (zero model calls)
+        run: node tools/falsify-vireonix-v37.mjs
