@@ -49,7 +49,7 @@ export function installTextChat({boot,getAvailability,getConversationId,setConve
     newChat.disabled=busy;selector.disabled=busy;
     send.textContent=busy?'Annulla':'Invia';
     const modelReady=local()?Boolean(boot.ai.mock||getAvailability()?.textReady===true):Boolean(boot.secret?.configured);
-    hint.textContent=busy?'Teddy sta rispondendo…':recoveryHint?recoveryHint:boot.ai.provider==='vireonix'?'Vireonix · online · il testo viene inviato al servizio esterno':local()?(boot.ai.mock?'Modalità di prova · nessun modello reale':(modelReady?'Modello locale pronto':getAvailability()?.installPhase==='failed'?'Chat base pronta · Qwen non pronto':'Chat base pronta · Qwen in preparazione')):(modelReady?'OpenAI API collegata':'Chat base pronta · OpenAI non collegata');
+    hint.textContent=busy?'Teddy sta rispondendo…':recoveryHint?recoveryHint:boot.ai.provider==='vireonix'?'Vireonix · remoto non verificato · dati inviati all’esterno':local()?(boot.ai.mock?'Modalità di prova · nessun modello reale':(modelReady?'Modello locale pronto':getAvailability()?.installPhase==='failed'?'Chat base pronta · Qwen non pronto':'Chat base pronta · Qwen in preparazione')):(modelReady?'OpenAI API collegata':'Chat base pronta · OpenAI non collegata');
   }
   function positionBalloon(length=0){
     const pos=comicGeometry(window.innerWidth,window.innerHeight,length);
