@@ -137,3 +137,6 @@ header .icon{margin-left:0}
 .teddy-bubble.is-thinking .teddy-bubble-head strong::after{content:' ···';display:inline-block;letter-spacing:3px;animation:teddy-thinking-pulse .95s ease-in-out infinite alternate}
 @keyframes teddy-thinking-pulse{from{opacity:.25;transform:translateY(1px)}to{opacity:1;transform:translateY(-2px)}}
 @media(prefers-reduced-motion:reduce){.teddy-bubble,.teddy-bubble.is-thinking .teddy-bubble-head strong::after{transition:none;animation:none}}
+
+/* Text provider selection: compact, always keyboard accessible. */
+.provider-choice{display:inline-flex;align-items:center;gap:5px;font-size:12px;white-space:nowrap;color:inherit}.provider-choice select{font:inherit;max-width:190px;background:#f8f3ea;color:#182b40;border:1px solid #b0a18e;border-radius:8px;padding:4px 6px}.provider-choice select:focus-visible{outline:2px solid #2d5a7b;outline-offset:2px}

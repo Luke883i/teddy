@@ -9,7 +9,7 @@ export function installTextChat({boot,getAvailability,getConversationId,setConve
   const history=$('#chatHistoryPanel'),toggle=$('#historyToggle'),historyClose=$('#historyClose'),historyEmpty=$('#chatHistoryEmpty');
   const bubble=$('#teddyBubble'),bubbleText=$('#teddyBubbleText'),bubbleClose=$('#bubbleClose'),bubbleReadAll=$('#bubbleReadAll'),newChat=$('#newChat');
   if([form,input,send,log,hint,history,toggle,historyClose,historyEmpty,bubble,bubbleText,bubbleClose,bubbleReadAll,newChat].some(el=>!el))throw Error('text_chat_surface_missing');
-  const local=boot.ai.provider==='local';
+  const local=()=>boot.ai.provider==='local';
   let busy=false,controller=null,historyOpen=false,closed=false,lastCompact=null,explicitSessionChoice=false,lastBubbleConversationId=null;
   let historyLoad=null,historyLoadError=false,pendingRequest=null,recoveryHint=null;
   function applyGeometry(){
@@ -24,6 +24,19 @@ export function installTextChat({boot,getAvailability,getConversationId,setConve
     return g;
   }
   const geometry=applyGeometry();
+  const selector=document.createElement('select');selector.id='textProviderSelect';selector.setAttribute('aria-label','Motore linguistico di Teddy');selector.title='Scegli il motore di generazione del testo';
+  for(const [value,label] of [['local','Qwen locale'],['vireonix','Vireonix (remoto gratuito)'],['openai','OpenAI (chiave)']]){const option=document.createElement('option');option.value=value;option.textContent=label;selector.append(option)}
+  selector.value=boot.ai.provider;
+  const control=document.createElement('label');control.className='provider-choice';control.textContent='Motore: ';control.append(selector);
+  hint.before(control);
+  selector.addEventListener('change',async()=>{
+    if(busy){selector.value=boot.ai.provider;return}
+    const prior=boot.ai.provider;selector.disabled=true;
+    try{const r=await fetch('/api/provider',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({provider:selector.value})});const data=await r.json();if(!r.ok)throw Error(data.error||'provider_switch_failed');Object.assign(boot,data);boot.ai=data.ai;
+      window.dispatchEvent(new CustomEvent('teddy:provider-changed',{detail:data}));update();}
+    catch{selector.value=prior;hint.textContent='Impossibile cambiare motore';}
+    finally{selector.disabled=false}
+  });
   window.addEventListener('resize',applyGeometry);
   window.visualViewport?.addEventListener('resize',applyGeometry);
   const seenIds=new Set();
@@ -33,10 +46,10 @@ export function installTextChat({boot,getAvailability,getConversationId,setConve
     const available=ready();
     input.disabled=!available||busy;
     send.disabled=!available&&!busy;
-    newChat.disabled=busy;
+    newChat.disabled=busy;selector.disabled=busy;
     send.textContent=busy?'Annulla':'Invia';
-    const modelReady=local?Boolean(boot.ai.mock||getAvailability()?.textReady===true):Boolean(boot.secret?.configured);
-    hint.textContent=busy?'Teddy sta rispondendo…':recoveryHint?recoveryHint:local?(boot.ai.mock?'Modalità di prova · nessun modello reale':(modelReady?'Modello locale pronto':getAvailability()?.installPhase==='failed'?'Chat base pronta · Qwen non pronto':'Chat base pronta · Qwen in preparazione')):(modelReady?'OpenAI API collegata':'Chat base pronta · OpenAI non collegata');
+    const modelReady=local()?Boolean(boot.ai.mock||getAvailability()?.textReady===true):Boolean(boot.secret?.configured);
+    hint.textContent=busy?'Teddy sta rispondendo…':recoveryHint?recoveryHint:boot.ai.provider==='vireonix'?'Vireonix · online · il testo viene inviato al servizio esterno':local()?(boot.ai.mock?'Modalità di prova · nessun modello reale':(modelReady?'Modello locale pronto':getAvailability()?.installPhase==='failed'?'Chat base pronta · Qwen non pronto':'Chat base pronta · Qwen in preparazione')):(modelReady?'OpenAI API collegata':'Chat base pronta · OpenAI non collegata');
   }
   function positionBalloon(length=0){
     const pos=comicGeometry(window.innerWidth,window.innerHeight,length);
