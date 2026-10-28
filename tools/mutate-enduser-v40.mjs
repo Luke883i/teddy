@@ -14,7 +14,7 @@ const providers=['local','vireonix','openai'];
 const utterances=['ciao','spiega perché il cielo è blu','Come stai Teddy?','perché?','Mi chiamo Luca','come mi chiamo?','Qual è la differenza tra una stella e un pianeta?','continua','grazie','chi sei?'];
 const families=['remote_switch_403','local_text_origin_403','valid_reply_balloon','upstream_timeout','legacy_voice_popup','empty_history','small_screen_footer','hostile_request'];
 const histogram=Object.fromEntries(families.map(x=>[x,0])),violations=Object.fromEntries(families.map(x=>[x,0]));
-let baselineConflicts=0,guards=0,semanticPlanners=0,blocked=0,recognizedTextFailures=0;
+let baselineConflicts=0,guards=0,semanticPlanners=0,blocked=0,recognizedTextFailures=0,proxyProofChecks=0,proxyProofRejections=0;
 const fail=family=>{violations[family]++};
 const hash=crypto.createHash('sha256');
 const auth='Basic '+Buffer.from('teddy:demo-password-that-is-long-enough').toString('base64');
@@ -59,6 +59,25 @@ for(let i=0;i<COUNT;i++){
   const result=guardRequest(req,{listenHost:'0.0.0.0',publicOrigin:'https://teddy-bear.onrender.com',authPassword:'demo-password-that-is-long-enough'});
   if(hostile){if(result.ok||result.status!==403)fail(family);else blocked++}else if(!result.ok)fail(family);
  }
+ // V41: every 16th scenario falsifies the real proxy-origin CSRF capability.
+ if((i&15)===0){
+  proxyProofChecks++;
+  const mode=rand()%6;
+  const headers={host:'teddy-bear.onrender.com',origin:'https://alternate-browser.example.test',
+    authorization:auth,'sec-fetch-site':'same-origin','sec-fetch-mode':'cors',
+    'sec-fetch-dest':'empty','x-teddy-csrf':'preseeded-v41-token'};
+  if(mode===1)headers['x-teddy-csrf']='incorrect';
+  else if(mode===2)headers['sec-fetch-site']='cross-site';
+  else if(mode===3)headers['sec-fetch-mode']='navigate';
+  else if(mode===4)headers.host='attacker.invalid';
+  else if(mode===5)headers.origin='null';
+  const out=guardRequest({method:'POST',url:'/api/text/turn',headers,socket:{encrypted:false}},
+    {listenHost:'0.0.0.0',publicOrigin:'https://teddy-bear.onrender.com',
+     authPassword:'demo-password-that-is-long-enough',csrfToken:'preseeded-v41-token'});
+  if(mode===0){if(!out.ok)fail(family)}
+  else if(out.ok)fail(family);
+  else proxyProofRejections++;
+ }
  // Every 64 iterations invoke the REAL deterministic semantic planner.
  if((i&63)===0){
   const plan=planSemanticTurn({text:utterance,history:[]});semanticPlanners++;
@@ -69,6 +88,6 @@ for(let i=0;i<COUNT;i++){
 }
 const total=Object.values(histogram).reduce((a,b)=>a+b,0),criticalSurvivors=Object.values(violations).reduce((a,b)=>a+b,0);
 assert.equal(total,COUNT);
-const proof={schema:'teddy.enduser.v40.mutation.1m',seed:'0x'+SEED.toString(16),scope:'preseeded deterministic contract mutations, not LLM generations or a million browser sessions',cases:total,families:histogram,realSecurityChecks:guards,securityRejections:blocked,realSemanticPlannerChecks:semanticPlanners,recognizedTextFailures,oldUXConflictOccurrences:baselineConflicts,criticalSurvivors,violations,traceSha256:hash.digest('hex'),pass:criticalSurvivors===0};
+const proof={schema:'teddy.enduser.v40.mutation.1m',seed:'0x'+SEED.toString(16),scope:'preseeded deterministic contract mutations, not LLM generations or a million browser sessions',cases:total,families:histogram,realSecurityChecks:guards,securityRejections:blocked,proxyProofChecks,proxyProofRejections,realSemanticPlannerChecks:semanticPlanners,recognizedTextFailures,oldUXConflictOccurrences:baselineConflicts,criticalSurvivors,violations,traceSha256:hash.digest('hex'),pass:criticalSurvivors===0};
 console.log('TEDDY_ENDUSER_MUTATION_V40',JSON.stringify(proof));
 if(!proof.pass)process.exitCode=1;
