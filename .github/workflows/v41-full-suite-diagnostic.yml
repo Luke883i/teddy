@@ -1,0 +1,43 @@
+name: v41-fast-full-suite-diagnostic
+on:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  all-unit-contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.19.0'
+      - name: Run every Node test and capture exact failure without hiding status
+        id: suite
+        run: |
+          set +e
+          node --test tests/*.test.mjs > "$RUNNER_TEMP/teddy-v41-tests.log" 2>&1
+          status=$?
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          tail -n 40 "$RUNNER_TEMP/teddy-v41-tests.log"
+          exit 0
+      - name: Extract first failed assertion for forensic root cause
+        id: classify
+        if: always()
+        run: |
+          node --input-type=module -e '
+            import fs from "node:fs";
+            const content=fs.readFileSync(process.env.RUNNER_TEMP+"/teddy-v41-tests.log","utf8");
+            const first=content.match(/^not ok [0-9]+ - (.*)$/m)?.[1]||"none";
+            const value=first.normalize("NFKD").replace(/[^a-zA-Z0-9_-]/g,"_").slice(0,125);
+            fs.appendFileSync(process.env.GITHUB_OUTPUT,"failure="+value+"\n");
+            console.log("TEDDY_FAST_TEST_CAUSE",JSON.stringify({firstFailed:first,notOk:(content.match(/^not ok /gm)||[]).length}));
+          '
+      - name: Earliest failing contract ${{ steps.classify.outputs.failure }}
+        run: test "${{ steps.suite.outputs.status }}" = 0
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: teddy-v41-full-contract-diagnostic
+          path: ${{ runner.temp }}/teddy-v41-tests.log
+          if-no-files-found: warn
