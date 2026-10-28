@@ -81,7 +81,7 @@ test('production HTML, script, persistence and fallback share one runtime toggli
   const css=fs.readFileSync(new URL('../web/styles.css',import.meta.url),'utf8');
   assert.match(html,/id="furBtn"/);assert.match(html,/data-view="movimento"/);
   assert.match(app,/renderMotionPanel\(drawer/);assert.match(app,/renderer\.enqueueMotion/);
-  assert.match(app,/fetch\('\/api\/config',\{method:'PUT'/);assert.match(app,/renderer\.setConfig\(config\)/);
+  assert.match(app,/protectedFetch\('\/api\/config',\{method:'PUT'/);assert.match(app,/fetchWithCsrf/);assert.match(app,/renderer\.setConfig\(config\)/);
   assert.match(shader,/uniform vec3 uFiberScale/);assert.match(shader,/vLocal=mix\(aPos,aRest,uSkinned\)\*uFiberScale/);
   assert.match(shader,/fur&&this\.furEnabled\?0\.82:0/);
   assert.match(shader,/gl\.disable\(gl\.BLEND\);gl\.depthMask\(true\);const welded=/);
