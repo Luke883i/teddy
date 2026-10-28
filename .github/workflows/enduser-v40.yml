@@ -14,9 +14,23 @@ jobs:
           node-version: '24.19.0'
       - name: Real security, user-state, layout and text-only contract
         run: node --test tests/enduser-v40.test.mjs tests/enduser-http-v40.test.mjs tests/chat-layout-v21.test.mjs tests/text-only-boundary-v25.test.mjs
+      - name: Reproduce both provider paths through real HTTPS-proxy HTTP and SQLite (upstreams MOCK)
+        run: node --test tests/dual-provider-proxy-v41.test.mjs
       - name: Execute 1,000,000 realistic seeded contract mutations
         run: node tools/mutate-enduser-v40.mjs
       - name: Genuine Chromium text input and returned balloon
         run: node tools/browser-text-v17.mjs --probe-chat
       - name: Genuine Chromium provider selector with HTTP and SQLite
         run: node tools/browser-text-v17.mjs --probe-provider-switch
+      - name: One real hosted HTTP/SQLite Vireonix dialogue (external, informational)
+        id: live
+        continue-on-error: true
+        timeout-minutes: 2
+        run: node tools/prove-hosted-vireonix-live-v41.mjs
+      - name: Preserve genuine external-provider diagnostic
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: teddy-v41-hosted-vireonix-${{ steps.live.outcome }}
+          path: ${{ runner.temp }}/teddy-v41-hosted-live.json
+          if-no-files-found: warn
