@@ -15,13 +15,13 @@ export function explainProviderSwitchFailure(error){
   return `Cambio motore non riuscito (${status||'rete'}: ${code}). Il motore precedente rimane selezionato.`;
 }
 
-export async function requestProviderSwitch(provider,{fetchImpl=fetch}={}){
+export async function requestProviderSwitch(provider,{fetchImpl=fetch,csrfToken=''}={}){
   if(!PROVIDERS.has(provider))throw failure('provider_invalid',400);
   let response;
   try{
     response=await fetchImpl('/api/provider',{
       method:'PUT',credentials:'same-origin',cache:'no-store',
-      headers:{'content-type':'application/json'},body:JSON.stringify({provider})
+      headers:{'content-type':'application/json','x-teddy-csrf':csrfToken},body:JSON.stringify({provider})
     });
   }catch{throw failure('provider_switch_network')}
   let payload=null;
