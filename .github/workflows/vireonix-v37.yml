@@ -12,6 +12,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24.19.0'
+      - name: Provider-switch authorization, HTTP runtime and persisted choice
+        run: node --test tests/provider-switch-v38.test.mjs tests/provider-switch-http-v38.test.mjs
       - name: Unit and contract tests
         run: node --test tests/vireonix-v37.test.mjs tests/text-turn-v17.test.mjs
       - name: 30 separate HTTP/SQLite sessions with upstream MOCK
