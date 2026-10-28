@@ -29,6 +29,8 @@ test('history opt-in; model selector, status and inline errors use distinct regi
  assert.match(chat,/setFeedback\(providerSwitchFeedback/);
  assert.match(app,/textChat\?\.reportProblem\(lastConnectionProblem\)/);
  assert.match(app,/browserOrigin:window\.location\.origin/);
+ assert.match(chat,/teddy:provider-switch-failed/);
+ assert.match(app,/attemptedProvider:failure\.attemptedProvider/);
 });
 test('trusted hosted origin works, malicious hosts and origins stay blocked',()=>{
  const password='the-password-is-long-enough';

@@ -43,6 +43,7 @@ export function installTextChat({boot,getAvailability,getConversationId,setConve
     }catch(error){
       selector.value=prior;
       setFeedback(providerSwitchFeedback({attempted,active:prior,code:error?.code,status:error?.status}));
+      window.dispatchEvent(new CustomEvent('teddy:provider-switch-failed',{detail:{attemptedProvider:attempted,activeProvider:prior,error:error?.code||'provider_switch_failed',status:error?.status||0}}));
       console.warn('Teddy provider switch denied:',error?.code||'unknown',error?.status||'');
       update();
     }

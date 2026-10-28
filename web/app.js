@@ -82,6 +82,7 @@ async function retryLocalRuntime(){if(!localMode()||runtimeRetryBusy)return;runt
 runtimeEls.retry.onclick=retryLocalRuntime;
 applyAvailability(availability);setInterval(refreshAvailability,1000);
 window.addEventListener('teddy:provider-changed',event=>{const data=event.detail;availability=data.availability;applyAvailability(availability);if(data.ai.provider==='openai'&&!data.secret.configured)showKeyDialog();else onboarding.classList.add('hidden');stateText.textContent=data.ai.provider==='vireonix'?'Vireonix · remoto':data.ai.provider==='openai'?'OpenAI · remoto':'Qwen · locale';});
+window.addEventListener('teddy:provider-switch-failed',event=>{const failure=event.detail||{};lastConnectionProblem={kind:'provider_switch',attemptedProvider:failure.attemptedProvider||null,activeProvider:failure.activeProvider||boot.ai.provider,error:failure.error||'provider_switch_failed',status:failure.status||0,at:new Date().toISOString()}});
 $('#health').textContent='server online';$('#health').classList.add('online');if(boot.ai.provider==='openai'&&!boot.secret.configured)showKeyDialog();
 
 function showKeyDialog(replace=false){$('#keyError').textContent='';$('#apiKey').value='';onboarding.querySelector('h1').textContent=replace?'Sostituisci la chiave OpenAI':'Collega OpenAI';onboarding.classList.remove('hidden');setTimeout(()=>$('#apiKey').focus(),80)}
