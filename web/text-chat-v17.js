@@ -1,4 +1,5 @@
 import {chatLayout} from './chat-layout-v21.js';
+import {requestProviderSwitch,explainProviderSwitchFailure} from './provider-switch-v38.js';
 import {comicGeometry,minimumThinkingMs,settleThinking} from './dialogue-pacing-v29.js';
 import {cognitiveMotionIntent} from './teddy/cognitive-motion-v31.js';
 // Teddy v21: HTTP-backed conversation, persistent paginated history, comic reply placement.
@@ -11,7 +12,7 @@ export function installTextChat({boot,getAvailability,getConversationId,setConve
   if([form,input,send,log,hint,history,toggle,historyClose,historyEmpty,bubble,bubbleText,bubbleClose,bubbleReadAll,newChat].some(el=>!el))throw Error('text_chat_surface_missing');
   const local=()=>boot.ai.provider==='local';
   let busy=false,controller=null,historyOpen=false,closed=false,lastCompact=null,explicitSessionChoice=false,lastBubbleConversationId=null;
-  let historyLoad=null,historyLoadError=false,pendingRequest=null,recoveryHint=null;
+  let historyLoad=null,historyLoadError=false,pendingRequest=null,recoveryHint=null,providerSwitchError=null;
   function applyGeometry(){
     const g=chatLayout(window.innerWidth,window.innerHeight);
     document.documentElement.style.setProperty('--teddy-history-width',g.historyWidth+'px');
@@ -32,9 +33,16 @@ export function installTextChat({boot,getAvailability,getConversationId,setConve
   selector.addEventListener('change',async()=>{
     if(busy){selector.value=boot.ai.provider;return}
     const prior=boot.ai.provider;selector.disabled=true;
-    try{const r=await fetch('/api/provider',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({provider:selector.value})});const data=await r.json();if(!r.ok)throw Error(data.error||'provider_switch_failed');Object.assign(boot,data);boot.ai=data.ai;
-      window.dispatchEvent(new CustomEvent('teddy:provider-changed',{detail:data}));update();}
-    catch{selector.value=prior;hint.textContent='Impossibile cambiare motore';}
+    try{
+      const data=await requestProviderSwitch(selector.value);
+      Object.assign(boot,data);boot.ai=data.ai;providerSwitchError=null;
+      window.dispatchEvent(new CustomEvent('teddy:provider-changed',{detail:data}));update();
+    }catch(error){
+      selector.value=prior;
+      providerSwitchError=explainProviderSwitchFailure(error);
+      console.warn('Teddy provider switch denied:',error?.code||'unknown',error?.status||'');
+      update();
+    }
     finally{selector.disabled=false}
   });
   window.addEventListener('resize',applyGeometry);
@@ -49,7 +57,7 @@ export function installTextChat({boot,getAvailability,getConversationId,setConve
     newChat.disabled=busy;selector.disabled=busy;
     send.textContent=busy?'Annulla':'Invia';
     const modelReady=local()?Boolean(boot.ai.mock||getAvailability()?.textReady===true):Boolean(boot.secret?.configured);
-    hint.textContent=busy?'Teddy sta rispondendo…':recoveryHint?recoveryHint:boot.ai.provider==='vireonix'?'Vireonix · remoto non verificato · dati inviati all’esterno':local()?(boot.ai.mock?'Modalità di prova · nessun modello reale':(modelReady?'Modello locale pronto':getAvailability()?.installPhase==='failed'?'Chat base pronta · Qwen non pronto':'Chat base pronta · Qwen in preparazione')):(modelReady?'OpenAI API collegata':'Chat base pronta · OpenAI non collegata');
+    hint.textContent=providerSwitchError|| (busy?'Teddy sta rispondendo…':recoveryHint?recoveryHint:boot.ai.provider==='vireonix'?'Vireonix · remoto non verificato · dati inviati all’esterno':local()?(boot.ai.mock?'Modalità di prova · nessun modello reale':(modelReady?'Modello locale pronto':getAvailability()?.installPhase==='failed'?'Chat base pronta · Qwen non pronto':'Chat base pronta · Qwen in preparazione')):(modelReady?'OpenAI API collegata':'Chat base pronta · OpenAI non collegata'));
   }
   function positionBalloon(length=0){
     const pos=comicGeometry(window.innerWidth,window.innerHeight,length);
