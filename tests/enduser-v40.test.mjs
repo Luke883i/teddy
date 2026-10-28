@@ -20,6 +20,9 @@ test('all text error classes remain textual and never masquerade as confirmed sp
  assert.equal(classifyVisibleTurn({httpOk:false,reply:'',conversationId:''}),'error');
  assert.equal(classifyVisibleTurn({httpOk:true,reply:'Eccomi.',conversationId:'conv',requestId:'same',expectedRequestId:'same'}),'balloon');
  assert.equal(classifyVisibleTurn({httpOk:true,reply:'Eccomi.',conversationId:'conv',requestId:'wrong',expectedRequestId:'same'}),'error');
+ assert.match(textTurnFeedback({provider:'vireonix',code:'vireonix_upstream_unavailable',upstreamStatus:503}),/503/);
+ assert.match(textTurnFeedback({provider:'vireonix',code:'vireonix_request_rejected',upstreamStatus:400}),/formato.*400/);
+ assert.doesNotMatch(textTurnFeedback({provider:'vireonix',code:'vireonix_upstream_unavailable',upstreamStatus:503}),/voce|microfono|WebRTC/i);
 });
 test('history opt-in; model selector, status and inline errors use distinct regions',()=>{
  for(const [w,h] of [[320,568],[390,844],[800,600],[1180,760],[1920,1080]])assert.equal(chatLayout(w,h).initialHistoryOpen,false);

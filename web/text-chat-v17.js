@@ -16,7 +16,7 @@ export function installTextChat({boot,getAvailability,getConversationId,setConve
   let busy=false,controller=null,historyOpen=false,closed=false,lastCompact=null,explicitSessionChoice=false,lastBubbleConversationId=null;
   let historyLoad=null,historyLoadError=false,pendingRequest=null,recoveryHint=null;
   function setFeedback(message=''){if(!feedback)return;feedback.textContent=message;feedback.classList.toggle('hidden',!message)}
-  function reportProblem(problem={}){setFeedback(textTurnFeedback({provider:problem.provider||boot.ai.provider,code:problem.error,status:problem.status}))}
+  function reportProblem(problem={}){setFeedback(textTurnFeedback({provider:problem.provider||boot.ai.provider,code:problem.error,status:problem.status,upstreamStatus:problem.upstreamStatus}))}
   function applyGeometry(){
     const g=chatLayout(window.innerWidth,window.innerHeight);
     document.documentElement.style.setProperty('--teddy-history-width',g.historyWidth+'px');
@@ -175,7 +175,7 @@ export function installTextChat({boot,getAvailability,getConversationId,setConve
     try{
       const response=await fetchWithCsrf('/api/text/turn',{method:'POST',headers:{'content-type':'application/json','x-teddy-csrf':boot.security?.csrfToken||''},credentials:'same-origin',body:JSON.stringify({text,conversationId:targetConversation,requestId}),signal:own.signal},{boot});
       const body=await response.json();
-      if(!response.ok||typeof body.reply!=='string'||!body.reply.trim()||typeof body.conversationId!=='string')throw Object.assign(new Error('text_turn_failed'),{code:body.error||'text_turn_failed',status:response.status});
+      if(!response.ok||typeof body.reply!=='string'||!body.reply.trim()||typeof body.conversationId!=='string')throw Object.assign(new Error('text_turn_failed'),{code:body.error||'text_turn_failed',status:response.status,upstreamStatus:body?.upstreamStatus});
       await settleThinking({started,signal:own.signal,minimum:minimumThinkingMs(body.semantic?.path,body.reply.length)});
       if(own.signal.aborted)return;
       if(body.requestId!==requestId)throw Object.assign(new Error('text_request_identity_mismatch'),{code:'text_request_identity_mismatch'});
@@ -193,7 +193,7 @@ export function installTextChat({boot,getAvailability,getConversationId,setConve
       if(error.name==='AbortError')recoveryHint='Invio interrotto: riprova lo stesso testo oppure controlla la cronologia.';
       else{
         if(error.code==='text_request_conflict'||error.code==='text_request_identity_mismatch')pendingRequest=null;
-        showProblem({error:error.code||'text_turn_failed',status:error.status,kind:'text',provider:boot.ai.provider});
+        showProblem({error:error.code||'text_turn_failed',status:error.status,upstreamStatus:error.upstreamStatus,kind:'text',provider:boot.ai.provider});
         recoveryHint='Risposta non confermata: riprova lo stesso messaggio senza creare duplicati.';
       }
     }finally{
