@@ -32,6 +32,12 @@ test('untrusted upstream error and malformed payloads fail closed',async()=>{
 });
 test('browser surface permits explicit provider choice without exposing a backend URL',()=>{
  const chat=fs.readFileSync(new URL('../web/text-chat-v17.js',import.meta.url),'utf8');
+ const switchClient=fs.readFileSync(new URL('../web/provider-switch-v38.js',import.meta.url),'utf8');
  const main=fs.readFileSync(new URL('../server/main.mjs',import.meta.url),'utf8');
- assert.match(chat,/textProviderSelect/);assert.match(chat,/\/api\/provider/);assert.match(main,/state\.setSetting\('text_provider',PROVIDER\)/);assert.match(main,/vireonixTextTurn/);
+ assert.match(chat,/textProviderSelect/);assert.match(chat,/requestProviderSwitch/);
+ assert.match(switchClient,/\/api\/provider/);
+ const persist=main.indexOf("state.setSetting('text_provider',body.provider)");
+ const activate=main.indexOf('PROVIDER=body.provider;');
+ assert.ok(persist>0&&activate>persist,'provider must be persisted before activation');
+ assert.match(main,/vireonixTextTurn/);
 });
