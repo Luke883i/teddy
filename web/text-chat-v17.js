@@ -1,4 +1,5 @@
 import {chatLayout} from './chat-layout-v21.js';
+import {fetchWithCsrf} from './fetch-with-csrf-v41.js';
 import {providerSwitchFeedback,textTurnFeedback} from './enduser-contract-v40.js';
 import {requestProviderSwitch,explainProviderSwitchFailure} from './provider-switch-v38.js';
 import {comicGeometry,minimumThinkingMs,settleThinking} from './dialogue-pacing-v29.js';
@@ -37,7 +38,7 @@ export function installTextChat({boot,getAvailability,getConversationId,setConve
     if(busy){selector.value=boot.ai.provider;return}
     const prior=boot.ai.provider,attempted=selector.value;selector.disabled=true;
     try{
-      const data=await requestProviderSwitch(attempted,{csrfToken:boot.security?.csrfToken||''});
+      const data=await requestProviderSwitch(attempted,{csrfToken:boot.security?.csrfToken||'',fetchImpl:(url,init)=>fetchWithCsrf(url,init,{boot})});
       Object.assign(boot,data);boot.ai=data.ai;setFeedback();
       window.dispatchEvent(new CustomEvent('teddy:provider-changed',{detail:data}));update();
     }catch(error){
@@ -172,7 +173,7 @@ export function installTextChat({boot,getAvailability,getConversationId,setConve
     startThinking();
     update();
     try{
-      const response=await fetch('/api/text/turn',{method:'POST',headers:{'content-type':'application/json','x-teddy-csrf':boot.security?.csrfToken||''},credentials:'same-origin',body:JSON.stringify({text,conversationId:targetConversation,requestId}),signal:own.signal});
+      const response=await fetchWithCsrf('/api/text/turn',{method:'POST',headers:{'content-type':'application/json','x-teddy-csrf':boot.security?.csrfToken||''},credentials:'same-origin',body:JSON.stringify({text,conversationId:targetConversation,requestId}),signal:own.signal},{boot});
       const body=await response.json();
       if(!response.ok||typeof body.reply!=='string'||!body.reply.trim()||typeof body.conversationId!=='string')throw Object.assign(new Error('text_turn_failed'),{code:body.error||'text_turn_failed',status:response.status});
       await settleThinking({started,signal:own.signal,minimum:minimumThinkingMs(body.semantic?.path,body.reply.length)});
