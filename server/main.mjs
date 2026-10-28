@@ -166,7 +166,7 @@ async function route(req,res){
     }catch(e){
       if(controller.signal.aborted)return;
       const code=e?.code||'text_turn_failed';
-      return json(res,e?.status>=400&&e?.status<600?e.status:502,{error:code});
+      return json(res,e?.status>=400&&e?.status<600?e.status:502,{error:code,...(Number.isInteger(e?.upstreamStatus)?{upstreamStatus:e.upstreamStatus}:{})});
     }finally{textBusy=false;req.off('aborted',abort)}
   }
   if(req.method==='PUT'&&u.pathname==='/api/config'){const patch=await readJson(req,64_000);config=mergeConfig(defaults,patch);state.setSetting('config',config);return json(res,200,{config})}
