@@ -58,7 +58,7 @@ try{
   text:'Spiega perché il cielo è blu in una frase comprensibile.',
   conversationId:intro.body.conversationId,requestId:crypto.randomUUID()
  },token);
- report.requestCount=1;report.remoteTurnStatus=reply.status;report.remoteTurnError=reply.body?.error||null;
+ report.requestCount=1;report.remoteTurnStatus=reply.status;report.remoteTurnError=reply.body?.error||null;report.remoteUpstreamStatus=reply.body?.upstreamStatus||null;
  report.externalTurnLatencyMs=Math.round(performance.now()-before);
  report.externalLatencyMeasured=true;
  if(reply.status!==200)throw Error('remote_text_turn_'+reply.status+'_'+(reply.body?.error||'unknown'));

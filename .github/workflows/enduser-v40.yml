@@ -18,6 +18,8 @@ jobs:
         run: node --test tests/dual-provider-proxy-v41.test.mjs
       - name: Bounded CSRF rotation and idempotent user-request recovery
         run: node --test tests/csrf-recovery-v41.test.mjs
+      - name: Vireonix actual upstream status and single bounded retry contract
+        run: node --test tests/vireonix-recovery-v41.test.mjs
       - name: Execute 1,000,000 realistic seeded contract mutations
         run: node tools/mutate-enduser-v40.mjs
       - name: Genuine Chromium text input and returned balloon
