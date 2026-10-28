@@ -1,5 +1,6 @@
 name: Vireonix v37 contract and HTTP proof
 on:
+  workflow_dispatch:
   pull_request:
   push:
     branches: [main, 'feat/vireonix-explicit-language-v37']
@@ -44,6 +45,7 @@ jobs:
       - name: One-million deterministic contract mutations (zero model calls)
         run: node tools/falsify-vireonix-v37.mjs
       - name: Live upstream Vireonix single synthetic text request (informational)
+        if: github.event_name == 'workflow_dispatch'
         id: live
         continue-on-error: true
         timeout-minutes: 2

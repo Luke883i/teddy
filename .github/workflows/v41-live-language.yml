@@ -1,14 +1,6 @@
 name: v41-live-language-diagnostic
 on:
-  pull_request:
-    paths:
-      - 'server/main.mjs'
-      - 'server/lib/vireonix-text.mjs'
-      - 'server/lib/security.mjs'
-      - 'tools/prove-hosted-vireonix-live-v41.mjs'
-      - '.github/workflows/v41-live-language.yml'
-  push:
-    branches: ['fix/enduser-chat-v40']
+  workflow_dispatch:
 permissions:
   contents: read
 jobs:

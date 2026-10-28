@@ -26,15 +26,5 @@ jobs:
         run: node tools/browser-text-v17.mjs --probe-chat
       - name: Genuine Chromium provider selector with HTTP and SQLite
         run: node tools/browser-text-v17.mjs --probe-provider-switch
-      - name: One real hosted HTTP/SQLite Vireonix dialogue (external, informational)
-        id: live
-        continue-on-error: true
-        timeout-minutes: 2
-        run: node tools/prove-hosted-vireonix-live-v41.mjs
-      - name: Preserve genuine external-provider diagnostic
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: teddy-v41-hosted-vireonix-${{ steps.live.outcome }}
-          path: ${{ runner.temp }}/teddy-v41-hosted-live.json
-          if-no-files-found: warn
+      # The real external-provider smoke is manual in v41-live-language.yml.
+      # Never flood a free API on every code push or pretend upstream SLA is CI.
