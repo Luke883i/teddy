@@ -9,9 +9,9 @@ export async function fetchWithCsrf(url,options={},{boot,fetchImpl=fetch}={}){
  if(response.status!==403)return response;
  let error;
  try{error=(await response.clone().json())?.error}catch{return response}
- if(error!=='origin_not_allowed')return response;
+ if(error!=='origin_not_allowed'||init.signal?.aborted)return response;
  let refresh;
- try{refresh=await fetchImpl('/api/bootstrap',{method:'GET',credentials:'same-origin',cache:'no-store'})}catch{return response}
+ try{refresh=await fetchImpl('/api/bootstrap',{method:'GET',credentials:'same-origin',cache:'no-store',signal:init.signal})}catch{return response}
  if(!refresh.ok)return response;
  let latest;
  try{latest=await refresh.json()}catch{return response}
@@ -25,5 +25,6 @@ export async function fetchWithCsrf(url,options={},{boot,fetchImpl=fetch}={}){
     window.dispatchEvent(new CustomEvent('teddy:provider-changed',{detail:latest}));
   }
  }
+ if(init.signal?.aborted)return response;
  return fetchImpl(url,makeOptions());
 }
