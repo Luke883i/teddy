@@ -44,7 +44,12 @@ test('chat UI contains only real API/wiring and closes secondary surfaces',()=>{
   const app=fs.readFileSync(new URL('../web/app.js',import.meta.url),'utf8');
   const chat=fs.readFileSync(new URL('../web/text-chat-v17.js',import.meta.url),'utf8');
   assert.match(index,/id="chatForm"/);assert.match(index,/id="chatLog"/);
-  assert.match(chat,/fetch\('\/api\/text\/turn'/);assert.match(chat,/body\.reply/);
+  assert.match(chat,/fetchWithCsrf\('\/api\/text\/turn'/);assert.match(chat,/body\.reply/);
+  assert.match(chat,/requestId\}\),signal:own\.signal\},\{boot\}\)/);
+  const csrf=fs.readFileSync(new URL('../web/fetch-with-csrf-v41.js',import.meta.url),'utf8');
+  assert.match(csrf,/response\.status!==403/);
+  assert.match(csrf,/error!=='origin_not_allowed'/);
+  assert.match(csrf,/return fetchImpl\(url,makeOptions\(\)\)/);
   assert.match(app,/textChat=installTextChat/);
   assert.match(app,/id='closeDrawer'/);assert.match(app,/function closeMenu/);
   assert.match(app,/if\(localMode\(\)\)drawer\.innerHTML/);
