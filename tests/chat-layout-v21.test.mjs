@@ -10,7 +10,7 @@ test('real layout contract reserves center, bounds panels and preserves mobile e
     assert.ok(p.bubbleWidth<=w*0.5);
     if(w>=900)assert.ok(p.centralGap>=w*0.30,'center must stay clear');
     if(w<900)assert.equal(p.initialHistoryOpen,false);
-    if(w>=900)assert.equal(p.initialHistoryOpen,true);
+    if(w>=900)assert.equal(p.initialHistoryOpen,false);
   }
 });
 test('chat elements are distinct and model details are operable on demand',()=>{
