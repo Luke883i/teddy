@@ -31,7 +31,7 @@ export function evaluateRenderDeployment(env={},opts={}){
  add('auth-password',typeof env.TEDDY_AUTH_PASSWORD==='string'&&env.TEDDY_AUTH_PASSWORD.length>=16&&!/[\r\n]/.test(env.TEDDY_AUTH_PASSWORD));
  add('external-master',validExternalMasterKey(masterKey));
  add('durable-home',inside(env.TEDDY_HOME||'/var/data/teddy'));
- add('provider',provider==='local'||provider==='openai');
+ add('provider',['local','openai','vireonix'].includes(provider));
  add('no-voice',env.TEDDY_ENABLE_VOICE_ENDPOINTS!=='1');
  add('single-instance',!env.RENDER_INSTANCE_COUNT||env.RENDER_INSTANCE_COUNT==='1');
  const result={schema:'teddy.render.v35',valid:checks.every(x=>x.ok),checks,

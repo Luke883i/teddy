@@ -78,8 +78,10 @@ async function route(req,res){
     const body=await readJson(req,1000);
     if(!['local','vireonix','openai'].includes(body?.provider))return json(res,400,{error:'provider_invalid'});
     const before=PROVIDER;
+    // Persist first. On disk failure the previously selected model remains authoritative.
+    try{state.setSetting('text_provider',body.provider)}
+    catch(error){console.error('provider persistence:',error?.code||'error');return json(res,503,{error:'provider_persistence_failed'})}
     PROVIDER=body.provider;
-    state.setSetting('text_provider',PROVIDER);
     if(PROVIDER==='local'&&before!=='local')runtime.start().catch(e=>console.error('local runtime:',e?.code||e?.message||e));
     return json(res,200,bootstrap());
   }
