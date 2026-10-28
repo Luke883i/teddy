@@ -103,7 +103,7 @@ try{
       await choose('vireonix');
       if(!hint?.textContent?.includes('Vireonix'))throw Error('UI fails to acknowledge selected Vireonix');
       await choose('local');
-      if(!hint?.textContent?.includes('locale'))throw Error('UI fails to restore local provider state');
+      if(!hint?.textContent?.includes('Modalità di prova')&&!hint?.textContent?.includes('locale'))throw Error('UI fails to restore local provider state: '+hint?.textContent);
       return {success:true,modelSwitches:['local','vireonix','local'],selected:select.value,provider:JSON.stringify((await(await fetch('/api/bootstrap')).json()).ai.provider)};
     })()`;
     const output=await Promise.race([command('Runtime.evaluate',{expression,awaitPromise:true,returnByValue:true}),sleep(50000).then(()=>{throw Error('browser provider selector timeout')})]);

@@ -15,7 +15,28 @@ jobs:
       - name: Provider-switch authorization, HTTP runtime and persisted choice
         run: node --test tests/provider-switch-v38.test.mjs tests/provider-switch-http-v38.test.mjs
       - name: Real Chromium provider selector with real Teddy HTTP and SQLite
-        run: node tools/browser-text-v17.mjs --probe-provider-switch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set +e
+          node tools/browser-text-v17.mjs --probe-provider-switch > "$RUNNER_TEMP/teddy-provider-selector.log" 2>&1
+          status=$?
+          cat "$RUNNER_TEMP/teddy-provider-selector.log"
+          if test "$status" -ne 0; then
+            if test "${{ github.event_name }}" = "pull_request"; then
+              { echo '### Provider selector real Chrome failure'; echo; echo '~~~'; tail -n 60 "$RUNNER_TEMP/teddy-provider-selector.log"; echo '~~~'; } > "$RUNNER_TEMP/teddy-provider-selector-failure.md"
+              gh issue comment "${{ github.event.pull_request.number }}" --repo "$GITHUB_REPOSITORY" --body-file "$RUNNER_TEMP/teddy-provider-selector-failure.md" || true
+            fi
+            exit "$status"
+          fi
+      - name: Preserve provider selector Chrome diagnostic
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: teddy-v38-provider-selector-browser-diagnostic
+          path: ${{ runner.temp }}/teddy-provider-selector.log
+          if-no-files-found: ignore
+
       - name: Unit and contract tests
         run: node --test tests/vireonix-v37.test.mjs tests/text-turn-v17.test.mjs
       - name: 30 separate HTTP/SQLite sessions with upstream MOCK
