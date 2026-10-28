@@ -48,6 +48,7 @@ jobs:
         continue-on-error: true
         timeout-minutes: 2
         run: |
+          set +e
           node tools/probe-vireonix-live-v39.mjs > "$RUNNER_TEMP/teddy-vireonix-live.jsonl" 2>&1
           code=$?
           cat "$RUNNER_TEMP/teddy-vireonix-live.jsonl"
