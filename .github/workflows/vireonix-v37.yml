@@ -1,0 +1,62 @@
+name: Vireonix v37 contract and HTTP proof
+on:
+  pull_request:
+  push:
+    branches: [main, 'feat/vireonix-explicit-language-v37']
+jobs:
+  vireonix-proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.19.0'
+      - name: Provider-switch authorization, HTTP runtime and persisted choice
+        run: node --test tests/provider-switch-v38.test.mjs tests/provider-switch-http-v38.test.mjs
+      - name: Real Chromium provider selector with real Teddy HTTP and SQLite
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set +e
+          node tools/browser-text-v17.mjs --probe-provider-switch > "$RUNNER_TEMP/teddy-provider-selector.log" 2>&1
+          status=$?
+          cat "$RUNNER_TEMP/teddy-provider-selector.log"
+          if test "$status" -ne 0; then
+            if test "${{ github.event_name }}" = "pull_request"; then
+              { echo '### Provider selector real Chrome failure'; echo; echo '~~~'; tail -n 60 "$RUNNER_TEMP/teddy-provider-selector.log"; echo '~~~'; } > "$RUNNER_TEMP/teddy-provider-selector-failure.md"
+              gh issue comment "${{ github.event.pull_request.number }}" --repo "$GITHUB_REPOSITORY" --body-file "$RUNNER_TEMP/teddy-provider-selector-failure.md" || true
+            fi
+            exit "$status"
+          fi
+      - name: Preserve provider selector Chrome diagnostic
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: teddy-v38-provider-selector-browser-diagnostic
+          path: ${{ runner.temp }}/teddy-provider-selector.log
+          if-no-files-found: ignore
+
+      - name: Unit and contract tests
+        run: node --test tests/vireonix-v37.test.mjs tests/text-turn-v17.test.mjs
+      - name: 30 separate HTTP/SQLite sessions with upstream MOCK
+        run: node tools/prove-vireonix-v37.mjs
+      - name: One-million deterministic contract mutations (zero model calls)
+        run: node tools/falsify-vireonix-v37.mjs
+      - name: Live upstream Vireonix single synthetic text request (informational)
+        id: live
+        continue-on-error: true
+        timeout-minutes: 2
+        run: |
+          set +e
+          node tools/probe-vireonix-live-v39.mjs > "$RUNNER_TEMP/teddy-vireonix-live.jsonl" 2>&1
+          code=$?
+          cat "$RUNNER_TEMP/teddy-vireonix-live.jsonl"
+          exit "$code"
+      - name: Preserve live-upstream diagnostic as evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: teddy-vireonix-live-v39-${{ steps.live.outcome }}
+          path: ${{ runner.temp }}/teddy-vireonix-live.jsonl
+          if-no-files-found: ignore

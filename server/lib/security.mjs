@@ -31,12 +31,12 @@ export function guardRequest(req,{listenHost='127.0.0.1',allowedHosts=process.en
   const rawHost=String(req.headers.host||'').trim().toLowerCase(),h=hostName(rawHost);
   if(!rawHost)return {ok:false,status:400,error:'host_required'};
   const explicitHosts=splitCsv(allowedHosts),normalizedPublic=normalizeOrigin(publicOrigin),publicHost=normalizedPublic?new URL(normalizedPublic).host.toLowerCase():'';
+  const trustedPublicHosts=new Set([...explicitHosts,publicHost].filter(Boolean));
   if(isLoopbackHost(listenHost)){
     if(!isLoopbackHost(h))return {ok:false,status:421,error:'host_not_allowed'};
   }else{
-    const allowed=new Set([...explicitHosts,publicHost].filter(Boolean));
-    if(!allowed.size)return {ok:false,status:503,error:'allowed_hosts_required'};
-    if(!allowed.has(rawHost)&&!allowed.has(h))return {ok:false,status:421,error:'host_not_allowed'};
+    if(!trustedPublicHosts.size)return {ok:false,status:503,error:'allowed_hosts_required'};
+    if(!trustedPublicHosts.has(rawHost)&&!trustedPublicHosts.has(h))return {ok:false,status:421,error:'host_not_allowed'};
   }
   const pathname=(()=>{try{return new URL(req.url||'/','http://localhost').pathname}catch{return '/'}})();
   if(authPassword&&pathname!=='/api/health'&&!validBasicAuthorization(req.headers.authorization,authPassword))return {ok:false,status:401,error:'authentication_required',headers:{'www-authenticate':'Basic realm="Teddy", charset="UTF-8"'}};
@@ -49,7 +49,11 @@ export function guardRequest(req,{listenHost='127.0.0.1',allowedHosts=process.en
       const normalized=normalizeOrigin(origin);if(!normalized)return {ok:false,status:403,error:'origin_not_allowed'};
       const directOrigin=`${req.socket?.encrypted?'https':'http'}://${rawHost}`.toLowerCase();
       const directAllowed=isLoopbackHost(listenHost)&&normalized===directOrigin;
-      if(!directAllowed&&!explicitOrigins.has(normalized))return {ok:false,status:403,error:'origin_not_allowed'};
+      // A trusted reverse proxy terminates TLS: socket.encrypted is false here.
+      // Authorize only the EXACT HTTPS Origin of an already allowlisted Host;
+      // never infer trust from arbitrary X-Forwarded-Host/Proto headers.
+      const sameHostedOrigin=!isLoopbackHost(listenHost)&&trustedPublicHosts.has(rawHost)&&normalized===`https://${rawHost}`;
+      if(!directAllowed&&!sameHostedOrigin&&!explicitOrigins.has(normalized))return {ok:false,status:403,error:'origin_not_allowed'};
     }else if(fetchSite&&fetchSite!=='same-origin'&&fetchSite!=='none')return {ok:false,status:403,error:'origin_required'};
   }
   return {ok:true};

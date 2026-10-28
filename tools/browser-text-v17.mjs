@@ -75,6 +75,45 @@ try{
   if(process.argv.includes('--desktop')||process.argv.includes('--mobile'))await command('Emulation.setDeviceMetricsOverride',{width:process.argv.includes('--mobile')?390:1180,height:process.argv.includes('--mobile')?844:760,deviceScaleFactor:1,mobile:process.argv.includes('--mobile')});
   await command('Page.navigate',{url:`http://127.0.0.1:${port}/`});
   if(process.argv.includes('--probe-dom')){const r=await command('Runtime.evaluate',{expression:'JSON.stringify({readyState:document.readyState,html:!!document.querySelector(\'#chatForm\'),hint:document.querySelector(\'#chatHint\')?.textContent||\'\'})',returnByValue:true});console.log('TEDDY_CHROME_DOM_PASS',r.result?.value);await completeProbe();}
+  // Real browser and real Teddy HTTP/SQLite: an actual human-equivalent select
+  // change, not a direct PUT request or intercepted UI mutation.
+  if(process.argv.includes('--probe-provider-switch')){
+    const expression = `(async()=>{
+      const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+      let select;
+      for(let i=0;i<250;i++){
+        select=document.querySelector('#textProviderSelect');
+        if(select&&document.querySelector('#chatForm')?.dataset.wired==='true')break;
+        await sleep(75);
+      }
+      if(!select)throw Error('provider selector did not mount in real Chrome');
+      if(select.value!=='local')throw Error('expected local provider on fresh SQLite home');
+      const hint=document.querySelector('#chatHint');
+      const choose=async value=>{
+        select.value=value;
+        select.dispatchEvent(new Event('change',{bubbles:true}));
+        for(let i=0;i<170;i++){
+          const r=await fetch('/api/bootstrap',{cache:'no-store'});
+          if(r.ok&&(await r.json()).ai?.provider===value&&!select.disabled)break;
+          await sleep(70);
+        }
+        const body=await (await fetch('/api/bootstrap',{cache:'no-store'})).json();
+        if(body.ai?.provider!==value||select.value!==value||select.disabled)throw Error('browser-selected provider did not commit: '+JSON.stringify({wanted:value,bootstrap:body.ai?.provider,selected:select.value,disabled:select.disabled,hint:hint?.textContent}));
+      };
+      await choose('vireonix');
+      if(!hint?.textContent?.includes('Vireonix'))throw Error('UI fails to acknowledge selected Vireonix');
+      await choose('local');
+      if(!hint?.textContent?.includes('Modalità di prova')&&!hint?.textContent?.includes('locale'))throw Error('UI fails to restore local provider state: '+hint?.textContent);
+      return {success:true,modelSwitches:['local','vireonix','local'],selected:select.value,provider:JSON.stringify((await(await fetch('/api/bootstrap')).json()).ai.provider)};
+    })()`;
+    const output=await Promise.race([command('Runtime.evaluate',{expression,awaitPromise:true,returnByValue:true}),sleep(50000).then(()=>{throw Error('browser provider selector timeout')})]);
+    if(output.exceptionDetails)throw Error('browser provider selector exception: '+(output.exceptionDetails.exception?.description||output.exceptionDetails.text));
+    if(!output.result?.value?.success)throw Error('provider selector UI E2E: '+JSON.stringify(output.result?.value));
+    const saved=await(await sendHttp('/api/bootstrap')).json();
+    if(saved.ai.provider!=='local')throw Error('final provider not persisted to SQLite');
+    console.log('TEDDY_BROWSER_PROVIDER_SWITCH_PASS',JSON.stringify(output.result.value));
+    await completeProbe();
+  }
   const probeBootstrap=process.argv.includes('--probe-bootstrap'),probeChat=process.argv.includes('--probe-chat');
   const probeBalloon=process.argv.includes('--probe-balloon'),probeGeometry=process.argv.includes('--probe-geometry'),probeControls=process.argv.includes('--probe-controls');
   const probeHistory=process.argv.includes('--probe-history');
