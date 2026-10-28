@@ -3,6 +3,7 @@ on:
   pull_request:
 permissions:
   contents: read
+  issues: write
 jobs:
   all-unit-contracts:
     runs-on: ubuntu-latest
@@ -28,13 +29,27 @@ jobs:
           node --input-type=module -e '
             import fs from "node:fs";
             const content=fs.readFileSync(process.env.RUNNER_TEMP+"/teddy-v41-tests.log","utf8");
-            const first=content.match(/^not ok [0-9]+ - (.*)$/m)?.[1]||"none";
-            const value=first.normalize("NFKD").replace(/[^a-zA-Z0-9_-]/g,"_").slice(0,125);
+            const first=content.match(/^\\s*not ok [0-9]+ - (.*)$/m)?.[1]||content.match(/(?:AssertionError|Error|ERR_)[^\\n]{0,110}/m)?.[0]||"no_assertion_marker";
+            const value=first.normalize("NFKD").replace(/[^a-zA-Z0-9_-]/g,"_").slice(0,100);
             fs.appendFileSync(process.env.GITHUB_OUTPUT,"failure="+value+"\n");
             console.log("TEDDY_FAST_TEST_CAUSE",JSON.stringify({firstFailed:first,notOk:(content.match(/^not ok /gm)||[]).length}));
           '
       - name: Earliest failing contract ${{ steps.classify.outputs.failure }}
         run: test "${{ steps.suite.outputs.status }}" = 0
+      - name: Publish bounded test failure excerpt in PR for forensic resolution
+        if: ${{ failure() && github.event_name == 'pull_request' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo "### v41 full-unit-suite exact failure"
+            echo
+            echo '~~~'
+            grep -A 22 -m 3 'not ok' "$RUNNER_TEMP/teddy-v41-tests.log" || tail -n 90 "$RUNNER_TEMP/teddy-v41-tests.log"
+            echo '~~~'
+          } > "$RUNNER_TEMP/teddy-v41-contract-failure-comment.md"
+          head -c 7000 "$RUNNER_TEMP/teddy-v41-contract-failure-comment.md" > "$RUNNER_TEMP/teddy-v41-contract-short.md"
+          gh issue comment "${{ github.event.pull_request.number }}" --repo "$GITHUB_REPOSITORY" --body-file "$RUNNER_TEMP/teddy-v41-contract-short.md" || true
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
