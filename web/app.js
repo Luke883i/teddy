@@ -90,7 +90,8 @@ $('#closeKey').onclick=()=>onboarding.classList.add('hidden');
 $('#noticeClose').onclick=()=>hideConnectionNotice();
 function hideConnectionNotice(){notice.classList.add('hidden')}
 function showProblem(problem={}){
-  lastConnectionProblem={...problem,at:new Date().toISOString()};
+  lastConnectionProblem={...problem,provider:problem.provider||boot.ai.provider,at:new Date().toISOString()};
+  if(boot.interaction?.mode==='text'){hideConnectionNotice();textChat?.reportProblem(lastConnectionProblem);return}
   const g=connectionGuidance(problem);
   noticeTitle.textContent=g.title;
   noticeBody.textContent=problem.error==='local_runtime_not_ready'||problem.error==='local_text_not_ready'
@@ -117,7 +118,7 @@ async function openView(name){closeMenu();document.querySelectorAll('nav button'
      $('#replaceKey').onclick=()=>showKeyDialog(true);$('#removeKey').onclick=async()=>{const response=await fetch('/api/secrets/openai',{method:'DELETE'});if(!response.ok){showProblem({error:'openai_key_delete_failed',kind:'text'});return}boot.secret=(await response.json()).secret;textChat?.update();await openView('studio')};
    }
  }
- if(name==='diagnostics'){await refreshAvailability();drawer.innerHTML=`<h2>Diagnostica</h2><div class="diagnostic">${esc(JSON.stringify({provider:boot.ai,availability,secret:{configured:boot.secret.configured},persistence:boot.persistence,lastProblem:lastConnectionProblem,renderer:renderer.backend,visualSkin:renderer.implicitSkinStatus?.(),visualQuality:latestVisualQuality,motion:renderer.motionStatus?.()},null,2))}</div>`}
+ if(name==='diagnostics'){await refreshAvailability();drawer.innerHTML=`<h2>Diagnostica</h2><div class="diagnostic">${esc(JSON.stringify({provider:boot.ai,availability,secret:{configured:boot.secret.configured},persistence:boot.persistence,browserOrigin:window.location.origin,configuredPublicOrigin:boot.security?.publicOrigin,lastProblem:lastConnectionProblem,renderer:renderer.backend,visualSkin:renderer.implicitSkinStatus?.(),visualQuality:latestVisualQuality,motion:renderer.motionStatus?.()},null,2))}</div>`}
  const closer=document.createElement('button');closer.id='closeDrawer';closer.type='button';closer.className='drawer-close';closer.textContent='Chiudi';closer.onclick=()=>openView('talk');drawer.prepend(closer);
 }
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>openView(b.dataset.view));$('#settingsBtn').onclick=toggleMenu;

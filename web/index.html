@@ -22,6 +22,6 @@
       <input id="chatInput" type="text" name="message" maxlength="2000" placeholder="Scrivi a Teddy…" autocomplete="off" disabled>
       <button id="sendText" type="submit" disabled>Invia</button>
     </form>
-    <div class="chat-footer"><button id="historyToggle" class="history-trigger" type="button" aria-expanded="false" aria-controls="chatHistoryPanel"><span aria-hidden="true">☰</span> Cronologia</button><span id="chatHint" role="status"></span><button id="newChat" class="history-trigger" type="button" aria-label="Inizia una nuova conversazione">Nuova chat</button></div>
+    <p id="chatFeedback" class="chat-feedback hidden" role="alert" aria-live="assertive"></p><div class="chat-footer"><button id="historyToggle" class="history-trigger" type="button" aria-expanded="false" aria-controls="chatHistoryPanel"><span aria-hidden="true">☰</span> Cronologia</button><span id="chatHint" role="status"></span><button id="newChat" class="history-trigger" type="button" aria-label="Inizia una nuova conversazione">Nuova chat</button></div>
   </section>
 </main><script type="module" src="/teddy/init-v13.js"></script></body></html>

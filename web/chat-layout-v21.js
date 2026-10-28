@@ -9,5 +9,5 @@ export function chatLayout(width,height){
   const composerWidth=Math.min(535,w-24);
   const margin=compact?12:18;
   const centralGap=Math.max(0,w-historyWidth-bubbleWidth-2*margin);
-  return {compact,historyWidth,bubbleWidth,composerWidth,centralGap,shortScreen:h<521,initialHistoryOpen:!compact};
+  return {compact,historyWidth,bubbleWidth,composerWidth,centralGap,shortScreen:h<521,initialHistoryOpen:false};
 }
