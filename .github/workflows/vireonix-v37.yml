@@ -43,3 +43,19 @@ jobs:
         run: node tools/prove-vireonix-v37.mjs
       - name: One-million deterministic contract mutations (zero model calls)
         run: node tools/falsify-vireonix-v37.mjs
+      - name: Live upstream Vireonix single synthetic text request (informational)
+        id: live
+        continue-on-error: true
+        timeout-minutes: 2
+        run: |
+          node tools/probe-vireonix-live-v39.mjs > "$RUNNER_TEMP/teddy-vireonix-live.jsonl" 2>&1
+          code=$?
+          cat "$RUNNER_TEMP/teddy-vireonix-live.jsonl"
+          exit "$code"
+      - name: Preserve live-upstream diagnostic as evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: teddy-vireonix-live-v39
+          path: ${{ runner.temp }}/teddy-vireonix-live.jsonl
+          if-no-files-found: ignore
