@@ -56,3 +56,29 @@ The user's actual `403 origin_not_allowed` cannot be declared repaired without t
 ### What is not proved
 
 A Qwen readiness self-test does not validate real-world Italian fluency. A deterministic greeting does not query Qwen or Vireonix. The PR51 upstream connectivity probe is one real Vireonix request, not a reliability distribution or superiority benchmark. The v40 campaign does not independently validate the user's deployed browser until that deployment and its Origin configuration are retested.
+
+## v41 runtime forensic closure — two separate error boundaries
+
+**Observed from user evidence:** `origin_not_allowed` is a Teddy HTTP/Origin control-plane denial. It is not evidence that Qwen failed inference or that the external Vireonix service failed. In one container reproduction with actual Teddy HTTP+SQLite, an untrusted page Origin returned **403** for `ciao`, while the same request with an authorized HTTPS Origin returned **200** and two committed turns. This used a local model mock, not authentic GGUF.
+
+**Observed from GitHub Actions:** An initial real, non-mocked, end-to-end hosted Teddy→Vireonix request returned `vireonix_http_error`; a later end-to-end run completed successfully. These are distinct upstream outcomes: the API can work, but no per-turn reliability or SLA claim follows. The old adapter collapsed upstream 400/5xx into public 502 and lost the original HTTP status, obstructing diagnosis.
+
+### Minimal backward-derived closure
+
+1. **E0 trusted ingress:** Host allowlist + strong Basic authentication + browser fetch metadata `same-origin/cors/empty`; never permit a cross-site request or opaque Origin.
+2. **E1 TLS proxy reconciliation:** A process-scoped cryptographic CSRF capability, issued only by authenticated `GET /api/bootstrap`, can authorize a same-origin browser fetch even if a trusted reverse proxy rewrites the HTTP Host. Neither an Origin wildcard nor a forwarded Host header is used as authorization. A foreign Origin without the capability remains 403; cross-site always remains 403.
+3. **E2 client resilience:** All browser mutations attach the capability. On an `origin_not_allowed` response following a restart, the browser refreshes it from its own authenticated bootstrap, then retries at most **once**, with precisely the same request body/requestId. Abort prevents replay; unchanged tokens and unrelated errors are never retried.
+4. **E3 generation truth:** `local` still means genuine managed Qwen when mock is disabled; `vireonix` still means fixed HTTPS to the free `auto` provider. No silent provider fallback, no global saved-memory disclosure in the Vireonix adapter.
+5. **E4 bounded upstream failure:** Vireonix HTTP 4xx/429/5xx codes are distinguished, an `upstreamStatus` is returned only when present, and **one** retry for 5xx uses a shared 28-second budget with short delay. Requests denied by schema, authentication or quota never consume automatic retries. A free service does not promise availability.
+6. **E5 visible user truth:** The inline chat error identifies the failing provider and sanitized upstream HTTP status. No legacy voice popup and no invented Teddy message.
+7. **E6 falsification:** `tests/dual-provider-proxy-v41.test.mjs` starts actual Teddy HTTP+SQLite with **labelled mock** upstream engines and proves both provider paths behind a proxy-Origin mismatch; `tests/csrf-recovery-v41.test.mjs` falsifies replay, cancellation and token rotation; `tests/vireonix-recovery-v41.test.mjs` falsifies upstream HTTP classes. One million seeded product-contract scenarios now include real CSRF guard checks. Genuine Qwen inference is independently exercised in `text-real-model-v20`. A genuine Vireonix full-route smoke is available through manually invoked `v41-live-language-diagnostic`.
+
+### Evidence limitations and operational deployment
+
+This container cannot download/execute the pinned 484 MB GGUF or reach `vireonix.ai` (DNS `EAI_AGAIN`). Local tests with Qwen mock are not real language-generation tests. GitHub Actions supports a different network and has produced at least one successful, genuine hosted Teddy→Vireonix turn; an earlier failure is preserved, not overwritten. Automated high-volume external API probing is explicitly disabled to respect free shared capacity.
+
+The screenshots do not reveal the exact user's effective HTTPS Origin, reverse-proxy Host, or deployment revision. The post-merge operator must retest on the **exact user-facing domain**: open Diagnostics for `browserOrigin` and `configuredPublicOrigin`, then send `ciao`, a real Qwen open question, switch to Vireonix, and send a real remote question. An unresolved `403` should be correlated with Host/Origin and fetch metadata; never solve it with `Access-Control-Allow-Origin: *`, by dropping Basic authentication, or by accepting arbitrary forwarded headers.
+
+### Provider quality status
+
+Authentic response ≠ superior eloquence. A strict claim that Vireonix improves Italian fluency requires blinded matched multi-turn comparison (same user prompts and conversation premises, proper latency/error accounting), not one positive HTTP response.
