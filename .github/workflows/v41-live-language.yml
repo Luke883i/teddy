@@ -1,0 +1,46 @@
+name: v41-live-language-diagnostic
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  real-provider:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.19.0'
+      - name: Actual Vireonix adapter with one synthetic prompt
+        id: direct
+        continue-on-error: true
+        run: node tools/probe-vireonix-live-v39.mjs
+      - name: Actual hosted Teddy semantic route, no upstream mock
+        id: integrated
+        continue-on-error: true
+        run: node tools/prove-hosted-vireonix-live-v41.mjs
+      - name: Classify the real integrated failure from its JSON evidence
+        id: classified
+        if: always()
+        run: |
+          node --input-type=module -e '
+            import fs from "node:fs";
+            const file=process.env.RUNNER_TEMP+"/teddy-v41-hosted-live.json";
+            let proof={};
+            try{proof=JSON.parse(fs.readFileSync(file,"utf8"))}catch{}
+            const value=String(proof.remoteTurnError||proof.failure||"missing-proof").replace(/[^a-zA-Z0-9_-]/g,"_").slice(0,110);
+            const result=(proof.pass?"pass":"fail")+"_"+value;
+            fs.appendFileSync(process.env.GITHUB_OUTPUT,"result="+result+"\n");
+            console.log("TEDDY_LIVE_DIAGNOSTIC",JSON.stringify({result,provider:proof.upstream,remoteTurnStatus:proof.remoteTurnStatus,latency:proof.externalTurnLatencyMs,pass:proof.pass}));
+          '
+      - name: Expose actual remote semantic outcome ${{ steps.classified.outputs.result }}
+        if: always()
+        run: echo "Outcome is encoded in this step name"
+      - name: Archive real Vireonix integrated proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: teddy-v41-live-${{ steps.integrated.outcome }}-${{ steps.classified.outputs.result }}
+          path: ${{ runner.temp }}/teddy-v41-hosted-live.json
+          if-no-files-found: warn

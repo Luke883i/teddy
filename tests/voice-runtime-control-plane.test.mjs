@@ -16,7 +16,8 @@ test('failed local availability exposes a retry affordance wired to the runtime 
   const app=source('../web/app.js');
   assert.match(app,/id="runtimeRetry"/);
   assert.match(app,/async function retryLocalRuntime/);
-  assert.match(app,/fetch\('\/api\/runtime\/retry',\{method:'POST'\}\)/);
+  assert.match(app,/protectedFetch\('\/api\/runtime\/retry',\{method:'POST',headers:csrfHeaders\(\)\}\)/);
+  assert.match(app,/const protectedFetch=\(url,init\)=>fetchWithCsrf\(url,init,\{boot\}\)/);
   assert.match(app,/runtimeEls\.retry\.onclick=retryLocalRuntime/);
   assert.match(app,/const ready=availability\?\.textReady===true\|\|boot\.ai\.mock===true/);
   assert.match(app,/canRetry=!ready&&!installing/);

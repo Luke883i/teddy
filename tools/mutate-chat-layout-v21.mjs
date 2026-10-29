@@ -23,7 +23,7 @@ for(let family=0;family<10;family++){
     const [w,h]=families[family]();
     const o=chatLayout(w,h);
     assert.equal(o.compact,w<900);
-    assert.equal(o.initialHistoryOpen,!o.compact);
+    assert.equal(o.initialHistoryOpen,false);
     assert.equal(o.composerWidth,Math.min(535,w-24));
     assert.ok(o.historyWidth>=0&&o.historyWidth<=w-24);
     assert.ok(o.bubbleWidth>0&&o.bubbleWidth<=Math.floor(w*.5));

@@ -1,4 +1,5 @@
 import http from 'node:http';
+import crypto from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { SecretStore } from './lib/secrets.mjs';
@@ -24,6 +25,8 @@ const HOME=process.env.TEDDY_HOME||path.join(process.env.HOME||process.cwd(),'.t
 const PORT=Number(process.env.TEDDY_PORT||8787),HOST=process.env.TEDDY_HOST||'127.0.0.1';
 const PUBLIC_ORIGIN=process.env.TEDDY_PUBLIC_ORIGIN||'',AUTH_PASSWORD=process.env.TEDDY_AUTH_PASSWORD||'',MASTER_KEY=process.env.TEDDY_SECRET_MASTER_KEY||'';
 const DEFAULT_PROVIDER=normalizeProvider(process.env.TEDDY_PROVIDER||'local');
+// Per-process capability; never persisted or printed, reissued on each bootstrap.
+const CSRF_TOKEN=crypto.randomBytes(32).toString('base64url');
 const policy=deploymentPolicy({listenHost:HOST,publicOrigin:PUBLIC_ORIGIN,authPassword:AUTH_PASSWORD,secretMasterKey:MASTER_KEY});
 if(!policy.ok)throw new Error(`unsafe_deployment:${policy.error}`);
 const REALTIME_URL=validateRealtimeEndpoint(process.env.TEDDY_OPENAI_REALTIME_URL||'https://api.openai.com/v1/realtime/calls');
@@ -42,7 +45,7 @@ const bootstrap=()=>({
   availability:PROVIDER==='local'?localAvailability():{availability:PROVIDER==='vireonix'?'remoto':'not_applicable',ready:PROVIDER==='vireonix'||secrets.status().configured,installPhase:'not_applicable',engines:{}},
   secret:secrets.status(),config,
   persistence:{engine:'sqlite',durable:true,wal:true},
-  security:{mode:policy.mode,authenticated:!!AUTH_PASSWORD,publicOrigin:policy.publicOrigin},
+  security:{mode:policy.mode,authenticated:!!AUTH_PASSWORD,publicOrigin:policy.publicOrigin,csrfToken:CSRF_TOKEN},
   interaction:{mode:'text',voiceUi:false,voiceEndpoints:VOICE_ENDPOINTS_ENABLED},
   render:{backend:'client-negotiated',webgl2:true,canvas2dFallback:true,webgpuOptional:true,presenceRig:'v4',morphology:'v5',anatomy:'v6',correctedDepth:true,audioReactive:false,adaptiveNoise:true},
   install:{id:String(state.getSetting('install_id')).slice(0,8)}
@@ -66,7 +69,7 @@ async function route(req,res){
   if(process.env.TEDDY_RENDER_HEALTH_PROBE==='1'&&req.method==='GET'&&
      new URL(req.url,'http://localhost').pathname==='/api/health')
     return json(res,200,{ok:true,service:'teddy',version:VERSION,provider:PROVIDER,security:policy.mode,liveness:'up'});
-  const guard=guardRequest(req,{listenHost:HOST,publicOrigin:PUBLIC_ORIGIN,authPassword:AUTH_PASSWORD});if(!guard.ok)return json(res,guard.status,{error:guard.error},guard.headers||{});
+  const guard=guardRequest(req,{listenHost:HOST,publicOrigin:PUBLIC_ORIGIN,authPassword:AUTH_PASSWORD,csrfToken:CSRF_TOKEN});if(!guard.ok)return json(res,guard.status,{error:guard.error},guard.headers||{});
   const u=new URL(req.url,'http://localhost');
   if(req.method==='GET'&&u.pathname==='/api/health')return json(res,200,{ok:true,service:'teddy',version:VERSION,provider:PROVIDER,security:policy.mode,liveness:'up'});
   if(req.method==='GET'&&u.pathname==='/api/version')return json(res,200,{service:'teddy',revision:/^[0-9a-f]{40}$/i.test(process.env.RENDER_GIT_COMMIT||'')?process.env.RENDER_GIT_COMMIT:'unbound',version:VERSION,mode:policy.mode});
@@ -163,7 +166,7 @@ async function route(req,res){
     }catch(e){
       if(controller.signal.aborted)return;
       const code=e?.code||'text_turn_failed';
-      return json(res,e?.status>=400&&e?.status<600?e.status:502,{error:code});
+      return json(res,e?.status>=400&&e?.status<600?e.status:502,{error:code,...(Number.isInteger(e?.upstreamStatus)?{upstreamStatus:e.upstreamStatus}:{})});
     }finally{textBusy=false;req.off('aborted',abort)}
   }
   if(req.method==='PUT'&&u.pathname==='/api/config'){const patch=await readJson(req,64_000);config=mergeConfig(defaults,patch);state.setSetting('config',config);return json(res,200,{config})}

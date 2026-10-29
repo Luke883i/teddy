@@ -1,0 +1,30 @@
+name: Teddy v40 end-user semantic closure
+on:
+  pull_request:
+  push:
+    branches: [main, 'fix/enduser-chat-v40']
+jobs:
+  enduser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.19.0'
+      - name: Real security, user-state, layout and text-only contract
+        run: node --test tests/enduser-v40.test.mjs tests/enduser-http-v40.test.mjs tests/chat-layout-v21.test.mjs tests/text-only-boundary-v25.test.mjs
+      - name: Reproduce both provider paths through real HTTPS-proxy HTTP and SQLite (upstreams MOCK)
+        run: node --test tests/dual-provider-proxy-v41.test.mjs
+      - name: Bounded CSRF rotation and idempotent user-request recovery
+        run: node --test tests/csrf-recovery-v41.test.mjs
+      - name: Vireonix actual upstream status and single bounded retry contract
+        run: node --test tests/vireonix-recovery-v41.test.mjs
+      - name: Execute 1,000,000 realistic seeded contract mutations
+        run: node tools/mutate-enduser-v40.mjs
+      - name: Genuine Chromium text input and returned balloon
+        run: node tools/browser-text-v17.mjs --probe-chat
+      - name: Genuine Chromium provider selector with HTTP and SQLite
+        run: node tools/browser-text-v17.mjs --probe-provider-switch
+      # The real external-provider smoke is manual in v41-live-language.yml.
+      # Never flood a free API on every code push or pretend upstream SLA is CI.

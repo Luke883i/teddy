@@ -140,3 +140,9 @@ header .icon{margin-left:0}
 
 /* Text provider selection: compact, always keyboard accessible. */
 .provider-choice{display:inline-flex;align-items:center;gap:5px;font-size:12px;white-space:nowrap;color:inherit}.provider-choice select{font:inherit;max-width:190px;background:#f8f3ea;color:#182b40;border:1px solid #b0a18e;border-radius:8px;padding:4px 6px}.provider-choice select:focus-visible{outline:2px solid #2d5a7b;outline-offset:2px}
+
+/* V40: conversational errors are never shown in legacy voice popups. */
+.chat-feedback{margin:0;max-height:min(23vh,145px);overflow:auto;color:#f3d5cb;background:#331c22;border:1px solid #965e5c;border-radius:11px;padding:9px 12px;font-size:12px;line-height:1.5;overflow-wrap:anywhere}
+.chat-footer{display:grid;grid-template-columns:auto minmax(130px,1fr) auto;grid-template-areas:'history engine fresh' 'status status status';align-items:center;gap:6px 9px}
+.chat-footer #historyToggle{grid-area:history}.chat-footer .provider-choice{grid-area:engine;min-width:0;justify-content:center}.chat-footer .provider-choice select{min-width:0;max-width:190px;width:100%}.chat-footer #newChat{grid-area:fresh}.chat-footer #chatHint{grid-area:status;min-width:0;text-align:center;overflow-wrap:anywhere;font-size:11px;line-height:1.35}
+@media(max-width:600px){.chat-footer{grid-template-columns:1fr auto;grid-template-areas:'engine engine' 'history fresh' 'status status'}.chat-footer .provider-choice{justify-self:stretch}.chat-footer .provider-choice select{width:100%;max-width:none}}

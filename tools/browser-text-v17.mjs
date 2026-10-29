@@ -149,7 +149,7 @@ try{
     if(globalThis.__teddyMicAttempts!==0||globalThis.__teddyVoiceFetchAttempts!==0||globalThis.__teddyAudioContextAttempts!==0||globalThis.__teddyMediaPlayAttempts!==0)throw Error('voice side-effect during actual chat turn');
     if(${probeBalloon})return {success:true,chatInputVisible:true,stage:'balloon'};
     const compact=innerWidth<900;
-    if(compact===(!history.classList.contains('hidden')))throw Error('history default visibility mismatch: '+JSON.stringify({width:innerWidth,compact,historyHidden:history.classList.contains('hidden'),expanded:document.querySelector('#historyToggle')?.getAttribute('aria-expanded')}));
+    if(!history.classList.contains('hidden'))throw Error('history must start closed: '+JSON.stringify({width:innerWidth,compact,historyHidden:history.classList.contains('hidden'),expanded:document.querySelector('#historyToggle')?.getAttribute('aria-expanded')}));
     if(${probeHistory})return {success:true,chatInputVisible:true,stage:'history'};
     const balloonRect=bubble.getBoundingClientRect(),composerRect=document.querySelector('#chatPanel').getBoundingClientRect();
     if(balloonRect.right>innerWidth+1||balloonRect.left<0||composerRect.right>innerWidth+1||composerRect.left<0)throw Error('reflow outside viewport: '+JSON.stringify({width:innerWidth,device:screen.width,visual:visualViewport?.width,balloon:{left:balloonRect.left,right:balloonRect.right,width:balloonRect.width},composer:{left:composerRect.left,right:composerRect.right,width:composerRect.width},styles:{bubble:getComputedStyle(bubble).width,composer:getComputedStyle(document.querySelector('#chatPanel')).width}}));

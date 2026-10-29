@@ -27,7 +27,7 @@ export function deploymentPolicy({listenHost='127.0.0.1',publicOrigin='',authPas
   if(!masterOk)return {ok:false,error:'external_secret_master_required'};
   return {ok:true,mode:'authenticated-proxy',publicOrigin:origin,publicHost:new URL(origin).host.toLowerCase()};
 }
-export function guardRequest(req,{listenHost='127.0.0.1',allowedHosts=process.env.TEDDY_ALLOWED_HOSTS||'',allowedOrigins=process.env.TEDDY_ALLOWED_ORIGINS||'',publicOrigin=process.env.TEDDY_PUBLIC_ORIGIN||'',authPassword=process.env.TEDDY_AUTH_PASSWORD||''}={}){
+export function guardRequest(req,{listenHost='127.0.0.1',allowedHosts=process.env.TEDDY_ALLOWED_HOSTS||'',allowedOrigins=process.env.TEDDY_ALLOWED_ORIGINS||'',publicOrigin=process.env.TEDDY_PUBLIC_ORIGIN||'',authPassword=process.env.TEDDY_AUTH_PASSWORD||'',csrfToken=''}={}){
   const rawHost=String(req.headers.host||'').trim().toLowerCase(),h=hostName(rawHost);
   if(!rawHost)return {ok:false,status:400,error:'host_required'};
   const explicitHosts=splitCsv(allowedHosts),normalizedPublic=normalizeOrigin(publicOrigin),publicHost=normalizedPublic?new URL(normalizedPublic).host.toLowerCase():'';
@@ -53,7 +53,17 @@ export function guardRequest(req,{listenHost='127.0.0.1',allowedHosts=process.en
       // Authorize only the EXACT HTTPS Origin of an already allowlisted Host;
       // never infer trust from arbitrary X-Forwarded-Host/Proto headers.
       const sameHostedOrigin=!isLoopbackHost(listenHost)&&trustedPublicHosts.has(rawHost)&&normalized===`https://${rawHost}`;
-      if(!directAllowed&&!sameHostedOrigin&&!explicitOrigins.has(normalized))return {ok:false,status:403,error:'origin_not_allowed'};
+      // Reverse proxies may rewrite Host while preserving the browser's page
+      // Origin. Browser fetch metadata + a 256-bit token from authenticated,
+      // same-origin GET /api/bootstrap are a second CSRF proof, NOT a CORS bypass.
+      // Only hosted XHR/fetch, never navigation, cross-site or opaque origins.
+      const browserProof=!isLoopbackHost(listenHost)&&Boolean(csrfToken)&&
+        fetchSite==='same-origin'&&
+        String(req.headers['sec-fetch-mode']||'').toLowerCase()==='cors'&&
+        String(req.headers['sec-fetch-dest']||'').toLowerCase()==='empty'&&
+        normalized.startsWith('https://')&&
+        safeEqual(req.headers['x-teddy-csrf']||'',csrfToken);
+      if(!directAllowed&&!sameHostedOrigin&&!explicitOrigins.has(normalized)&&!browserProof)return {ok:false,status:403,error:'origin_not_allowed'};
     }else if(fetchSite&&fetchSite!=='same-origin'&&fetchSite!=='none')return {ok:false,status:403,error:'origin_required'};
   }
   return {ok:true};
