@@ -69,7 +69,7 @@ async function route(req,res){
   if(process.env.TEDDY_RENDER_HEALTH_PROBE==='1'&&req.method==='GET'&&
      new URL(req.url,'http://localhost').pathname==='/api/health')
     return json(res,200,{ok:true,service:'teddy',version:VERSION,provider:PROVIDER,security:policy.mode,liveness:'up'});
-  const guard=guardRequest(req,{listenHost:HOST,publicOrigin:PUBLIC_ORIGIN,authPassword:AUTH_PASSWORD,csrfToken:CSRF_TOKEN});if(!guard.ok)return json(res,guard.status,{error:guard.error},guard.headers||{});
+  const guard=guardRequest(req,{listenHost:HOST,listenPort:PORT,codespaceName:process.env.CODESPACE_NAME||'',publicOrigin:PUBLIC_ORIGIN,authPassword:AUTH_PASSWORD,csrfToken:CSRF_TOKEN});if(!guard.ok)return json(res,guard.status,{error:guard.error},guard.headers||{});
   const u=new URL(req.url,'http://localhost');
   if(req.method==='GET'&&u.pathname==='/api/health')return json(res,200,{ok:true,service:'teddy',version:VERSION,provider:PROVIDER,security:policy.mode,liveness:'up'});
   if(req.method==='GET'&&u.pathname==='/api/version')return json(res,200,{service:'teddy',revision:/^[0-9a-f]{40}$/i.test(process.env.RENDER_GIT_COMMIT||'')?process.env.RENDER_GIT_COMMIT:'unbound',version:VERSION,mode:policy.mode});
