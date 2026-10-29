@@ -1,0 +1,30 @@
+name: codespaces-origin-v42
+on:
+  pull_request:
+    paths:
+      - 'server/lib/security.mjs'
+      - 'server/main.mjs'
+      - 'tests/codespaces-origin-v42.test.mjs'
+      - 'tests/codespaces-http-v42.test.mjs'
+      - 'tools/falsify-codespaces-v42.mjs'
+      - '.github/workflows/codespaces-origin-v42.yml'
+  push:
+    branches: [main, 'fix/codespaces-origin-v42']
+permissions:
+  contents: read
+jobs:
+  codespaces:
+    name: real HTTP/SQLite Codespaces Origin, Qwen and Vireonix mock proof
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.19.0'
+      - name: Exact Codespaces incident, malicious Origin and real HTTP/SQLite
+        run: node --test tests/codespaces-origin-v42.test.mjs tests/codespaces-http-v42.test.mjs
+      - name: Existing strict Render and Vireonix provider safeguards
+        run: node --test tests/provider-switch-v38.test.mjs tests/render-deployment-v35.test.mjs tests/enduser-http-v40.test.mjs
+      - name: Mutate 100000 deterministic Codespaces ingress variants (no model calls)
+        run: node tools/falsify-codespaces-v42.mjs
