@@ -107,6 +107,12 @@ try{
  const history=await(await fetch('http://127.0.0.1:'+port+'/api/history?limit=20')).json();
  if(history.turns?.length!==6)throw Error('SQLite turn count does not match: '+history.turns?.length);
  if(writes.length!==5||writes.some(x=>x.status!==200||x.origin!==origin||x.site!=='same-origin'||x.mode!=='cors'||x.dest!=='empty'))throw Error('proxy security mismatch: '+JSON.stringify(writes));
+ const capture=await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});
+ const png=Buffer.from(capture.data,'base64');
+ if(png.subarray(1,4).toString()!=='PNG')throw Error('Chrome did not capture PNG proof');
+ const screenshotPath=path.join(process.env.RUNNER_TEMP||temp,'teddy-v43-codespaces-browser.png');
+ fs.writeFileSync(screenshotPath,png);
+
  console.log('TEDDY_CODESPACES_BROWSER_V43_PASS',JSON.stringify({schema:'teddy.codespaces.browser.v43',chromium:true,teddyHttp:true,sqliteTurns:6,proxyHeadersSimulated:true,modelUpstreams:'MOCK_ONLY',balloons:3,switches:2,receivedStatuses:writes.map(x=>x.status),...proof}));
 }finally{
  websocket?.close();browser?.kill('SIGKILL');server?.kill('SIGTERM');

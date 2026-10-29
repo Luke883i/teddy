@@ -7,6 +7,7 @@ on:
       - 'tests/codespaces-origin-v42.test.mjs'
       - 'tests/codespaces-http-v42.test.mjs'
       - 'tools/falsify-codespaces-v42.mjs'
+      - 'tools/browser-codespaces-v43.mjs'
       - '.github/workflows/codespaces-origin-v42.yml'
   push:
     branches: [main, 'fix/codespaces-origin-v42']
@@ -28,3 +29,15 @@ jobs:
         run: node --test tests/provider-switch-v38.test.mjs tests/render-deployment-v35.test.mjs tests/enduser-http-v40.test.mjs
       - name: Mutate 100000 deterministic Codespaces ingress variants (no model calls)
         run: node tools/falsify-codespaces-v42.mjs
+      - name: Real Chromium + actual Teddy HTTP/SQLite through a Codespaces-equivalent header proxy
+        run: |
+          node --check tools/browser-codespaces-v43.mjs
+          node tools/browser-codespaces-v43.mjs
+      - name: Preserve the actual Chrome screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: teddy-v43-codespaces-enduser-browser
+          path: ${{ runner.temp }}/teddy-v43-codespaces-browser.png
+          if-no-files-found: ignore
+
