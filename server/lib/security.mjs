@@ -12,6 +12,20 @@ function normalizeOrigin(value){
   try{const u=new URL(String(value));if(!['http:','https:'].includes(u.protocol)||u.username||u.password||u.pathname!=='/'||u.search||u.hash)return null;return `${u.protocol}//${u.host}`.toLowerCase()}catch{return null}
 }
 function safeEqual(a,b){const aa=Buffer.from(String(a)),bb=Buffer.from(String(b));return aa.length===bb.length&&crypto.timingSafeEqual(aa,bb)}
+
+// GitHub Codespaces forwards HTTPS <codespace>-<port>.app.github.dev to a
+// loopback HTTP listener. Keep this narrowly scoped: same port, exact platform
+// suffix, optional process-owned CODESPACE_NAME, and no origin URL port.
+export function codespacesForwardedOrigin(origin,{listenPort=8787,codespaceName=process.env.CODESPACE_NAME||''}={}){
+  const normalized=normalizeOrigin(origin);
+  if(!normalized||!normalized.startsWith('https://'))return false;
+  const u=new URL(normalized);
+  if(u.port)return false;
+  const match=/^([a-z0-9](?:[a-z0-9-]*[a-z0-9])?)-([1-9][0-9]{1,4})\.app\.github\.dev$/.exec(u.hostname);
+  if(!match||Number(match[2])!==Number(listenPort))return false;
+  if(codespaceName&&match[1]!==String(codespaceName).toLowerCase())return false;
+  return true;
+}
 export function validBasicAuthorization(header,password){
   if(!password)return true;
   if(typeof header!=='string'||!header.startsWith('Basic '))return false;
@@ -27,7 +41,7 @@ export function deploymentPolicy({listenHost='127.0.0.1',publicOrigin='',authPas
   if(!masterOk)return {ok:false,error:'external_secret_master_required'};
   return {ok:true,mode:'authenticated-proxy',publicOrigin:origin,publicHost:new URL(origin).host.toLowerCase()};
 }
-export function guardRequest(req,{listenHost='127.0.0.1',allowedHosts=process.env.TEDDY_ALLOWED_HOSTS||'',allowedOrigins=process.env.TEDDY_ALLOWED_ORIGINS||'',publicOrigin=process.env.TEDDY_PUBLIC_ORIGIN||'',authPassword=process.env.TEDDY_AUTH_PASSWORD||'',csrfToken=''}={}){
+export function guardRequest(req,{listenHost='127.0.0.1',allowedHosts=process.env.TEDDY_ALLOWED_HOSTS||'',allowedOrigins=process.env.TEDDY_ALLOWED_ORIGINS||'',publicOrigin=process.env.TEDDY_PUBLIC_ORIGIN||'',authPassword=process.env.TEDDY_AUTH_PASSWORD||'',csrfToken='',listenPort=Number(process.env.TEDDY_PORT||8787),codespaceName=process.env.CODESPACE_NAME||''}={}){
   const rawHost=String(req.headers.host||'').trim().toLowerCase(),h=hostName(rawHost);
   if(!rawHost)return {ok:false,status:400,error:'host_required'};
   const explicitHosts=splitCsv(allowedHosts),normalizedPublic=normalizeOrigin(publicOrigin),publicHost=normalizedPublic?new URL(normalizedPublic).host.toLowerCase():'';
@@ -57,13 +71,19 @@ export function guardRequest(req,{listenHost='127.0.0.1',allowedHosts=process.en
       // Origin. Browser fetch metadata + a 256-bit token from authenticated,
       // same-origin GET /api/bootstrap are a second CSRF proof, NOT a CORS bypass.
       // Only hosted XHR/fetch, never navigation, cross-site or opaque origins.
-      const browserProof=!isLoopbackHost(listenHost)&&Boolean(csrfToken)&&
+      const verifiedBrowser=Boolean(csrfToken)&&
         fetchSite==='same-origin'&&
         String(req.headers['sec-fetch-mode']||'').toLowerCase()==='cors'&&
         String(req.headers['sec-fetch-dest']||'').toLowerCase()==='empty'&&
         normalized.startsWith('https://')&&
         safeEqual(req.headers['x-teddy-csrf']||'',csrfToken);
-      if(!directAllowed&&!sameHostedOrigin&&!explicitOrigins.has(normalized)&&!browserProof)return {ok:false,status:403,error:'origin_not_allowed'};
+      const browserProof=!isLoopbackHost(listenHost)&&verifiedBrowser;
+      // In Codespaces the browser Origin is HTTPS *.app.github.dev while the
+      // Node Host remains 127.0.0.1:<port>. No global Host/Origin relaxation.
+      // The browser must present the token read from this very Teddy bootstrap.
+      const codespacesProof=isLoopbackHost(listenHost)&&verifiedBrowser&&
+        codespacesForwardedOrigin(normalized,{listenPort,codespaceName});
+      if(!directAllowed&&!sameHostedOrigin&&!explicitOrigins.has(normalized)&&!browserProof&&!codespacesProof)return {ok:false,status:403,error:'origin_not_allowed'};
     }else if(fetchSite&&fetchSite!=='same-origin'&&fetchSite!=='none')return {ok:false,status:403,error:'origin_required'};
   }
   return {ok:true};
