@@ -62,7 +62,7 @@ try{
  await send('Page.enable');await send('Runtime.enable');
  await send('Page.addScriptToEvaluateOnNewDocument',{source:"const original=HTMLCanvasElement.prototype.getContext;HTMLCanvasElement.prototype.getContext=function(kind,...args){return kind==='webgl2'?null:original.call(this,kind,...args)}"});
  await send('Page.navigate',{url:'http://127.0.0.1:'+proxyPort+'/'});
- const expression=String.raw\`(async()=>{
+ const expression=String.raw`(async()=>{
   const wait=ms=>new Promise(r=>setTimeout(r,ms));
   for(let i=0;i<230&&document.querySelector('#chatForm')?.dataset.wired!=='true';i++)await wait(80);
   const form=document.querySelector('#chatForm'),input=document.querySelector('#chatInput'),bubble=document.querySelector('#teddyBubble'),text=document.querySelector('#teddyBubbleText'),feedback=document.querySelector('#chatFeedback'),selector=document.querySelector('#textProviderSelect');
@@ -99,7 +99,7 @@ try{
   await speak('spiega perché il cielo è blu','atmosfera');
   await choose('local');
   return {pass:true,turns,selected:selector.value,feedbackHidden:feedback.classList.contains('hidden')};
- })()\`;
+ })()`;
  const output=await Promise.race([send('Runtime.evaluate',{expression,awaitPromise:true,returnByValue:true}),wait(90000).then(()=>{throw Error('real Chromium timed out')})]);
  if(output.exceptionDetails)throw Error('Chromium UI error: '+(output.exceptionDetails.exception?.description||output.exceptionDetails.text));
  const proof=output.result?.value;
