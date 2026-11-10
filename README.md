@@ -3,7 +3,7 @@
 
 ## Independent entrypoint
 
-**Purpose:** a local conversational-character experiment and a controlled case study in *mutation-guided, saturation-informed AI-assisted software development*. Coding-assistant workflows repeatedly propose hypotheses, generate reproducible modelled fault vectors, test against stated oracles, inspect surviving counterexamples and stop at bounded no-novelty tails. This is an experiment in engineering feedback and falsification, **not a claim of machine learning by changing model weights, generalization or real-world proof from large mutation counts**. The local model and text UX have separate runtime requirements. **Provisional CORA-Score:** Dev_CORA **4/5** · Bonifica_CORA **2/5**; [rubric](https://github.com/Luke883i/cora/blob/main/docs/CORA_SCORE.md).
+**Purpose:** a local conversational-character experiment and a controlled case study in *mutation-guided, saturation-informed AI-assisted software development*. Coding-assistant workflows repeatedly propose hypotheses, generate reproducible modelled fault vectors, test against stated oracles, inspect surviving counterexamples and stop at bounded no-novelty tails. This is an experiment in engineering feedback and falsification, **not a claim of machine learning by changing model weights, generalization or real-world proof from large mutation counts**. The local model and text UX have separate runtime requirements.
 
 ---
 
