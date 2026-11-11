@@ -21,7 +21,7 @@ function premises(text,history){
 export function derivePremises({text='',history=[]}={}){
  const g=goal(text),{facts,rules,turns}=premises(text,history);
  const known=new Map([...facts].map(([v,t])=>[v,{depth:0,turns:[t]}]));let steps=0;
- for(let round=0;round<6;round++){let added=0;
+ for(let round=0;round<rules.length;round++){let added=0;
   for(const rule of rules){if(known.has(rule.to)||!known.has(rule.from)||known.size>=48)continue;
    const parent=known.get(rule.from);
    known.set(rule.to,{depth:parent.depth+1,turns:[...new Set([...parent.turns,rule.turn])].slice(0,12)});

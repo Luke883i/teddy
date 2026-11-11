@@ -1,0 +1,21 @@
+{
+  "schema": "teddy-cora-cognitive-dod/1",
+  "baseline": {"repository": "Luke883i/teddy", "commit": "52ce828122e342ef95f874fb384433a7f1b8645b", "tree": "ac1aff158370af328b6e9802f3c570e02fbc0d56"},
+  "objective": "Correct bounded conditional entailment, standalone routing and most-recent local context selection without promoting source tests into product or reviewer authority.",
+  "method": "CORA_SOURCE_BOUND_NONCOMPENSATORY_AND",
+  "authorization": "NONE",
+  "nodes": [
+    {"id":"D1_repository", "depends_on":[],"scope":"SOURCE", "acceptance":"Exact final PR HEAD, role declaration, original CORA source replay and unchanged owner boundaries"},
+    {"id":"D2_reasoning", "depends_on":[],"scope":"SOURCE", "acceptance":"120/120 positive, 120/120 negative BFS, max depth 24, conditional-only authority and controls"},
+    {"id":"D3_illocution", "depends_on":[],"scope":"SOURCE", "acceptance":"40/40 autonomous requests, 18/18 prefix-sensitive standalone requests, and 18/18 short anaphoric followups"},
+    {"id":"D4_context", "depends_on":[],"scope":"SOURCE", "acceptance":"newest eligible history kept, strict chronology, <=2600 chars, current question final"},
+    {"id":"D5_node24", "depends_on":[],"scope":"EXTERNAL", "acceptance":"Exact HEAD official Node24 CI and HTTP/SQLite idempotence confirmed independently"},
+    {"id":"D6_governance", "depends_on":[],"scope":"EXTERNAL", "acceptance":"Required checks, nonauthor human reviewer, merge and postmerge authorized"},
+    {"id":"D7_product", "depends_on":[],"scope":"EXTERNAL", "acceptance":"Real Qwen multi-turn evaluations and independent browser/user UX judgment"},
+    {"id":"SOURCE_CUT", "depends_on":["D1_repository","D2_reasoning","D3_illocution","D4_context","D5_node24"],"scope":"SOURCE", "acceptance":"All bounded repository/software gates hold together"},
+    {"id":"PRODUCT_CUT", "depends_on":["SOURCE_CUT","D6_governance","D7_product"],"scope":"EXTERNAL", "acceptance":"Independent product value, reviewer authority and source closure together"}
+  ],
+  "source_test": "tests/cora-cognitive-closure-v44.test.mjs",
+  "metrics_command": "node tools/cora-cognitive-metrics-v44.mjs",
+  "external_proof_default": "BLOCKED_UNOBSERVED"
+}
