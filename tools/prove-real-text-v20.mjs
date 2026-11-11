@@ -93,11 +93,11 @@ try{
   // A short question takes the deterministic route; open questions must never be faked.
   const extra=[
     {text:'sei in gamba',path:'deterministic',act:'praise'},
-    {text:'spiega in modo semplice che cos’è un contratto',path:'model',act:'followup'},
+    {text:'spiega in modo semplice che cos’è un contratto',path:'model',act:'open'},
     {text:'non mi chiamo Luca',path:'deterministic',act:'retraction'},
     {text:'come mi chiamo?',path:'deterministic',act:'name_query',matches:/non me lo|non lo ritrovo/i},
     {text:'Chiamami Elena',path:'deterministic',act:'introduction'},
-    {text:'spiega perché il cielo è blu',path:'model',act:'followup'}
+    {text:'spiega perché il cielo è blu',path:'model',act:'open'}
   ];
   const latencies=[];
   for(const item of extra){

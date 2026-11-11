@@ -10,6 +10,8 @@
 | S-02 | Contextual routing for `spiega` / `approfondisci` is triggered by an old assistant turn even if the request is complete. | `server/lib/semantic-spine.mjs` | 40 self-contained questions under four histories, 18 semantic-boundary cases and 18 short contextual follow-ups; never invent missing antecedents. |
 | S-03 | Prompt budget assigned oldest-first across last eight turns, displacing newest answer. | `server/lib/local-engines.mjs` | 12 long turns, 2600-character maximum history budget, newest retained, chronological retained subsequence, current question always final. |
 
+**Inherited HTTP acceptance alignment:** prior acceptance scripts `tools/prove-real-text-v20.mjs` and `tools/prove-ten-interactions-v26.mjs` expected `followup` for fully specified `spiega` requests. That expectation encoded S-02, not a product requirement. The two tools now require `open` while keeping the real-model path, all genuine-generation obligations, persistence, security and refusal oracles. Updating the assertions is necessary to detect behavioral regressions in the *correct* semantics; it is not permission to skip their independent HTTP tests.
+
 ## Non-compensatory DoD and checklist
 
 - [ ] **D1 / R:** original main identity and changed Git blobs pinned; no undocumented production call-path changes; project-owned artifact roles and CORA original replay still pass on final PR HEAD.
@@ -30,7 +32,7 @@ node --test tests/cora-cognitive-closure-v44.test.mjs
 npm test
 ```
 
-The metrics script records separate numerator/denominator and counterexample rows; it exits nonzero if any bounded source obligation is violated. The test file is included in the existing `npm test` suite on Node24 (and is also runnable under Node22 for limited local compatibility). Do **not** overwrite the three baseline results with candidate outputs; archive each with its source SHA. The deterministic 120+120+40+18+18 cases are finite synthetic families, not 292 independent real user sessions.
+The metrics script records separate numerator/denominator and counterexample rows; it exits nonzero if any bounded source obligation is violated. The test file is included in the existing `npm test` suite on Node24 (and is also runnable under Node22 for limited local compatibility). Do **not** overwrite the three baseline results with candidate outputs; archive each with its source SHA. The deterministic 120+120+40+18+18 cases are finite synthetic families, not 316 independent real user sessions.
 
 ## CORA / inheritance and evidence limits
 
