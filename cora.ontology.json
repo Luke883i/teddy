@@ -1,0 +1,16 @@
+{
+  "schema": "cora-ontology/1",
+  "products": [
+    {
+      "id": "teddy-conversational-character",
+      "roots": ["web", "server", "config", "scripts", "docs", "tests", "tools"],
+      "entrypoints": ["scripts/start-v36.mjs", "server/main.mjs", "web/app.js"]
+    }
+  ],
+  "software": [
+    {"id": "teddy-node-control-plane", "roots": ["server", "scripts"], "product_ids": ["teddy-conversational-character"]},
+    {"id": "teddy-browser-and-avatar", "roots": ["web"], "product_ids": ["teddy-conversational-character"]},
+    {"id": "teddy-configuration", "roots": ["config"], "product_ids": ["teddy-conversational-character"]},
+    {"id": "teddy-engineering-verification", "roots": ["tests", "tools"], "product_ids": ["teddy-conversational-character"]}
+  ]
+}

@@ -1,0 +1,72 @@
+name: CORA | Teddy source assurance (read only)
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  cora-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4 pinned
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5 pinned
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7 pinned
+        with:
+          node-version: '24.19.0'
+      - name: Bind exact reviewed commit
+        env:
+          TARGET_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+      - name: Install independent CORA at exact verified revision
+        run: |
+          git clone --quiet https://github.com/Luke883i/cora.git "$RUNNER_TEMP/cora"
+          git -C "$RUNNER_TEMP/cora" checkout --quiet --detach cbae1fae8db92d44b6ed0d91c4d4d697e7f65585
+          test "$(git -C "$RUNNER_TEMP/cora" rev-parse HEAD)" = cbae1fae8db92d44b6ed0d91c4d4d697e7f65585
+          echo "PYTHONPATH=$RUNNER_TEMP/cora/src" >> "$GITHUB_ENV"
+      - name: Native CORA commit and ontology replay
+        run: |
+          mkdir -p "$RUNNER_TEMP/teddy-cora"
+          python -m cora.cli snapshot . --revision HEAD --output "$RUNNER_TEMP/teddy-cora/snapshot.json"
+          python -m cora.cli verify-ledger "$RUNNER_TEMP/teddy-cora/snapshot.json" --repo .
+          python -m cora.cli graph . --revision HEAD --output "$RUNNER_TEMP/teddy-cora/graph.json"
+          python -m cora.cli artifact-audit . --revision HEAD --output "$RUNNER_TEMP/teddy-cora/artifacts.json"
+          python -m cora.cli verify-artifacts "$RUNNER_TEMP/teddy-cora/artifacts.json" --repo .
+          python -m cora.cli adapter-audit . --revision HEAD --output "$RUNNER_TEMP/teddy-cora/adapters.json"
+          python -m cora.cli verify-adapters "$RUNNER_TEMP/teddy-cora/adapters.json" --repo .
+          python -m cora.cli workflow-audit . --revision HEAD --output "$RUNNER_TEMP/teddy-cora/workflows.json"
+          python -m cora.cli verify-workflows "$RUNNER_TEMP/teddy-cora/workflows.json" --repo .
+          python -m cora.cli process-run . --revision HEAD --process full --output "$RUNNER_TEMP/teddy-cora/process.json"
+          python -m cora.cli verify-process "$RUNNER_TEMP/teddy-cora/process.json" --repo .
+      - name: Reject unclassified or stale committed role declarations
+        run: |
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          r=json.loads((Path(os.environ['RUNNER_TEMP'])/'teddy-cora/artifacts.json').read_text())
+          assert r['summary']['unclassified']==0, r['summary']
+          assert not r['summary']['stale_rules'], r['summary']
+          print('CORA_ARTIFACT_DECLARATIONS_SCOPED_PASS',r['summary']['total_tracked_artifacts'])
+          PY
+      - name: Supplemental JS source candidates and real negative regressions
+        run: |
+          node --check tools/cora-js-graph.mjs
+          node --experimental-vm-modules tools/cora-js-graph.mjs --revision HEAD --output "$RUNNER_TEMP/teddy-cora/js.json"
+          node --experimental-vm-modules tools/cora-js-graph.mjs --verify "$RUNNER_TEMP/teddy-cora/js.json"
+          node --experimental-vm-modules --test tests/cora-adoption.test.mjs
+      - name: Preserve scoped evidence on both success and failure
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2 pinned
+        with:
+          name: teddy-cora-source-${{ github.sha }}
+          path: ${{ runner.temp }}/teddy-cora/
+          if-no-files-found: warn
+          retention-days: 14

@@ -146,7 +146,7 @@ try{
     cdp.send('Runtime.evaluate',{expression,awaitPromise:true,returnByValue:true}),
     sleep(28000).then(()=>{throw Error('CDP WebGL skin evaluation timed out')})
   ]);
-  if(result.exceptionDetails)throw Error('Browser JavaScript exception: '+result.exceptionDetails.text);
+  if(result.exceptionDetails)throw Error('Browser JavaScript exception: '+(result.exceptionDetails.exception?.description||result.exceptionDetails.text));
   const value=result.result?.value;
   if(!value?.success)throw Error('Teddy WebGL2 fused skin not ready: '+JSON.stringify(value));
   if(!capabilityProbe&&!activationProbe){
@@ -214,7 +214,16 @@ try{
   console.log(capabilityProbe?'TEDDY_WEBGL2_CAPABILITY_PASS':activationProbe?'TEDDY_WEBGL2_SKIN_ACTIVATION_PASS':'TEDDY_V18_BROWSER_UI_AND_VISUAL_PASS',JSON.stringify(value));
 }finally{
   cdp?.ws?.close();
-  proc?.kill('SIGKILL');
+  if(proc){
+    // Chrome writes its profile asynchronously. Wait for process exit before
+    // removing it; otherwise ENOTEMPTY can mask the actual visual assertion.
+    const exited=new Promise(resolve=>{
+      if(proc.exitCode!==null||proc.signalCode!==null)resolve();
+      else proc.once('exit',resolve);
+    });
+    proc.kill('SIGKILL');
+    await Promise.race([exited,sleep(1800)]);
+  }
   await new Promise(resolve=>server.close(resolve));
-  fs.rmSync(dir,{recursive:true,force:true});
+  fs.rmSync(dir,{recursive:true,force:true,maxRetries:8,retryDelay:120});
 }
