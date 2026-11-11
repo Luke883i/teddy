@@ -1,0 +1,9 @@
+{
+  "schema": "cora-continuous-policy/1",
+  "version": 1,
+  "max_changed_paths": 128,
+  "high_risk_prefixes": [".cora", ".github/workflows", "server/lib/security.mjs", "server/lib/secrets.mjs", "server/lib/state.mjs", "scripts/start-v36.mjs", "tools/cora-js-graph.mjs"],
+  "high_risk_paths": ["AGENTS.md", "README.md", "cora.ontology.json", "cora.artifact-roles.json", "package.json", "render.yaml", "Dockerfile"],
+  "required_human_roles": ["MAINTAINER", "INDEPENDENT_SECURITY_REVIEWER"],
+  "review_processes": ["source", "history", "architecture", "debt", "verification"]
+}

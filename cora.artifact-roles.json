@@ -1,0 +1,31 @@
+{
+  "schema": "cora-artifact-roles/1",
+  "rules": [
+    {"pattern": "README.md", "roles": ["DOCUMENTATION", "PRODUCT_CONTRACT"], "rationale": "Independent product objective and operator-facing limitations."},
+    {"pattern": "AGENTS.md", "roles": ["DOCUMENTATION", "GOVERNANCE", "POLICY"], "rationale": "AI assistant review boundaries; never grants approval authority."},
+    {"pattern": "LICENSE", "roles": ["LICENSE"], "rationale": "Distribution permissions and software licensing terms."},
+    {"pattern": ".gitignore", "roles": ["POLICY"], "rationale": "Version control exclusion policy; not a proof of deletion."},
+    {"pattern": ".dockerignore", "roles": ["POLICY"], "rationale": "Container build exclusion policy for deployment."},
+    {"pattern": ".node-version", "roles": ["BUILD_METADATA"], "rationale": "Declared runtime language version for local execution."},
+    {"pattern": "Dockerfile", "roles": ["BUILD_METADATA"], "rationale": "Image packaging specification; does not certify deployment."},
+    {"pattern": "render.yaml", "roles": ["BUILD_METADATA", "POLICY"], "rationale": "External deployment declaration, not evidence of live hosting."},
+    {"pattern": "package.json", "roles": ["BUILD_METADATA", "PRODUCT_CONTRACT"], "rationale": "Node engine and package command declarations."},
+    {"pattern": "package-lock.json", "roles": ["BUILD_METADATA"], "rationale": "Committed dependency lock for repeatable package operations."},
+    {"pattern": "teddy.sh", "roles": ["ENTRYPOINT", "SOFTWARE_SOURCE"], "rationale": "Compatibility launcher with externally observable behavior."},
+    {"pattern": "config/*", "roles": ["POLICY"], "rationale": "Defaults and configuration affecting product runtime behavior."},
+    {"pattern": "server/*", "roles": ["SOFTWARE_SOURCE"], "rationale": "Node HTTP control plane and server-side model contracts."},
+    {"pattern": "server/main.mjs", "roles": ["ENTRYPOINT", "SOFTWARE_SOURCE"], "rationale": "Actual HTTP server entrypoint invoked by canonical launcher."},
+    {"pattern": "scripts/*", "roles": ["SOFTWARE_SOURCE"], "rationale": "Runtime startup, deployment and verification helpers."},
+    {"pattern": "scripts/start-v36.mjs", "roles": ["ENTRYPOINT", "SOFTWARE_SOURCE"], "rationale": "Canonical npm launcher for local and hosted contexts."},
+    {"pattern": "web/*", "roles": ["SOFTWARE_SOURCE"], "rationale": "Static UI and articulated Teddy browser runtime."},
+    {"pattern": "web/app.js", "roles": ["ENTRYPOINT", "SOFTWARE_SOURCE"], "rationale": "Browser bootstrap and user-facing orchestration entrypoint."},
+    {"pattern": "tests/*", "roles": ["TEST"], "rationale": "Executable test declarations; outcome requires run evidence."},
+    {"pattern": "tools/*", "roles": ["RELEASE_TOOL"], "rationale": "Engineering verification and mutation tools, not product evidence alone."},
+    {"pattern": "tools/cora-js-graph.mjs", "roles": ["CONTRACT_VERIFIER", "RELEASE_TOOL", "SOFTWARE_SOURCE"], "rationale": "Independent bounded lexical JS source scan with Git replay."},
+    {"pattern": "docs/*", "roles": ["DOCUMENTATION"], "rationale": "Technical documentation and historical evidence declarations."},
+    {"pattern": ".github/workflows/*", "roles": ["WORKFLOW"], "rationale": "CI workflow declarations, not proof of required-check enforcement."},
+    {"pattern": ".cora/continuous-policy.json", "roles": ["GOVERNANCE", "POLICY"], "rationale": "Candidate policy bootstrap; requires trusted base and human approval."},
+    {"pattern": "cora.ontology.json", "roles": ["ARTIFACT_INDEX", "PRODUCT_CONTRACT"], "rationale": "Explicit product and implementing software identities for CORA."},
+    {"pattern": "cora.artifact-roles.json", "roles": ["ARTIFACT_INDEX", "PRODUCT_CONTRACT"], "rationale": "Overlapping role declarations bound to committed Git bytes."}
+  ]
+}
