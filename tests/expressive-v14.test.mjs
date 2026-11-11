@@ -37,6 +37,14 @@ test('32 individually qualified semantic motion trajectories, bounded with nontr
   assert.equal(validPoseMutation({name:'dance',joint:'head',axis:1,angle:.2,phase:.5}),true);
   assert.equal(validPoseMutation({name:'dance',joint:'head',axis:1,angle:4,phase:.5}),false);
 });
+test('V45 actual pose mutation validator honours shared joint limit, rejects both sides of boundary',()=>{
+  const exemplar={name:'greet',joint:'wristR',axis:2,phase:.46};
+  for(const sign of [-1,1]){
+    assert.equal(validPoseMutation({...exemplar,angle:sign*EXPRESSIVE_JOINT_LIMIT}),true);
+    assert.equal(validPoseMutation({...exemplar,angle:sign*(EXPRESSIVE_JOINT_LIMIT+.001)}),false);
+  }
+  assert.equal(validPoseMutation({...exemplar,angle:NaN}),false);
+});
 test('routine timeline remains one continuous semantic action across sub-actions',()=>{
   const e=new MotionEngine();assert.ok(queueRoutine(e,'dance'));
   const initial=e.status();assert.ok(initial.queued.length>=3);
@@ -52,7 +60,7 @@ test('routine timeline remains one continuous semantic action across sub-actions
 test('reset restores engine absolute world pose, yaw, queue, timeline and neutral motion',()=>{
   const e=new MotionEngine();assert.ok(queueRoutine(e,'stepLeft'));
   for(let i=0;i<40;i++)e.step(1/60);
-  assert.ok(Math.abs(e.world.yaw)+Math.abs(e.world.z)>0.001);
+  assert.ok(Math.abs(e.world.x)>0.001,'lateral step must translate along x');
   const snap=e.reset();
   assert.deepEqual(snap.world,{x:0,y:0,z:0,yaw:0});
   assert.equal(snap.routine,null);

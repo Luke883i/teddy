@@ -26,6 +26,11 @@ export class MotionEngine{
     if(c.name==='walkForward'||c.name==='walkBack'){
       gaitSpeed=clamp(i*.92);gaitDirection=c.name==='walkBack'?-1:1;
       const velocity=(.11+.13*gaitSpeed)*gaitDirection;this.world.z=clampRange(this.world.z+velocity*dt,MOTION_LIMITS.worldZ);footSlip=.018+.026*gaitSpeed;
+    }else if(c.name==='sideStepLeft'||c.name==='sideStepRight'){
+      const sign=c.name==='sideStepLeft'?-1:1;
+      gaitSpeed=clamp(i*.82);gaitDirection=sign;
+      this.world.x=clampRange(this.world.x+sign*(.10+.12*gaitSpeed)*dt,MOTION_LIMITS.worldX);
+      footSlip=.018+.023*gaitSpeed;
     }else if(c.name==='turnLeft'||c.name==='turnRight'){
       const sign=c.name==='turnLeft'?1:-1;this.world.yaw=clampRange(this.world.yaw+sign*dt*(.32+.46*i),MOTION_LIMITS.yaw);
     }else if(c.name==='jump'){

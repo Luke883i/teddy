@@ -1,4 +1,5 @@
 import {BASE_ROUTINE_NAMES,COMPLEX_ROUTINE_NAMES,ROUTINES} from './choreography-v12.js';
+import {MOTION_SEMANTICS_V45,motionTuningOptions} from './motion-semantics-v45.js';
 
 export const MOTION_LABELS=Object.freeze({
   greet:'Saluta',farewell:'Arrivederci',yes:'Fai sì',noThanks:'Declina',shy:'Timido',
@@ -25,16 +26,28 @@ export function renderMotionPanel(root,{onMove,onStop,onReset,status=()=>({}),ba
   message.id='motionFeedback';message.setAttribute('role','status');message.setAttribute('aria-live','polite');
   const base=make('button','Base'),complex=make('button','Complessi'),stop=make('button','Ferma Teddy','motion-stop'),reset=make('button','Reset','motion-reset');
   for(const b of [base,complex,stop,reset])b.type='button';
-  tabs.append(base,complex,stop,reset);root.append(title,note,tabs,items,message);
+  const tuning=make('section','','motion-tuning');
+  const slider=(name,min,max,step,start)=>{
+    const label=make('label',name);const input=make('input');input.type='range';input.min=String(min);input.max=String(max);input.step=String(step);input.value=String(start);
+    const value=make('output',String(start));input.setAttribute('aria-label',name);
+    input.addEventListener('input',()=>{value.textContent=String(input.value)});
+    label.append(input,value);tuning.append(label);return input;
+  };
+  const intensity=slider('Ampiezza del gesto',.55,1,.05,.95),tempo=slider('Velocità',.7,1.4,.1,1);
+  const intent=make('p','Ogni pulsante indica il gesto che Teddy deve realizzare.','motion-intent');
+  tabs.append(base,complex,stop,reset);root.append(title,note,tabs,tuning,items,intent,message);
   function show(kind){
     base.setAttribute('aria-pressed',String(kind==='base'));complex.setAttribute('aria-pressed',String(kind==='complessi'));
     items.replaceChildren();
     for(const item of motionMenu(kind)){
       const b=make('button',item.label,'motion-option');b.type='button';b.dataset.routine=item.name;
       b.setAttribute('aria-label',item.label);
+      b.title=MOTION_SEMANTICS_V45[item.name].description;
       b.addEventListener('click',()=>{
-        const ok=onMove(item.name);
-        message.textContent=ok?`Teddy esegue: ${item.label}.`:'Teddy è occupato: premi Ferma Teddy per cambiare routine.';
+        const options=motionTuningOptions({intensity:Number(intensity.value),tempo:Number(tempo.value)});
+        const ok=onMove(item.name,options);
+        intent.textContent=MOTION_SEMANTICS_V45[item.name].description;
+        message.textContent=ok?`Teddy esegue: ${item.label}. Ampiezza ${Math.round(options.intensity*100)}%, velocità ${options.tempo.toFixed(1)}×.`:'Teddy è occupato: premi Ferma Teddy per cambiare routine.';
       });
       items.append(b);
     }
@@ -44,5 +57,5 @@ export function renderMotionPanel(root,{onMove,onStop,onReset,status=()=>({}),ba
   stop.addEventListener('click',()=>{onStop();message.textContent='Movimento interrotto.'});
   reset.addEventListener('click',()=>{onReset();message.textContent='Teddy è tornato nella posizione originale.'});
   show('base');
-  return {show,message,items,stop,reset,base,complex};
+  return {show,message,items,stop,reset,base,complex,intensity,tempo,intent};
 }

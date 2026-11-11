@@ -1,6 +1,6 @@
 // Reproducible 100M mutated kinematic parameter combinations, not 100M rendered frames.
 // Each candidate addresses a concrete authored semantic routine + joint + axis + time.
-import {EXPRESSIVE_PROFILES,BONE,sampleExpressivePose,validPoseMutation} from '../web/teddy/expressive-v14.js';
+import {EXPRESSIVE_PROFILES,BONE,EXPRESSIVE_JOINT_LIMIT,sampleExpressivePose,validPoseMutation} from '../web/teddy/expressive-v14.js';
 import {ROUTINES} from '../web/teddy/choreography-v12.js';
 import {performance} from 'node:perf_hooks';
 const N=100_000_000, names=Object.keys(EXPRESSIVE_PROFILES),bones=Object.values(BONE);
@@ -15,7 +15,7 @@ for(let i=0;i<N;i++){
   candidate.axis=(hash>>>10)%3;candidate.phase=((hash>>>12)&1023)/1023;
   candidate.angle=(((hash>>>22)&255)/255*2-1)*1.19;
   // Four invalid physical mutations against the safety contract.
-  if(variant===4)candidate.angle=1.201;
+  if(variant===4)candidate.angle=EXPRESSIVE_JOINT_LIMIT+.001;
   if(variant===5)candidate.phase=1.01;
   if(variant===6)candidate.angle=NaN;
   if(variant===7)candidate.joint='nonexistent-joint';
@@ -27,7 +27,7 @@ for(let i=0;i<N;i++){
     const clip=sampleExpressivePose(names[index],candidate.phase,((hash>>>16)&255)/255);
     if(!clip)throw Error('missing clip');
     for(const angles of Object.values(clip.joints))for(const a of angles){
-      if(!Number.isFinite(a)||Math.abs(a)>1.200001)throw Error('unsafe physical joint '+i);
+      if(!Number.isFinite(a)||Math.abs(a)>EXPRESSIVE_JOINT_LIMIT+1e-6)throw Error('unsafe physical joint '+i);
       peak=Math.max(peak,Math.abs(a));
     }
     physicalSamples++;
