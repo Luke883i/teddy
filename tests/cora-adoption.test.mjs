@@ -3,7 +3,9 @@ import assert from 'node:assert/strict';
 import {mkdtempSync,mkdirSync,writeFileSync,rmSync} from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import {execFileSync} from 'node:child_process';
+import {execFileSync,spawnSync} from 'node:child_process';
+import {fileURLToPath} from 'node:url';
+import vm from 'node:vm';
 import {inspectCommittedJs,verifyCommittedJs} from '../tools/cora-js-graph.mjs';
 const git=(root,...args)=>execFileSync('git',['-C',root,...args],{encoding:'utf8'}).trim();
 function fixture(callback){
@@ -16,6 +18,18 @@ function fixture(callback){
     return callback(root);
   }finally{rmSync(root,{recursive:true,force:true})}
 }
+// The inherited npm test runner does not pass Node's experimental VM-parser flag.
+// Re-execute the genuine seven tests in a pinned child interpreter instead of
+// skipping them or silently replacing the parser with a misleading lexical scan.
+if(typeof vm.SourceTextModule!=='function'){
+  test('execute CORA ESM parser regressions under explicit VM parser flag',()=>{
+    const env={...process.env}; delete env.NODE_TEST_CONTEXT;
+    const child=spawnSync(process.execPath,['--no-warnings','--experimental-vm-modules','--test',fileURLToPath(import.meta.url)],{
+      cwd:path.resolve(fileURLToPath(new URL('..',import.meta.url))),env,encoding:'utf8',timeout:30000,maxBuffer:2*1024*1024});
+    assert.equal(child.status,0,child.error?.message||child.stderr+'\n'+child.stdout);
+    assert.match(child.stdout,/# pass 7\b/);
+  });
+}else{
 test('source report is bound to the exact Git commit, not editable worktree',()=>fixture(root=>{
   const baseline=inspectCommittedJs(root);assert.equal(baseline.coverage.literal_candidates,1);
   assert.equal(baseline.coverage.missing_literal_relative,0);
@@ -66,3 +80,5 @@ test('parsing imports never executes a top-level side effect',()=>fixture(root=>
   assert.equal(x.coverage.literal_candidates,1);
   assert.equal(x.coverage.runtime,'NOT_RUN');
 }));
+
+}
