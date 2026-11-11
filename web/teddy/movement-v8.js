@@ -70,6 +70,11 @@ function groundGroups(groups,state){
   const support=Math.min(...ys),dy=clamp(FLOOR_Y-support,-.085,.085),out=preMultiplyAll(groups,M4.translate(0,dy,0));
   const corrected=support+dy,penetration=Math.max(0,FLOOR_Y-corrected);return {groups:out,correction:dy,penetration};
 }
+export function motionRoutineSpin(state,reducedMotion=false){
+  // The gesture amplitude controls arms; a piroetta always turns 360 degrees
+  // at normal motion preference. Reduced-motion preference declassifies it.
+  return state?.routine?.name==='spin'?Math.PI*2*Math.max(0,Math.min(1,state.routine.phase))*(reducedMotion?.25:1):0;
+}
 function emitFrame(detail){if(typeof window!=='undefined'&&typeof window.dispatchEvent==='function'&&typeof CustomEvent==='function')window.dispatchEvent(new CustomEvent('teddy:motion-frame',{detail}));}
 function engineFor(renderer){return renderer.__motionEngine||(renderer.__motionEngine=new MotionEngine({reducedMotion:renderer.reduced}));}
 
@@ -83,7 +88,11 @@ export function installMovementEngine(){
     const state=engine.step(dt||1/60);this.locomotion={speed:state.gaitSpeed,direction:state.gaitDirection};
     let groups=originalGroups.call(this,sec,p);groups=state.routine?applyExpressivePose(groups,state.routine):applySemanticAction(groups,state,sec);
     const grounded=groundGroups(groups,state);groups=grounded.groups;
-    const w=state.world,worldDelta=compose(M4.translate(w.x,w.y,w.z),M4.rotY(w.yaw));groups=preMultiplyAll(groups,worldDelta);
+    const w=state.world;
+    // A piroetta is a visible full-body turn, not the previous left+right cancellation.
+    // Preserve bounded authoritative world yaw; the transient 2π spin is a local pose.
+    const spin=motionRoutineSpin(state,this.reduced);
+    const worldDelta=compose(M4.translate(w.x,w.y,w.z),M4.rotY(w.yaw+spin));groups=preMultiplyAll(groups,worldDelta);
     this.__motionGround={correction:grounded.correction,penetration:grounded.penetration,floorY:FLOOR_Y};
     emitFrame({...state,ground:this.__motionGround});return groups;
   };

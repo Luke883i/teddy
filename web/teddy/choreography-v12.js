@@ -10,9 +10,9 @@ export const ROUTINES=Object.freeze({
   applaud:sequence('waveLeft','waveRight'), stretch:sequence('raiseLeftArm','raiseRightArm'),
   pointLeft:sequence('raiseLeftArm','turnLeft'), pointRight:sequence('raiseRightArm','turnRight'),
   march:sequence('walkForward','walkBack'), retreat:sequence('walkBack','nod'),
-  approach:sequence('walkForward','waveRight'), pivot:sequence('turnLeft','turnRight'),
+  approach:sequence('walkForward','waveRight'), pivot:sequence('turnLeft','turnLeft'),
   sway:sequence('turnLeft','turnRight','turnLeft'), bounce:sequence('jump','nod'),
-  stepLeft:sequence('turnLeft','walkForward'), stepRight:sequence('turnRight','walkForward'),
+  stepLeft:sequence('sideStepLeft'), stepRight:sequence('sideStepRight'),
   balanceLeft:sequence('liftLeftLeg','nod'), balanceRight:sequence('liftRightLeg','nod'),
   warmup:sequence('raiseLeftArm','raiseRightArm','jump'), coolDown:sequence('nod'),
   salute:sequence('raiseRightArm'), bow:sequence('nod'),
@@ -23,12 +23,12 @@ export const ROUTINES=Object.freeze({
 });
 export const BASE_ROUTINE_NAMES=Object.freeze(Object.keys(ROUTINES).filter(n=>n!=='dance'&&n!=='lightningBolt'));
 export const COMPLEX_ROUTINE_NAMES=Object.freeze(['dance','lightningBolt']);
-export function expandRoutine(name,{intensity=.7,source='runtime'}={}){
+export function expandRoutine(name,{intensity=.7,tempo=1,source='runtime'}={}){
   if(typeof name!=='string'||!Object.hasOwn(ROUTINES,name))return null;
   const out=[];
   function visit(key,depth){
     if(depth>4||out.length>32)return false;
-    if(!Object.hasOwn(ROUTINES,key)){const command=sanitizeMotionIntent({name:key,intensity,source,reason:'routine:'+name});if(!command)return false;out.push(command);return true;}
+    if(!Object.hasOwn(ROUTINES,key)){const base=sanitizeMotionIntent({name:key,intensity,source,reason:'routine:'+name});if(!base)return false;const safeTempo=Number.isFinite(tempo)?Math.max(.7,Math.min(1.4,tempo)):1;const command=sanitizeMotionIntent({...base,duration:base.duration/safeTempo});out.push(command);return true;}
     return ROUTINES[key].every(child=>visit(child,depth+1));
   }
   if(!visit(name,0)||out.length>32)return null;
