@@ -1,7 +1,7 @@
 // Exact 50,000,000 deterministic kinematic mutation candidates, three physical scales.
 // It is not a surrogate for image/video render mutation.
 import {performance} from 'node:perf_hooks';
-import {EXPRESSIVE_PROFILES,BONE,sampleExpressivePose} from '../web/teddy/expressive-v14.js';
+import {EXPRESSIVE_PROFILES,BONE,EXPRESSIVE_JOINT_LIMIT,sampleExpressivePose} from '../web/teddy/expressive-v14.js';
 import {MOTION_DYNAMICS_V15,MOTION_LAYERS_V15} from '../web/teddy/motion-dynamics-v15.js';
 import {MUTATION_TIERS_V15,CHAIN_PAIRS_V15,validateLocalMotion,validateIntermediateMotion,validateGlobalMotion,envelopeSafetySummary} from '../web/teddy/motion-falsifiers-v15.js';
 
@@ -19,7 +19,9 @@ for(let i=0;i<N;i++){
   if(tier===0){
     candidate.bone=bones[(hash>>>7)&15];candidate.axis=(hash>>>22)%3;
     candidate.phase=((hash>>>11)&1023)/1023;
-    candidate.angle=invalid?1.201:(((hash>>>20)&255)/255*2-1)*1.17;
+    // A negative mutant must be OUTSIDE the current joint envelope, not merely
+    // above a superseded legacy threshold (V45 widened the envelope to 1.55).
+    candidate.angle=invalid?EXPRESSIVE_JOINT_LIMIT+.001:(((hash>>>20)&255)/255*2-1)*1.17;
     accepted=validateLocalMotion(candidate);
   }else if(tier===1){
     const pair=CHAIN_PAIRS_V15[(hash>>>7)&7];
@@ -40,7 +42,7 @@ for(let i=0;i<N;i++){
   if((i&2047)===0){
     const pose=sampleExpressivePose(name,((hash>>>7)&1023)/1023,(hash&255)/255);
     for(const angles of Object.values(pose.joints))for(const v of angles){
-      if(!Number.isFinite(v)||Math.abs(v)>1.200001)throw Error('nonfinite or unsafe mesh pose '+i);
+      if(!Number.isFinite(v)||Math.abs(v)>EXPRESSIVE_JOINT_LIMIT+1e-6)throw Error('nonfinite or unsafe mesh pose '+i);
       peak=Math.max(peak,Math.abs(v));
     }
     physicalSamples++;
