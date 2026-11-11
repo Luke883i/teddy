@@ -66,7 +66,9 @@ export function classifyInteraction(text,history=[]){
   for(const [act,re] of social)if(re.test(simple))return {act};
   const extension=extendedSocialAct(simple);if(extension)return {act:extension};
   // An incomplete follow-up is a context request, never a fresh generic greeting.
-  const followup=/^(?:perché|perche|come mai|e quindi|e allora|spiega|approfondisci|continua)(?:\s|$)/u.test(simple);
+  // Only an explicitly underspecified imperative can inherit the previous turn.
+  // 'spiega il punto di vista...' and 'spiega la risposta immunitaria' are new topics.
+  const followup=/^(?:perché|perche|come mai|e quindi|e allora|continua)(?:\s|$)/u.test(simple) || /^(?:spiega|approfondisci)(?:\s+(?:questo|quello|meglio|ancora|il punto|la risposta|questo passaggio))?$/u.test(simple);
   const caution=/\b(?:oggi|adesso|attualmente|ultima notizia|prezzo|certezza|sicuro|medicina|legge|diagnosi|fonti)\b/u.test(simple);
   return {act:followup&&history.some(t=>t?.role==='assistant')?'followup':'open',caution};
 }
