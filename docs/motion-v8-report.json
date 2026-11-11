@@ -7,20 +7,22 @@
     "uniqueByConstruction": true
   },
   "families": {
-    "stand": 71429,
-    "walkForward": 71429,
-    "walkBack": 71429,
-    "turnLeft": 71429,
-    "turnRight": 71429,
-    "raiseLeftArm": 71429,
-    "raiseRightArm": 71429,
-    "waveLeft": 71429,
-    "waveRight": 71428,
-    "liftLeftLeg": 71428,
-    "liftRightLeg": 71428,
-    "jump": 71428,
-    "nod": 71428,
-    "boltPose": 71428
+    "stand": 62500,
+    "walkForward": 62500,
+    "walkBack": 62500,
+    "sideStepLeft": 62500,
+    "sideStepRight": 62500,
+    "turnLeft": 62500,
+    "turnRight": 62500,
+    "raiseLeftArm": 62500,
+    "raiseRightArm": 62500,
+    "waveLeft": 62500,
+    "waveRight": 62500,
+    "liftLeftLeg": 62500,
+    "liftRightLeg": 62500,
+    "jump": 62500,
+    "nod": 62500,
+    "boltPose": 62500
   },
   "invariants": [
     "finite-state",
@@ -64,8 +66,8 @@
       0.38
     ]
   },
-  "sourceDigest": "d8937605aa6a7149ad0b4b12df70a925e4c51311e27ed01bd5e7589defa41097",
-  "digest": "7e112640b02bf3f40e0a9ed31bfc14331c8b8a4f32081884d102f7241a1d82a7",
+  "sourceDigest": "3768e2a3b526c6bc5a963d33247a0d422a10fce8417cf2135e3f755f45515d87",
+  "digest": "e8c96d0d3ed11d143b0a0e4801d7ee724db06df475f28cefb492a24483bc8151",
   "definition": {
     "syntheticScenarioSpace": true,
     "physicalBrowserRenders": false,
