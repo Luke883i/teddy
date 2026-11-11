@@ -57,6 +57,19 @@ test('all keyframe boundaries have continuous speed, unlike a segmented start-st
     }
   }
 });
+test('V45 joint-envelope boundary is accepted, while +/- out-of-envelope real mutants are rejected',()=>{
+  const base={name:'greet',bone:'wristR',axis:2,phase:.62};
+  for(const sign of [-1,1]){
+    assert.equal(validateLocalMotion({...base,angle:sign*EXPRESSIVE_JOINT_LIMIT}),true);
+    assert.equal(validateLocalMotion({...base,angle:sign*(EXPRESSIVE_JOINT_LIMIT+.001)}),false);
+  }
+  for(const name of names){
+    assert.equal(validateLocalMotion({...base,name,angle:EXPRESSIVE_JOINT_LIMIT+.001}),false,name);
+  }
+  const pose=sampleExpressivePose('greet',.16,1);
+  for(const angle of Object.values(pose.joints).flat())
+    assert.ok(Number.isFinite(angle)&&Math.abs(angle)<=EXPRESSIVE_JOINT_LIMIT+1e-6);
+});
 test('six bilateral joint envelope families bury accessory pads inside nearby limb volumes',()=>{
   assert.deepEqual(envelopeSafetySummary(),{ok:true,kinds:6,sides:2,material:'opaque'});
   const parts=buildTeddyArchetype().parts;

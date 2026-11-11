@@ -37,6 +37,14 @@ test('32 individually qualified semantic motion trajectories, bounded with nontr
   assert.equal(validPoseMutation({name:'dance',joint:'head',axis:1,angle:.2,phase:.5}),true);
   assert.equal(validPoseMutation({name:'dance',joint:'head',axis:1,angle:4,phase:.5}),false);
 });
+test('V45 actual pose mutation validator honours shared joint limit, rejects both sides of boundary',()=>{
+  const exemplar={name:'greet',joint:'wristR',axis:2,phase:.46};
+  for(const sign of [-1,1]){
+    assert.equal(validPoseMutation({...exemplar,angle:sign*EXPRESSIVE_JOINT_LIMIT}),true);
+    assert.equal(validPoseMutation({...exemplar,angle:sign*(EXPRESSIVE_JOINT_LIMIT+.001)}),false);
+  }
+  assert.equal(validPoseMutation({...exemplar,angle:NaN}),false);
+});
 test('routine timeline remains one continuous semantic action across sub-actions',()=>{
   const e=new MotionEngine();assert.ok(queueRoutine(e,'dance'));
   const initial=e.status();assert.ok(initial.queued.length>=3);
