@@ -1,0 +1,62 @@
+name: teddy-motion-intent-v45
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: teddy-motion-intent-v45-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  physical-kinematics:
+    name: 32 intention contracts / 3.2m physical mutants
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.19.0
+      - name: Source-bound rig, menu, intent and pelt regressions
+        run: |
+          node --test tests/motion-semantics-v45.test.mjs tests/motion-physical-pelt-v45.test.mjs
+          node --test tests/expressive-v14.test.mjs tests/choreography-v12.test.mjs tests/motion-silhouette-v15.test.mjs
+      - name: Actually transform 6.4m articulated poses in 3.2m variants (100k per label)
+        run: |
+          mkdir -p "$RUNNER_TEMP/teddy-motion-v45"
+          node tools/motion-physical-falsify-v45.mjs --count 100000 --output "$RUNNER_TEMP/teddy-motion-v45/physical-100k.json"
+          node -e "const r=require(process.argv[1]);if(r.totalRoutines!==32||r.perRoutine!==100000||r.totalPhysicalMutants!==3200000||r.totalActualKinematicPoses!==6400000||r.passedAtDefault!==32||!r.allFinite||r.rows.some(x=>x.mutations!==100000||x.nonfinite))process.exit(1);console.log('TEDDY_V45_32x100K_ACTUAL_KINEMATICS_PASS')" "$RUNNER_TEMP/teddy-motion-v45/physical-100k.json"
+      - name: Upload original physical rig receipts
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: teddy-v45-physical-100k-${{ github.sha }}
+          path: ${{ runner.temp }}/teddy-motion-v45/
+          if-no-files-found: warn
+          retention-days: 14
+  actual-browser:
+    name: 32 real UI clicks / WebGL2 screenshot review
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.19.0
+      - name: Real Chromium CDP, production CSP and 32 labeled gestures
+        run: |
+          node --check tools/browser-motion-intent-v45.mjs
+          node tools/browser-motion-intent-v45.mjs
+      - name: Upload 32 genuine browser frames and scoped manifest
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: teddy-v45-browser-gestures-${{ github.sha }}
+          path: artifacts/motion-intent-v45/
+          if-no-files-found: warn
+          retention-days: 14
