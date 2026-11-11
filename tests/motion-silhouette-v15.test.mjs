@@ -6,7 +6,7 @@ import {refinePartV71} from '../web/teddy/refinement-v7.js';
 import {cinematicPart,installCinematicV11} from '../web/teddy/cinematic-v11.js';
 import {JOINT_ENVELOPES_V15,finishJointEnvelope,verifyJointEnvelope,envelopeKind} from '../web/teddy/silhouette-v15.js';
 import {MOTION_DYNAMICS_V15,MOTION_LAYERS_V15,kineticLayer} from '../web/teddy/motion-dynamics-v15.js';
-import {EXPRESSIVE_PROFILES,sampleExpressivePose} from '../web/teddy/expressive-v14.js';
+import {EXPRESSIVE_PROFILES,EXPRESSIVE_JOINT_LIMIT,sampleExpressivePose} from '../web/teddy/expressive-v14.js';
 import {validateLocalMotion,validateIntermediateMotion,validateGlobalMotion,envelopeSafetySummary,CHAIN_PAIRS_V15} from '../web/teddy/motion-falsifiers-v15.js';
 import {TeddyRenderer} from '../web/teddy/render.js';
 import {installTeddyRefinement} from '../web/teddy/refinement-v7.js';
@@ -30,7 +30,7 @@ test('continuous motion is finite, rests at both ends, and keeps 120 Hz angular 
       for(const [joint,a] of Object.entries(s.joints)){
         const b=last.joints[joint]||[0,0,0];
         for(let axis=0;axis<3;axis++){
-          assert.ok(Number.isFinite(a[axis])&&Math.abs(a[axis])<=1.2000001,name);
+          assert.ok(Number.isFinite(a[axis])&&Math.abs(a[axis])<=EXPRESSIVE_JOINT_LIMIT+1e-7,name);
           max=Math.max(max,Math.abs(a[axis]-b[axis]));peak=Math.max(peak,Math.abs(a[axis]));
         }
       }

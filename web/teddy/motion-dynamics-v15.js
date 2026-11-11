@@ -57,6 +57,6 @@ export function sampleKineticJoint(frames,code,axis,phase,style){
   const phaseOffset=layer==='local'?.46:layer==='intermediate'?.15:0;
   const axisGain=axis===2?1:axis===0?.52:.30;
   const wave=Math.sin(T*(style.beats*p-phaseOffset)+style.skew*T)*envelope*displacement*axisGain;
-  return clamp(v+wave,-1.2,1.2);
+  return clamp(v+wave,-1.55,1.55);
 }
 export function styleForMotion(name){return Object.hasOwn(MOTION_DYNAMICS_V15,name)?MOTION_DYNAMICS_V15[name]:null}

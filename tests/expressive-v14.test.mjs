@@ -52,7 +52,7 @@ test('routine timeline remains one continuous semantic action across sub-actions
 test('reset restores engine absolute world pose, yaw, queue, timeline and neutral motion',()=>{
   const e=new MotionEngine();assert.ok(queueRoutine(e,'stepLeft'));
   for(let i=0;i<40;i++)e.step(1/60);
-  assert.ok(Math.abs(e.world.yaw)+Math.abs(e.world.z)>0.001);
+  assert.ok(Math.abs(e.world.x)>0.001,'lateral step must translate along x');
   const snap=e.reset();
   assert.deepEqual(snap.world,{x:0,y:0,z:0,yaw:0});
   assert.equal(snap.routine,null);
