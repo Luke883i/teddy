@@ -95,6 +95,32 @@ export class StateStore{
     if(!this.conversationExists(id))return [];
     return this.db.prepare('SELECT t.id,t.role,t.text,t.created_at,t.conversation_id FROM turns t WHERE t.conversation_id=? ORDER BY t.id DESC LIMIT ?').all(id,Math.min(24,Math.max(1,Number(limit)||12))).reverse();
   }
+  // Bounded cursor scan of explicit candidate events within this conversation only.
+  // The original 256-row cap caused false amnesia. A reached budget is reported
+  // to the planner as uncertainty instead of falsely claiming no name exists.
+  conversationNameEvidence(id,{pageSize=128,maxRows=10240}={}){
+    if(!this.conversationExists(id))return [];
+    const page=Math.min(256,Math.max(1,Number(pageSize)||128));
+    const budget=Math.min(10240,Math.max(1,Number(maxRows)||10240));
+    const statement=this.db.prepare(`SELECT id,role,text,conversation_id FROM turns
+      WHERE conversation_id=? AND role='user' AND id < ? AND (
+        text LIKE 'mi chiamo %' OR text LIKE 'in realt% mi chiamo %' OR
+        text LIKE 'chiamami %' OR text LIKE 'preferisco che tu mi chiami %' OR
+        text LIKE 'non mi chiamo %' OR text LIKE 'non chiamarmi %' OR
+        text LIKE 'non usare pi% il nome %'
+      ) ORDER BY id DESC LIMIT ?`);
+    const events=[];let cursor=Number.MAX_SAFE_INTEGER,complete=false;
+    while(events.length<budget){
+      const batch=statement.all(id,cursor,Math.min(page,budget-events.length));
+      events.push(...batch);
+      if(batch.length<Math.min(page,budget-events.length+batch.length)){complete=true;break}
+      cursor=batch.at(-1).id;
+    }
+    // When the budget is exactly exhausted, do not claim that all evidence
+    // was searched: a single lower row can still revoke the conclusion.
+    events.reverse();events.complete=complete;
+    return events;
+  }
   // All-or-nothing: even if SQLite fails between the two turns, nothing is shown as committed.
   commitTextTurn({conversationId=null,text,reply,receipt,requestId=null}={}){
     if(typeof text!=='string'||!text.trim()||typeof reply!=='string'||!reply.trim()
@@ -125,7 +151,7 @@ export class StateStore{
     }catch(e){try{this.db.exec('ROLLBACK')}catch{};throw e}
   }
   semanticReceipts(id){return this.db.prepare('SELECT receipt_json FROM semantic_receipts WHERE conversation_id=? ORDER BY id').all(id).map(r=>JSON.parse(r.receipt_json))}
-  history(limit=100,beforeId=null){const count=Math.min(500,Math.max(1,Number(limit)||100)),cursor=Number(beforeId),base='SELECT t.id,t.role,t.text,t.created_at,c.id conversation_id FROM turns t JOIN conversations c ON c.id=t.conversation_id';return (Number.isSafeInteger(cursor)&&cursor>0?this.db.prepare(base+' WHERE t.id < ? ORDER BY t.id DESC LIMIT ?').all(cursor,count):this.db.prepare(base+' ORDER BY t.id DESC LIMIT ?').all(count)).reverse()}
+  history(limit=100,beforeId=null){const count=Math.min(500,Math.max(1,Number(limit)||100)),cursor=Number(beforeId),base="SELECT t.id,t.role,t.text,t.created_at,c.id conversation_id,c.ended_at, CASE WHEN t.role='user' THEN 'user' WHEN EXISTS (SELECT 1 FROM semantic_receipts s WHERE s.assistant_turn_id=t.id AND s.conversation_id=t.conversation_id) THEN 'receipt_backed' ELSE 'legacy_unattested' END origin FROM turns t JOIN conversations c ON c.id=t.conversation_id";return (Number.isSafeInteger(cursor)&&cursor>0?this.db.prepare(base+' WHERE t.id < ? ORDER BY t.id DESC LIMIT ?').all(cursor,count):this.db.prepare(base+' ORDER BY t.id DESC LIMIT ?').all(count)).reverse()}
   addMemory(text,salience=.5){const n=Number(salience),safe=Number.isFinite(n)?Math.min(1,Math.max(0,n)):.5;const r=this.db.prepare('INSERT INTO memories(text,salience,created_at) VALUES(?,?,?)').run(String(text).slice(0,4000),safe,new Date().toISOString());return Number(r.lastInsertRowid)}
   listMemories(limit=500){return this.db.prepare('SELECT id,text,salience,created_at FROM memories ORDER BY salience DESC,id DESC LIMIT ?').all(Math.min(500,Math.max(1,Number(limit)||500)))}
   deleteMemory(id){this.db.prepare('DELETE FROM memories WHERE id=?').run(Number(id))}

@@ -1,6 +1,7 @@
 // Teddy v24: bounded, reproducible semantic control plane. Not a truth oracle or a second LLM.
 // Data from past turns and memories never becomes an instruction source.
 import crypto from 'node:crypto';
+import {writtenPersonaSeed} from './written-persona-v48.mjs';
 import {chooseNovelVariant,semanticDepth,semanticDepthDirective} from './semantic-adaptation-v29.mjs';
 import {buildCognitiveWorkspace,workspaceDirective} from './cognitive-workspace-v31.mjs';
 import {groundedTurn} from './grounded-reasoner-v32.mjs';
@@ -73,7 +74,7 @@ export function classifyInteraction(text,history=[]){
   return {act:followup&&history.some(t=>t?.role==='assistant')?'followup':'open',caution};
 }
 function pick(choices,seed,history){return chooseNovelVariant(choices,hash(seed),history)}
-export function planSemanticTurn({text,history=[],memories=[],conversationId=null,requestId=null}={}){
+export function planSemanticTurn({text,history=[],memories=[],nameEvidence=null,persona=null,conversationId=null,requestId=null}={}){
   if(typeof text!=='string'||!text.trim()||text.length>2000)throw Object.assign(new Error('semantic_input_invalid'),{code:'semantic_input_invalid'});
   const recent=Array.isArray(history)?history.filter(t=>['user','assistant'].includes(t?.role)&&typeof t.text==='string').slice(-12):[];
   const classification=classifyInteraction(text,recent);
@@ -87,12 +88,12 @@ export function planSemanticTurn({text,history=[],memories=[],conversationId=nul
   const selectedAct=goal.completeQuestion&&classification.act==='followup'?'open':classification.act;
   const act=reasoning?.act||(selectedAct==='clarify'&&workspace.antecedent?'clarify_context':selectedAct);
   // Use first-turn request identity to diversify wording without changing replay semantics.
-  const seed=[conversationId||requestId||'new',recent.length,act,lexical(text)].join('|');
+  const seed=[conversationId||requestId||'new',recent.length,act,lexical(text),...(persona?[writtenPersonaSeed(persona)]:[])].join('|');
   let reply=reasoning?.reply||null;
   if(act==='introduction')reply=`Piacere, ${classification.name}. Terrò a mente il tuo nome in questa conversazione.`;
   else if(act==='name_query'){
-    const name=mostRecentDeclaredName(recent);
-    reply=name?`Ti chiami ${name}.`:'Non lo ritrovo qui. Come preferisci che ti chiami?';
+    const name=mostRecentDeclaredName(Array.isArray(nameEvidence)?nameEvidence:recent);
+    reply=name?`Ti chiami ${name}.`:Array.isArray(nameEvidence)&&nameEvidence.complete===false?'Non posso verificare il tuo nome in tutta la cronologia. Come preferisci che ti chiami?':'Non lo ritrovo qui. Come preferisci che ti chiami?';
   }else if(adultVariants[act])reply=chooseNovelVariant(adultVariants[act],hash(seed),recent);
   else if(templates[act])reply=pick(templates[act],seed,recent);
   const extended=/\b(?:spiega|analizza|perché|perche|confronta|approfondisci|argomenta|passaggi)\b/iu.test(text);

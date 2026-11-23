@@ -12,9 +12,10 @@ import { normalizeProvider, providerCapabilities } from './lib/provider.mjs';
 import { createLocalService } from './lib/local-service.mjs';
 import {openAITextTurn,normalizeUserText} from './lib/text-service.mjs';
 import {vireonixTextTurn} from './lib/vireonix-text.mjs';
-import {planSemanticTurn,finalizeSemanticReply,semanticReceipt} from './lib/semantic-spine.mjs';
+import {planSemanticTurn,classifyInteraction,finalizeSemanticReply,semanticReceipt} from './lib/semantic-spine.mjs';
 import {semanticReadback} from './lib/cognitive-workspace-v31.mjs';
 import {scopeExplicitPremises} from './lib/goal-ledger-v33.mjs';
+import {writtenPersonaDirective} from './lib/written-persona-v48.mjs';
 import { createRuntimeManager } from './lib/runtime-manager.mjs';
 import { recoverManagedRuntime, recoveryCooldown, shouldAttemptRuntimeRecovery } from './lib/runtime-recovery.mjs';
 
@@ -35,7 +36,7 @@ const VOICE_ENDPOINTS_ENABLED=process.env.TEDDY_ENABLE_VOICE_ENDPOINTS==='1';
 const secrets=new SecretStore(HOME,{externalMasterKey:MASTER_KEY}),state=new StateStore(HOME),defaults=readDefaultConfig(ROOT);let config=mergeConfig(defaults,state.getSetting('config')||{});
 let PROVIDER=normalizeProvider(state.getSetting('text_provider')||DEFAULT_PROVIDER);
 const runtimeEnv={...process.env,TEDDY_TEXT_ONLY:process.env.TEDDY_TEXT_ONLY??'1',TEDDY_RUNTIME_AUTOINSTALL:process.env.TEDDY_RUNTIME_AUTOINSTALL??'1'};
-const realtimeGate=new RealtimeBackoff();let closing=false,runtime=createRuntimeManager({home:HOME,env:runtimeEnv}),localService=createLocalService({runtime}),textBusy=false;
+const realtimeGate=new RealtimeBackoff();let closing=false,runtime=createRuntimeManager({home:HOME,env:runtimeEnv}),localService=createLocalService({runtime}),modelBusy=false,activeTextTurns=0;const activeConversations=new Set(),activeRequestIds=new Set();
 let runtimeWasReady=false,runtimeRecovery=null,recoveryCycles=0,nextRecoveryAt=0;
 if(PROVIDER==='local')runtime.start().catch(e=>console.error('local runtime:',e?.code||e?.message||e));
 const localAvailability=()=>runtime.status();
@@ -77,7 +78,7 @@ async function route(req,res){
   if(req.method==='GET'&&u.pathname==='/api/ready'){const a=PROVIDER==='local'?localAvailability():bootstrap().availability;return json(res,a.ready?200:503,a)}
   if(req.method==='GET'&&u.pathname==='/api/bootstrap')return json(res,200,bootstrap());
   if(req.method==='PUT'&&u.pathname==='/api/provider'){
-    if(textBusy)return json(res,409,{error:'provider_switch_busy'});
+    if(activeTextTurns>0)return json(res,409,{error:'provider_switch_busy'});
     const body=await readJson(req,1000);
     if(!['local','vireonix','openai'].includes(body?.provider))return json(res,400,{error:'provider_invalid'});
     const before=PROVIDER;
@@ -120,19 +121,27 @@ async function route(req,res){
         if(committed)return json(res,200,committed);
       }catch(error){return json(res,error?.status||400,{error:error?.code||'text_request_id_invalid'})}
     }
-    if(textBusy)return json(res,429,{error:'text_turn_in_progress'});
+    const existing=typeof body?.conversationId==='string'?body.conversationId:'';
+    if(existing&&!state.conversationExists(existing))return json(res,409,{error:'conversation_not_found'});
+    // Prevent overlapping turns in the same thread or under the same requestId.
+    // Different conversations may still commit deterministic replies while
+    // inference is busy elsewhere. Model generation stays single-flight.
+    if((existing&&activeConversations.has(existing))||(requestedId&&activeRequestIds.has(requestedId)))
+      return json(res,429,{error:'text_turn_in_progress'});
     const controller=new AbortController(),abort=()=>controller.abort();
     req.once('aborted',abort);res.once('close',()=>{if(!res.writableEnded)abort()});
-    textBusy=true;
+    activeTextTurns++;if(existing)activeConversations.add(existing);if(requestedId)activeRequestIds.add(requestedId);
+    let ownsModel=false;
     try{
-      const existing=typeof body?.conversationId==='string'?body.conversationId:'';
-      if(existing&&!state.conversationExists(existing))return json(res,409,{error:'conversation_not_found'});
       // Step 0: only this conversation contributes recent user/assistant messages.
       const history=existing?state.conversationHistory(existing,12):[];
       const memories=state.listMemories(6);
       // Step 1: deterministic planning is separate from model-generated language.
-      const plan=planSemanticTurn({text,history,memories,conversationId:existing,requestId:requestedId});
+      const nameEvidence=existing&&classifyInteraction(text,history).act==='name_query'
+        ?state.conversationNameEvidence(existing):null;
+      const plan=planSemanticTurn({text,history,memories,nameEvidence,persona:config.persona,conversationId:existing,requestId:requestedId});
       const useRules=plan.path==='deterministic';
+      if(!useRules){if(modelBusy)return json(res,429,{error:'text_turn_in_progress'});modelBusy=true;ownsModel=true;}
       // Social rules work before installation; open questions still require a real ready provider.
       if(!useRules&&PROVIDER==='local'&&!localService.status().textReady)return json(res,503,{error:'local_text_not_ready'});
       let apiKey;
@@ -142,11 +151,12 @@ async function route(req,res){
       }
       const effectivePlan=useRules?plan:{...plan,path:'model'};
       const relevantHistory=scopeExplicitPremises(history,{currentText:text}).turns;
-      const modelContext={turns:relevantHistory,memories,semanticDirective:plan.directive,extended:plan.extended,depth:plan.depth,workspace:plan.workspace};
+      const personaDirective=writtenPersonaDirective(config);
+      const modelContext={turns:relevantHistory,memories,semanticDirective:plan.directive,personaDirective,extended:plan.extended,depth:plan.depth,workspace:plan.workspace};
       let raw=useRules?plan.reply:PROVIDER==='local'
         ?await localService.text(text,{signal:controller.signal,context:modelContext})
         :PROVIDER==='vireonix'
-        ?await vireonixTextTurn({text,semanticDirective:plan.directive,history:relevantHistory,signal:controller.signal})
+        ?await vireonixTextTurn({text,semanticDirective:plan.directive,personaDirective,history:relevantHistory,signal:controller.signal})
         :await openAITextTurn({apiKey,text,config,memories,history:relevantHistory,semanticDirective:plan.directive,signal:controller.signal,model:process.env.TEDDY_OPENAI_TEXT_MODEL||'gpt-4.1-mini'});
       if(controller.signal.aborted)return;
       const mockModel=PROVIDER==='local'&&localService.status().mock;
@@ -167,7 +177,7 @@ async function route(req,res){
       if(controller.signal.aborted)return;
       const code=e?.code||'text_turn_failed';
       return json(res,e?.status>=400&&e?.status<600?e.status:502,{error:code,...(Number.isInteger(e?.upstreamStatus)?{upstreamStatus:e.upstreamStatus}:{})});
-    }finally{textBusy=false;req.off('aborted',abort)}
+    }finally{if(ownsModel)modelBusy=false;if(existing)activeConversations.delete(existing);if(requestedId)activeRequestIds.delete(requestedId);activeTextTurns--;req.off('aborted',abort)}
   }
   if(req.method==='PUT'&&u.pathname==='/api/config'){const patch=await readJson(req,64_000);config=mergeConfig(defaults,patch);state.setSetting('config',config);return json(res,200,{config})}
   if(req.method==='POST'&&u.pathname==='/api/secrets/openai'){const body=await readJson(req,4_000);try{const secret=secrets.saveOpenAI(body.key);realtimeGate.clear();return json(res,200,{secret})}catch{return json(res,400,{error:'invalid_api_key'})}}

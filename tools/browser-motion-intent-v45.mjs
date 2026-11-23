@@ -72,6 +72,9 @@ try{
   await cdp.send('Page.enable');await cdp.send('Runtime.enable');
   await cdp.send('Page.addScriptToEvaluateOnNewDocument',{source:`
     window.__teddyVisualQuality=null;
+    window.__teddyBrowserErrors=[];
+    window.addEventListener('error',e=>{window.__teddyBrowserErrors.push(String(e.message||e.error||'script error'))});
+    window.addEventListener('unhandledrejection',e=>{window.__teddyBrowserErrors.push(String(e.reason||'unhandled rejection'))});
     window.addEventListener('teddy:visual-quality',e=>{window.__teddyVisualQuality=e.detail||null});
     window.__teddySkinV16=null;
     window.addEventListener('teddy:implicit-skin-ready',e=>{window.__teddySkinV16=e.detail});
@@ -85,7 +88,10 @@ try{
         return {ok:true,skin:window.__teddySkinV16,backend:document.querySelector('#visualBackend')?.textContent};
       await new Promise(r=>setTimeout(r,80));
     }
-    return {ok:false,skin:window.__teddySkinV16,nav:!!document.querySelector('button[data-view="movimento"]')?.onclick};
+    return {ok:false,skin:window.__teddySkinV16,nav:!!document.querySelector('button[data-view="movimento"]')?.onclick,
+      readyState:document.readyState,href:location.href,errors:window.__teddyBrowserErrors||[],
+      backend:document.querySelector('#visualBackend')?.textContent||'',
+      state:document.querySelector('#stateText')?.textContent||''};
   })()`,awaitPromise:true,returnByValue:true});
   const setup=ready.result?.value;
   if(!setup?.ok||setup.skin?.mode!=='anatomical-pelt-v21'||setup.skin?.components!==6||
@@ -105,10 +111,15 @@ try{
       const seen=[],listener=e=>{if(e.detail?.routine?.name===${safe})seen.push(e.detail?.routine?.phase??0)};
       window.addEventListener('teddy:motion-frame',listener);
       b.click();
-      await new Promise(r=>setTimeout(r,720));
+      // WebGL2 and CPU scheduling are variable on CI. Wait for the same four
+      // observed physical frames, not an arbitrary 720 ms elapsed time.
+      // The bounded deadline remains a hard failure for a stalled gesture.
+      const started=performance.now(),deadline=started+6500;
+      while(seen.length<4&&performance.now()<deadline)await new Promise(r=>setTimeout(r,100));
       window.removeEventListener('teddy:motion-frame',listener);
       const q=window.__teddyVisualQuality;
-      return {ok:seen.length>=4,name:${safe},frames:seen.length,firstPhase:seen[0]??null,lastPhase:seen.at(-1)??null,
+      return {ok:seen.length>=4,name:${safe},frames:seen.length,waitedMs:Math.round(performance.now()-started),
+        frameDeadlineMs:6500,firstPhase:seen[0]??null,lastPhase:seen.at(-1)??null,
         realWebGL2:!!document.createElement('canvas').getContext('webgl2'),
         visualQuality:q?{pass:q.pass,stretch:q.maxEdgeStretch,zeroCrossRegionTriangles:q.zeroCrossRegionTriangles}:null,
         feedback:document.querySelector('#motionFeedback')?.textContent||''};
