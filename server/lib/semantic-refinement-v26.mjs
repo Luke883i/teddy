@@ -15,7 +15,7 @@ export function selfDeclaredName(text){
   return null;
 }
 export function mostRecentDeclaredName(history=[]){
-  const records=Array.isArray(history)?history.slice(-256):[];
+  const records=Array.isArray(history)?history:[];
   const revoked=new Set();
   const fold=name=>name.normalize('NFKC').toLocaleLowerCase('it-IT');
   for(let i=records.length-1;i>=0;i--){

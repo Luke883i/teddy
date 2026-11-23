@@ -95,19 +95,31 @@ export class StateStore{
     if(!this.conversationExists(id))return [];
     return this.db.prepare('SELECT t.id,t.role,t.text,t.created_at,t.conversation_id FROM turns t WHERE t.conversation_id=? ORDER BY t.id DESC LIMIT ?').all(id,Math.min(24,Math.max(1,Number(limit)||12))).reverse();
   }
-  // A read-only projection from this conversation's committed user turns.
-  // Explicit names are not global memories and do not require a new schema.
-  // SQL prefilter is intentionally broad; the planner validates declarations
-  // and retractions before using them as evidence. Bound to 256 candidates.
-  conversationNameEvidence(id){
+  // Bounded cursor scan of explicit candidate events within this conversation only.
+  // The original 256-row cap caused false amnesia. A reached budget is reported
+  // to the planner as uncertainty instead of falsely claiming no name exists.
+  conversationNameEvidence(id,{pageSize=128,maxRows=10240}={}){
     if(!this.conversationExists(id))return [];
-    return this.db.prepare(`SELECT id,role,text,conversation_id FROM turns
-      WHERE conversation_id=? AND role='user' AND (
+    const page=Math.min(256,Math.max(1,Number(pageSize)||128));
+    const budget=Math.min(10240,Math.max(1,Number(maxRows)||10240));
+    const statement=this.db.prepare(`SELECT id,role,text,conversation_id FROM turns
+      WHERE conversation_id=? AND role='user' AND id < ? AND (
         text LIKE 'mi chiamo %' OR text LIKE 'in realt% mi chiamo %' OR
         text LIKE 'chiamami %' OR text LIKE 'preferisco che tu mi chiami %' OR
         text LIKE 'non mi chiamo %' OR text LIKE 'non chiamarmi %' OR
         text LIKE 'non usare pi% il nome %'
-      ) ORDER BY id DESC LIMIT 256`).all(id).reverse();
+      ) ORDER BY id DESC LIMIT ?`);
+    const events=[];let cursor=Number.MAX_SAFE_INTEGER,complete=false;
+    while(events.length<budget){
+      const batch=statement.all(id,cursor,Math.min(page,budget-events.length));
+      events.push(...batch);
+      if(batch.length<Math.min(page,budget-events.length+batch.length)){complete=true;break}
+      cursor=batch.at(-1).id;
+    }
+    // When the budget is exactly exhausted, do not claim that all evidence
+    // was searched: a single lower row can still revoke the conclusion.
+    events.reverse();events.complete=complete;
+    return events;
   }
   // All-or-nothing: even if SQLite fails between the two turns, nothing is shown as committed.
   commitTextTurn({conversationId=null,text,reply,receipt,requestId=null}={}){
