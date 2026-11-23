@@ -7,7 +7,7 @@ import { StateStore } from './lib/state.mjs';
 import { readDefaultConfig, mergeConfig } from './lib/config.mjs';
 import { buildRealtimeSession, relayRealtime, classifyRealtimeFailure, RealtimeBackoff, validateRealtimeEndpoint } from './lib/realtime.mjs';
 import { json, readBody, readJson, requireContentType, serveStatic } from './lib/http.mjs';
-import { deploymentPolicy, guardRequest, SECURITY_HEADERS } from './lib/security.mjs';
+import { deploymentPolicy, guardRequest, bootstrapCsrfToken, SECURITY_HEADERS } from './lib/security.mjs';
 import { normalizeProvider, providerCapabilities } from './lib/provider.mjs';
 import { createLocalService } from './lib/local-service.mjs';
 import {openAITextTurn,normalizeUserText} from './lib/text-service.mjs';
@@ -40,13 +40,13 @@ const realtimeGate=new RealtimeBackoff();let closing=false,runtime=createRuntime
 let runtimeWasReady=false,runtimeRecovery=null,recoveryCycles=0,nextRecoveryAt=0;
 if(PROVIDER==='local')runtime.start().catch(e=>console.error('local runtime:',e?.code||e?.message||e));
 const localAvailability=()=>runtime.status();
-const bootstrap=()=>({
+const bootstrap=(req=null)=>({
   version:VERSION,
   ai:{provider:PROVIDER,...providerCapabilities(PROVIDER),...(PROVIDER==='local'?localService.status():{})},
   availability:PROVIDER==='local'?localAvailability():{availability:PROVIDER==='vireonix'?'remoto':'not_applicable',ready:PROVIDER==='vireonix'||secrets.status().configured,installPhase:'not_applicable',engines:{}},
   secret:secrets.status(),config,
   persistence:{engine:'sqlite',durable:true,wal:true},
-  security:{mode:policy.mode,authenticated:!!AUTH_PASSWORD,publicOrigin:policy.publicOrigin,csrfToken:CSRF_TOKEN},
+  security:{mode:policy.mode,authenticated:!!AUTH_PASSWORD,publicOrigin:policy.publicOrigin,csrfToken:req?bootstrapCsrfToken(req,{listenHost:HOST,listenPort:PORT,csrfToken:CSRF_TOKEN}):CSRF_TOKEN},
   interaction:{mode:'text',voiceUi:false,voiceEndpoints:VOICE_ENDPOINTS_ENABLED},
   render:{backend:'client-negotiated',webgl2:true,canvas2dFallback:true,webgpuOptional:true,presenceRig:'v4',morphology:'v5',anatomy:'v6',correctedDepth:true,audioReactive:false,adaptiveNoise:true},
   install:{id:String(state.getSetting('install_id')).slice(0,8)}
@@ -76,7 +76,7 @@ async function route(req,res){
   if(req.method==='GET'&&u.pathname==='/api/version')return json(res,200,{service:'teddy',revision:/^[0-9a-f]{40}$/i.test(process.env.RENDER_GIT_COMMIT||'')?process.env.RENDER_GIT_COMMIT:'unbound',version:VERSION,mode:policy.mode});
   if(req.method==='GET'&&u.pathname==='/api/availability'){const a=PROVIDER==='local'?localAvailability():bootstrap().availability;return json(res,200,a)}
   if(req.method==='GET'&&u.pathname==='/api/ready'){const a=PROVIDER==='local'?localAvailability():bootstrap().availability;return json(res,a.ready?200:503,a)}
-  if(req.method==='GET'&&u.pathname==='/api/bootstrap')return json(res,200,bootstrap());
+  if(req.method==='GET'&&u.pathname==='/api/bootstrap')return json(res,200,bootstrap(req));
   if(req.method==='PUT'&&u.pathname==='/api/provider'){
     if(activeTextTurns>0)return json(res,409,{error:'provider_switch_busy'});
     const body=await readJson(req,1000);
