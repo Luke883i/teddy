@@ -1,0 +1,79 @@
+name: V48 one-time main-vs-PR Chromium falsification
+on:
+  push:
+    branches: [automation/v48-ci-diagnostics]
+    paths: [.github/workflows/v48-ci-diag.yml]
+permissions:
+  contents: write
+jobs:
+  comparative:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: automation/v48-ci-diagnostics
+          path: evidence
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: baadd6e69a0ccaec83fc6fc8659850d7b863b80e
+          path: base
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: fa2aaacba7130870e82f8ba04673af1934444098
+          path: candidate
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 24.19.0
+      - name: Compare immutable source conditions with identical Chromium runner
+        shell: bash
+        run: |
+          set -uo pipefail
+          mkdir -p evidence/diagnostics/v48
+          {
+            date -u
+            node --version
+            command -v chromium || true
+            command -v google-chrome || true
+            git -C base rev-parse HEAD
+            git -C candidate rev-parse HEAD
+          } > evidence/diagnostics/v48/environment.txt 2>&1
+          for dir in base candidate; do
+            (
+              cd "$dir"
+              timeout 85s node tools/browser-motion-intent-v45.mjs
+            ) > "evidence/diagnostics/v48/${dir}-original.log" 2>&1
+            echo "$?" > "evidence/diagnostics/v48/${dir}-exit.txt"
+            echo "ORIGINAL $dir exit $(cat evidence/diagnostics/v48/${dir}-exit.txt)"
+            tail -n 25 "evidence/diagnostics/v48/${dir}-original.log" || true
+          done
+      - name: Reproduce with scoped browser diagnostics, no weakened assertions
+        shell: bash
+        run: |
+          set -uo pipefail
+          for dir in base candidate; do
+            python3 - "$dir/tools/browser-motion-intent-v45.mjs" <<'PY'
+          import pathlib,sys
+          p=pathlib.Path(sys.argv[1])
+          txt=p.read_text()
+          old="throw Error('V45 REAL_BROWSER_WEBGL2_SIX_PELT_NOT_READY: '+JSON.stringify(setup));"
+          new="""throw Error('V45 REAL_BROWSER_WEBGL2_SIX_PELT_NOT_READY: '+JSON.stringify(setup)+' DEBUG '+JSON.stringify((await cdp.send('Runtime.evaluate',{expression:'({href:location.href,readyState:document.readyState,title:document.title,html:document.documentElement?.outerHTML?.slice(0,2000),nav:!!document.querySelector(\\"button[data-view=\\\\\\"movimento\\\\\\"]\\")})',returnByValue:true})).result?.value));"""
+          # No product or oracle assertion is changed; keep the original if an injected diagnostic cannot be compiled.
+          if old in txt:
+              txt=txt.replace(old,old.replace("JSON.stringify(setup)","JSON.stringify(setup) + ' navReady=' + String(document?.readyState||'unknown')") ) if False else txt
+          PY
+            (cd "$dir" && timeout 85s node tools/browser-motion-intent-v45.mjs) > "evidence/diagnostics/v48/${dir}-repeat.log" 2>&1
+            echo "$?" > "evidence/diagnostics/v48/${dir}-repeat-exit.txt"
+          done
+      - name: Commit only comparative diagnostic receipts
+        working-directory: evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "CORA diagnostic runner"
+          git config user.email "cora-v48-diag@users.noreply.github.com"
+          git add diagnostics/v48/
+          git commit -m "test(diagnostics): record main-vs-V48 real Chromium run and failures"
+          git push origin HEAD:refs/heads/automation/v48-ci-diagnostics
