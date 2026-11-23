@@ -1,0 +1,6 @@
+Mon Nov 23 16:13:11 UTC 2026
+v24.19.0
+/usr/bin/chromium
+/usr/bin/google-chrome
+baadd6e69a0ccaec83fc6fc8659850d7b863b80e
+fa2aaacba7130870e82f8ba04673af1934444098
