@@ -1,0 +1,64 @@
+name: V48 Chromium baseline differential v2
+on:
+  push:
+    branches: [automation/v48-ci-diagnostics]
+    paths: [.github/workflows/v48-ci-diag-fixed.yml]
+permissions:
+  contents: write
+jobs:
+  differential:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: automation/v48-ci-diagnostics
+          path: evidence
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: baadd6e69a0ccaec83fc6fc8659850d7b863b80e
+          path: base
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: fa2aaacba7130870e82f8ba04673af1934444098
+          path: candidate
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 24.19.0
+      - name: Capture same-runner Chromium receipts even for failed oracles
+        shell: bash
+        run: |
+          set -uo pipefail
+          mkdir -p evidence/diagnostics/v48
+          {
+            date -u
+            node --version
+            command -v chromium || true
+            command -v google-chrome || true
+            git -C base rev-parse HEAD
+            git -C candidate rev-parse HEAD
+          } > evidence/diagnostics/v48/environment.txt 2>&1
+          set +e
+          for dir in base candidate; do
+            (
+              cd "$dir"
+              timeout 75s node tools/browser-motion-intent-v45.mjs
+            ) > "evidence/diagnostics/v48/${dir}-original.log" 2>&1
+            code=$?
+            echo "$code" > "evidence/diagnostics/v48/${dir}-exit.txt"
+            echo "ORIGINAL $dir exit $code"
+            tail -n 28 "evidence/diagnostics/v48/${dir}-original.log" || true
+          done
+          exit 0
+      - name: Commit comparative evidence, without modifying product/tests
+        working-directory: evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "CORA diagnostic runner"
+          git config user.email "cora-v48-diag@users.noreply.github.com"
+          git add diagnostics/v48/
+          git commit -m "test(diagnostics): record identical-runner main-vs-V48 browser results"
+          git push origin HEAD:refs/heads/automation/v48-ci-diagnostics
