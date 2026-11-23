@@ -1,0 +1,89 @@
+name: V50 one-time origin repair transplant
+on:
+  push:
+    branches: [automation/codespaces-v50-transfer]
+    paths: [.github/workflows/v50-import-once.yml]
+permissions:
+  contents: write
+concurrency:
+  group: teddy-v50-origin-transplant
+  cancel-in-progress: false
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: automation/codespaces-v50-transfer
+          path: transfer
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: fix/codespaces-origin-binding-v50
+          path: target
+          fetch-depth: 0
+          persist-credentials: true
+      - name: Verify pinned main and byte-exact two-commit patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat transfer/.cora/v50-transfer/part{00..04} > "$RUNNER_TEMP/v50-series.b64"
+          echo "7df03b4faeb08f21588a3583370b27221952af320caf96683417cce0a9524f8f  $RUNNER_TEMP/v50-series.b64" | sha256sum --check
+          base64 --decode "$RUNNER_TEMP/v50-series.b64" | gzip --decompress > "$RUNNER_TEMP/v50-series.patch"
+          echo "34fb1e4c0822f1e4b1925879c042cd1fc68f04b454316266a2d122cc5dcb7ea7  $RUNNER_TEMP/v50-series.patch" | sha256sum --check
+          test "$(git -C target rev-parse HEAD)" = "34a631e6fc567793f0bd558fe120c21fd6d9c67b"
+          test "$(git -C target rev-parse HEAD:server/lib/security.mjs)" = "f8438084644a1cb75b2e1a200a89db67eee436c6"
+          test "$(git -C target rev-parse HEAD:server/main.mjs)" = "72b647271d3500192de332a5eac21baf1b5ad99e"
+          test "$(git -C target rev-parse HEAD:web/app.js)" = "f50ee38cd2b360223f30447f4f2283b753ee50e9"
+          test "$(git -C target rev-parse HEAD:web/fetch-with-csrf-v41.js)" = "a40d565f4d4861538523b266922aaba1b3098538"
+      - name: Materialize exactly two reversible semantic commits
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd target
+          git config user.name "CORA V50 origin repair"
+          git config user.email "cora-v50@users.noreply.github.com"
+          git am "$RUNNER_TEMP/v50-series.patch"
+          test "$(git rev-list --count 34a631e6fc567793f0bd558fe120c21fd6d9c67b..HEAD)" = 2
+          git diff --check HEAD~2..HEAD
+          git log -2 --oneline
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '24.19.0'
+      - name: Target-native V50 and legacy security/proxy tests
+        working-directory: target
+        run: |
+          node --test tests/codespaces-origin-v50.test.mjs tests/codespaces-http-v50.test.mjs tests/codespaces-origin-v42.test.mjs tests/codespaces-http-v42.test.mjs tests/dual-provider-proxy-v41.test.mjs tests/csrf-recovery-v41.test.mjs tests/render-deployment-v35.test.mjs tests/provider-switch-v38.test.mjs tests/provider-switch-http-v38.test.mjs
+          node tools/falsify-codespaces-v42.mjs
+      - name: All native contract tests in target Node24
+        working-directory: target
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --test tests/*.test.mjs
+      - name: Genuine Chromium and Teddy HTTP/SQLite browser compatibility
+        working-directory: target
+        run: node tools/browser-codespaces-v43.mjs
+      - name: No tracked test-report drift and explicit patch readback
+        working-directory: target
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --exit-code
+          git diff --cached --exit-code
+          test "$(git diff --name-only HEAD~2 HEAD | wc -l)" = 8
+          git log -2 --format='%H %s'
+      - name: Push tested exact two-commit chain
+        working-directory: target
+        shell: bash
+        run: |
+          set -euo pipefail
+          git push origin HEAD:refs/heads/fix/codespaces-origin-binding-v50
+      - name: Keep original browser screenshot evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: teddy-v50-import-browser-evidence
+          path: ${{ runner.temp }}/teddy-v43-codespaces-browser.png
+          if-no-files-found: ignore
