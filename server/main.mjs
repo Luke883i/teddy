@@ -15,6 +15,7 @@ import {vireonixTextTurn} from './lib/vireonix-text.mjs';
 import {planSemanticTurn,classifyInteraction,finalizeSemanticReply,semanticReceipt} from './lib/semantic-spine.mjs';
 import {semanticReadback} from './lib/cognitive-workspace-v31.mjs';
 import {scopeExplicitPremises} from './lib/goal-ledger-v33.mjs';
+import {writtenPersonaDirective} from './lib/written-persona-v48.mjs';
 import { createRuntimeManager } from './lib/runtime-manager.mjs';
 import { recoverManagedRuntime, recoveryCooldown, shouldAttemptRuntimeRecovery } from './lib/runtime-recovery.mjs';
 
@@ -133,7 +134,7 @@ async function route(req,res){
       // Step 1: deterministic planning is separate from model-generated language.
       const nameEvidence=existing&&classifyInteraction(text,history).act==='name_query'
         ?state.conversationNameEvidence(existing):null;
-      const plan=planSemanticTurn({text,history,memories,nameEvidence,conversationId:existing,requestId:requestedId});
+      const plan=planSemanticTurn({text,history,memories,nameEvidence,persona:config.persona,conversationId:existing,requestId:requestedId});
       const useRules=plan.path==='deterministic';
       // Social rules work before installation; open questions still require a real ready provider.
       if(!useRules&&PROVIDER==='local'&&!localService.status().textReady)return json(res,503,{error:'local_text_not_ready'});
@@ -144,11 +145,12 @@ async function route(req,res){
       }
       const effectivePlan=useRules?plan:{...plan,path:'model'};
       const relevantHistory=scopeExplicitPremises(history,{currentText:text}).turns;
-      const modelContext={turns:relevantHistory,memories,semanticDirective:plan.directive,extended:plan.extended,depth:plan.depth,workspace:plan.workspace};
+      const personaDirective=writtenPersonaDirective(config);
+      const modelContext={turns:relevantHistory,memories,semanticDirective:plan.directive,personaDirective,extended:plan.extended,depth:plan.depth,workspace:plan.workspace};
       let raw=useRules?plan.reply:PROVIDER==='local'
         ?await localService.text(text,{signal:controller.signal,context:modelContext})
         :PROVIDER==='vireonix'
-        ?await vireonixTextTurn({text,semanticDirective:plan.directive,history:relevantHistory,signal:controller.signal})
+        ?await vireonixTextTurn({text,semanticDirective:plan.directive,personaDirective,history:relevantHistory,signal:controller.signal})
         :await openAITextTurn({apiKey,text,config,memories,history:relevantHistory,semanticDirective:plan.directive,signal:controller.signal,model:process.env.TEDDY_OPENAI_TEXT_MODEL||'gpt-4.1-mini'});
       if(controller.signal.aborted)return;
       const mockModel=PROVIDER==='local'&&localService.status().mock;
