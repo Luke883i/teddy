@@ -47,8 +47,16 @@ function sameOriginBrowserFetch(headers={}){
 // header is an untrusted *claim*; it is not a bypass. The response is protected
 // by the browser's same-origin policy and Teddy's no-CORS security headers.
 export function bootstrapCsrfToken(req,{listenHost='127.0.0.1',listenPort=8787,csrfToken=''}={}){
-  if(!isLoopbackHost(listenHost)||String(req?.method||'').toUpperCase()!=='GET'||
-     !isLoopbackHost(req?.headers?.host||'')||!sameOriginBrowserFetch(req.headers))return csrfToken;
+  if(!isLoopbackHost(listenHost)||!isLoopbackHost(req?.headers?.host||'')||
+     !sameOriginBrowserFetch(req.headers))return csrfToken;
+  const method=String(req?.method||'').toUpperCase();
+  if(method==='PUT'){
+    // After a successful provider switch the UI adopts this bootstrap object.
+    // Never replace its valid origin-scoped capability with the global one.
+    const bound=codespacesOriginToken(csrfToken,req.headers.origin,{listenPort});
+    return bound&&safeEqual(req.headers['x-teddy-csrf']||'',bound)?bound:csrfToken;
+  }
+  if(method!=='GET')return csrfToken;
   const claimed=req.headers['x-teddy-page-origin'];
   const requested=codespacesOriginToken(csrfToken,claimed,{listenPort});
   if(!requested||req.headers.origin&&normalizeOrigin(req.headers.origin)!==normalizeOrigin(claimed))return csrfToken;

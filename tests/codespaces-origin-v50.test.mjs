@@ -23,6 +23,7 @@ test('V50: signed bootstrap origin capability repairs both chat and provider swi
  assert.ok(token&&token!==secret&&token.length>=40);
  assert.equal(token,codespacesOriginToken(secret,actual,{listenPort:8787}));
  for(const method of ['POST','PUT'])assert.deepEqual(guardRequest(request(method,{'x-teddy-csrf':token}),policy),{ok:true});
+ assert.equal(bootstrapCsrfToken(request('PUT',{'x-teddy-csrf':token}),policy),token);
 });
 test('V50: cross-Origin token replay and copied legacy token remain denied',()=>{
  const token=bootstrapCsrfToken(boot(),policy);

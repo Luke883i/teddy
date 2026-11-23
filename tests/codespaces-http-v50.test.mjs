@@ -55,6 +55,7 @@ test('real HTTP/SQLite: screenshot Codespaces origin with stale server alias can
   assert.equal(qwen.status,200,JSON.stringify(qwen));assert.equal(qwen.data.semantic.path,'model');assert.match(qwen.data.reply,/Ho sentito/);
   const switched=await call('/api/provider','PUT',{provider:'vireonix'},csrf);
   assert.equal(switched.status,200,JSON.stringify(switched));assert.equal(switched.data.ai.provider,'vireonix');
+  assert.equal(switched.data.security.csrfToken,csrf['x-teddy-csrf'],'switch response must not downgrade scoped browser CSRF');
   const remote=await call('/api/text/turn','POST',{text:'spiega perché il cielo è blu',requestId:crypto.randomUUID()},csrf);
   assert.equal(remote.status,200,JSON.stringify(remote));assert.equal(remote.data.provider,'vireonix');assert.match(remote.data.reply,/atmosfera/);
   const history=await call('/api/history?limit=20');assert.equal(history.status,200);assert.equal(history.data.turns.length,6);

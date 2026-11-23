@@ -87,7 +87,7 @@ async function route(req,res){
     catch(error){console.error('provider persistence:',error?.code||'error');return json(res,503,{error:'provider_persistence_failed'})}
     PROVIDER=body.provider;
     if(PROVIDER==='local'&&before!=='local')runtime.start().catch(e=>console.error('local runtime:',e?.code||e?.message||e));
-    return json(res,200,bootstrap());
+    return json(res,200,bootstrap(req));
   }
   if(req.method==='GET'&&u.pathname==='/api/local/status')return json(res,200,localService.status());
   if(req.method==='POST'&&u.pathname==='/api/runtime/retry'){
