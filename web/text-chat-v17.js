@@ -5,6 +5,7 @@ import {requestProviderSwitch,explainProviderSwitchFailure} from './provider-swi
 import {comicGeometry,minimumThinkingMs,settleThinking} from './dialogue-pacing-v29.js';
 import {cognitiveMotionIntent} from './teddy/cognitive-motion-v31.js';
 import {historySelection} from './history-session-v48.js';
+import {historicalSpeaker,historicalReplyVerified} from './history-origin-v48.js';
 // Teddy v21: HTTP-backed conversation, persistent paginated history, comic reply placement.
 // No synthetic dialogue. The bubble displays only text returned from /api/text/turn or /api/history.
 export function installTextChat({boot,getAvailability,getConversationId,setConversationId,showProblem,showKeyDialog,setState}){
@@ -89,14 +90,14 @@ export function installTextChat({boot,getAvailability,getConversationId,setConve
     bubbleReadAll.classList.toggle('hidden',!overflow);
     bubbleReadAll.setAttribute('aria-hidden',String(!overflow));
   }
-  function showBubble(text,conversationId=null){
+  function showBubble(text,conversationId=null,meta={origin:'receipt_backed'}){
     if(typeof text!=='string'||!text.trim())return;
     lastBubbleConversationId=conversationId||getConversationId();
     positionBalloon(text.length);
     bubbleText.textContent=text;
     bubble.classList.remove('is-thinking','hidden');
     bubble.setAttribute('aria-busy','false');
-    bubble.setAttribute('aria-label','Ultima risposta di Teddy');
+    bubble.setAttribute('aria-label',meta.origin==='legacy_unattested'?'Testo storico di origine non attestata':'Ultima risposta di Teddy');
     bubbleText.scrollTop=0;
     refreshBubbleOverflow();
     requestAnimationFrame(refreshBubbleOverflow);
@@ -118,9 +119,9 @@ export function installTextChat({boot,getAvailability,getConversationId,setConve
     if(typeof text!=='string'||!text.trim()||!['user','assistant'].includes(role))return;
     if(id!=null){if(seenIds.has(id))return;seenIds.add(id)}
     const item=document.createElement(role==='assistant'?'button':'article');
-    if(role==='assistant'){item.type='button';item.setAttribute('aria-label','Riapri questa conversazione e rileggi Teddy');item.addEventListener('click',()=>{if(busy)return;if(conversationId){explicitSessionChoice=true;const selected=historySelection({conversation_id:conversationId,ended_at:meta.ended_at??null});setConversationId(selected.conversationId);if(selected.readOnly)setFeedback('Conversazione archiviata: puoi rileggerla; il prossimo messaggio inizierà una nuova chat.')}showBubble(text,conversationId);input.focus()})}
-    item.className='chat-message '+role;item.dataset.conversationId=conversationId||'';item.dataset.readOnly=String(meta.ended_at!=null);
-    const who=document.createElement('small');who.textContent=role==='user'?'Tu':'Teddy';
+    if(role==='assistant'){item.type='button';item.setAttribute('aria-label','Riapri questa conversazione e rileggi Teddy');item.addEventListener('click',()=>{if(busy)return;if(conversationId){explicitSessionChoice=true;const selected=historySelection({conversation_id:conversationId,ended_at:meta.ended_at??null});setConversationId(selected.conversationId);if(selected.readOnly)setFeedback('Conversazione archiviata: puoi rileggerla; il prossimo messaggio inizierà una nuova chat.')}showBubble(text,conversationId,meta);input.focus()})}
+    item.className='chat-message '+role;item.dataset.conversationId=conversationId||'';item.dataset.readOnly=String(meta.ended_at!=null);item.dataset.origin=meta.origin||'legacy_unattested';
+    const who=document.createElement('small');who.textContent=historicalSpeaker({role,origin:meta.origin});
     const message=document.createElement('p');message.textContent=text;
     item.append(who,message);log.append(item);
     historyEmpty.classList.add('hidden');log.scrollTop=log.scrollHeight;
@@ -182,7 +183,7 @@ export function installTextChat({boot,getAvailability,getConversationId,setConve
       if(body.requestId!==requestId)throw Object.assign(new Error('text_request_identity_mismatch'),{code:'text_request_identity_mismatch'});
       setConversationId(body.conversationId);
       pendingRequest=null;recoveryHint=null;
-      append('user',text,null,body.conversationId);append('assistant',body.reply,null,body.conversationId);
+      append('user',text,null,body.conversationId);append('assistant',body.reply,null,body.conversationId,{origin:'receipt_backed'});
       showBubble(body.reply,body.conversationId);
       // Embodiment is strictly downstream of the genuine persisted HTTP answer.
       const reducedMotion=window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches===true;
