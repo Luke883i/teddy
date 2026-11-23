@@ -133,6 +133,37 @@ jobs:
         run: node tools/mutate-motion-v15.mjs
       - name: mutate 1 million SDF skin and topology candidates
         run: node tools/mutate-implicit-v16.mjs
+      - name: mutate 100 million semantic kinematic parameters
+        run: node tools/mutate-expressive-v14.mjs
+      - name: saturate 1m movement scenarios
+        run: node tools/simulate-motion-v8.mjs --full
+      - name: kill 1m motion mutations
+        run: node tools/mutate-motion-v8.mjs --full
+      - name: verify converged evidence
+        run: |
+          node -e "const r=require('./docs/motion-v8-report.json');if(r.identity.scenarios!==1000000||r.unsafe!==0||r.runtime.unsafe!==0||r.runtime.frames<1000000||r.invariants.length<18)process.exit(1)"
+          node -e "const r=require('./docs/motion-v8-mutation-report.json');if(r.identity.mutations!==1000000||r.identity.critical!==1000000||r.killed!==1000000||r.survivors!==0||r.unsafeBase!==0)process.exit(1)"
+          git diff --exit-code -- docs/motion-v8-report.json docs/motion-v8-mutation-report.json
+  webgl:
+    name: motion / strict WebGL2 capability and visible quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      # A fresh GitHub runner isolates SwiftShader GPU state from CPU saturation and
+      # repeated earlier headless Chrome launches. All original GPU oracles remain mandatory.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.19.0
+      - name: install and check native GPU browser oracles
+        run: |
+          set -euo pipefail
+          npm ci --ignore-scripts
+          node --check tools/browser-implicit-smoke-v16.mjs
+          node --check tools/browser-visual-v18.mjs
+          node --check tools/browser-face-v17.mjs
       - name: require actual WebGL2 SwiftShader capability in headless Chrome
         run: node tools/browser-implicit-smoke-v16.mjs --probe-capability
       - name: prove fused skin initialization and watertight topology in real Chrome
@@ -172,14 +203,3 @@ jobs:
           retention-days: 14
       - name: prove expressive face in real WebGL2 Chrome under production CSP
         run: node tools/browser-face-v17.mjs
-      - name: mutate 100 million semantic kinematic parameters
-        run: node tools/mutate-expressive-v14.mjs
-      - name: saturate 1m movement scenarios
-        run: node tools/simulate-motion-v8.mjs --full
-      - name: kill 1m motion mutations
-        run: node tools/mutate-motion-v8.mjs --full
-      - name: verify converged evidence
-        run: |
-          node -e "const r=require('./docs/motion-v8-report.json');if(r.identity.scenarios!==1000000||r.unsafe!==0||r.runtime.unsafe!==0||r.runtime.frames<1000000||r.invariants.length<18)process.exit(1)"
-          node -e "const r=require('./docs/motion-v8-mutation-report.json');if(r.identity.mutations!==1000000||r.identity.critical!==1000000||r.killed!==1000000||r.survivors!==0||r.unsafeBase!==0)process.exit(1)"
-          git diff --exit-code -- docs/motion-v8-report.json docs/motion-v8-mutation-report.json

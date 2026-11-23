@@ -4,14 +4,14 @@ import {renderAvailability} from './availability.js';
 import {renderMotionPanel} from './teddy/motion-panel-v12.js';
 import {furEnabled,furLabel} from './teddy/fur-material-v12.js';
 import {installTextChat} from './text-chat-v17.js';
-import {fetchWithCsrf} from './fetch-with-csrf-v41.js';
+import {fetchWithCsrf,browserOriginClaim} from './fetch-with-csrf-v41.js';
 
 const $=s=>document.querySelector(s),drawer=$('#drawer'),onboarding=$('#onboarding'),stateText=$('#stateText');
 const csrfHeaders=()=>({'x-teddy-csrf':boot?.security?.csrfToken||''});
 const protectedFetch=(url,init)=>fetchWithCsrf(url,init,{boot});
 const notice=$('#connectionNotice'),noticeTitle=$('#connectionTitle'),noticeBody=$('#connectionBody'),noticePrimary=$('#connectionPrimary'),noticeDiag=$('#connectionDiagnostics');
 let boot,config,conversationId=null,lastConnectionProblem=null,availability=null,runtimeRetryBusy=false,textChat=null;
-try{const r=await fetch('/api/bootstrap');if(!r.ok)throw Error(`bootstrap ${r.status}`);boot=await r.json();config=boot.config;availability=boot.availability||null}catch(e){$('#health').textContent='offline';stateText.textContent='server non disponibile';throw e}
+try{const r=await fetch('/api/bootstrap',{headers:browserOriginClaim(),cache:'no-store'});if(!r.ok)throw Error(`bootstrap ${r.status}`);boot=await r.json();config=boot.config;availability=boot.availability||null}catch(e){$('#health').textContent='offline';stateText.textContent='server non disponibile';throw e}
 // Language interaction must be available independently of the graphical scene lifecycle.
 textChat=installTextChat({boot,getAvailability:()=>availability,getConversationId:()=>conversationId,setConversationId:id=>{conversationId=id},showProblem,showKeyDialog:()=>showKeyDialog(),setState:value=>{stateText.textContent=value}});
 const renderer=new TeddyRenderer($('#scene'),config);renderer.start();

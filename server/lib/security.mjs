@@ -26,6 +26,42 @@ export function codespacesForwardedOrigin(origin,{listenPort=8787,codespaceName=
   if(codespaceName&&match[1]!==String(codespaceName).toLowerCase())return false;
   return true;
 }
+// V50: an exact page-Origin capability, not a relaxed Origin allowlist. In a
+// Codespace the browser origin can be a new forwarding alias while the Node
+// process still has an older CODESPACE_NAME. The 256-bit process secret derives
+// *different* tokens for different HTTPS origins on the exact forwarded port.
+// The request still needs browser-enforced same-origin Fetch Metadata. A CSRF
+// token issued for another Origin, including the unscoped legacy token, fails.
+export function codespacesOriginToken(secret,origin,{listenPort=8787}={}){
+  const normalized=normalizeOrigin(origin);
+  if(!secret||!normalized||!codespacesForwardedOrigin(normalized,{listenPort,codespaceName:''}))return null;
+  return crypto.createHmac('sha256',String(secret))
+    .update('teddy.codespaces-origin.v50\0'+normalized).digest('base64url');
+}
+function sameOriginBrowserFetch(headers={}){
+  return String(headers['sec-fetch-site']||'').toLowerCase()==='same-origin'&&
+    String(headers['sec-fetch-mode']||'').toLowerCase()==='cors'&&
+    String(headers['sec-fetch-dest']||'').toLowerCase()==='empty';
+}
+// A browser sends its current origin during its same-origin bootstrap. This
+// header is an untrusted *claim*; it is not a bypass. The response is protected
+// by the browser's same-origin policy and Teddy's no-CORS security headers.
+export function bootstrapCsrfToken(req,{listenHost='127.0.0.1',listenPort=8787,csrfToken=''}={}){
+  if(!isLoopbackHost(listenHost)||!isLoopbackHost(req?.headers?.host||'')||
+     !sameOriginBrowserFetch(req.headers))return csrfToken;
+  const method=String(req?.method||'').toUpperCase();
+  if(method==='PUT'){
+    // After a successful provider switch the UI adopts this bootstrap object.
+    // Never replace its valid origin-scoped capability with the global one.
+    const bound=codespacesOriginToken(csrfToken,req.headers.origin,{listenPort});
+    return bound&&safeEqual(req.headers['x-teddy-csrf']||'',bound)?bound:csrfToken;
+  }
+  if(method!=='GET')return csrfToken;
+  const claimed=req.headers['x-teddy-page-origin'];
+  const requested=codespacesOriginToken(csrfToken,claimed,{listenPort});
+  if(!requested||req.headers.origin&&normalizeOrigin(req.headers.origin)!==normalizeOrigin(claimed))return csrfToken;
+  return requested;
+}
 export function validBasicAuthorization(header,password){
   if(!password)return true;
   if(typeof header!=='string'||!header.startsWith('Basic '))return false;
@@ -83,7 +119,13 @@ export function guardRequest(req,{listenHost='127.0.0.1',allowedHosts=process.en
       // The browser must present the token read from this very Teddy bootstrap.
       const codespacesProof=isLoopbackHost(listenHost)&&verifiedBrowser&&
         codespacesForwardedOrigin(normalized,{listenPort,codespaceName});
-      if(!directAllowed&&!sameHostedOrigin&&!explicitOrigins.has(normalized)&&!browserProof&&!codespacesProof)return {ok:false,status:403,error:'origin_not_allowed'};
+      // The origin-scoped token survives a forwarding alias change without
+      // extending the global token to any unrelated Codespace. Retain the
+      // original CODESPACE_NAME check for legacy/unscoped clients.
+      const boundToken=isLoopbackHost(listenHost)&&sameOriginBrowserFetch(req.headers)
+        ?codespacesOriginToken(csrfToken,normalized,{listenPort}):null;
+      const originBoundProof=Boolean(boundToken)&&safeEqual(req.headers['x-teddy-csrf']||'',boundToken);
+      if(!directAllowed&&!sameHostedOrigin&&!explicitOrigins.has(normalized)&&!browserProof&&!codespacesProof&&!originBoundProof)return {ok:false,status:403,error:'origin_not_allowed'};
     }else if(fetchSite&&fetchSite!=='same-origin'&&fetchSite!=='none')return {ok:false,status:403,error:'origin_required'};
   }
   return {ok:true};
