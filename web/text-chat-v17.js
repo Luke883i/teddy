@@ -4,6 +4,7 @@ import {providerSwitchFeedback,textTurnFeedback} from './enduser-contract-v40.js
 import {requestProviderSwitch,explainProviderSwitchFailure} from './provider-switch-v38.js';
 import {comicGeometry,minimumThinkingMs,settleThinking} from './dialogue-pacing-v29.js';
 import {cognitiveMotionIntent} from './teddy/cognitive-motion-v31.js';
+import {historySelection} from './history-session-v48.js';
 // Teddy v21: HTTP-backed conversation, persistent paginated history, comic reply placement.
 // No synthetic dialogue. The bubble displays only text returned from /api/text/turn or /api/history.
 export function installTextChat({boot,getAvailability,getConversationId,setConversationId,showProblem,showKeyDialog,setState}){
@@ -113,12 +114,12 @@ export function installTextChat({boot,getAvailability,getConversationId,setConve
     }
     else if(focus)toggle.focus();
   }
-  function append(role,text,id=null,conversationId=null){
+  function append(role,text,id=null,conversationId=null,meta={}){
     if(typeof text!=='string'||!text.trim()||!['user','assistant'].includes(role))return;
     if(id!=null){if(seenIds.has(id))return;seenIds.add(id)}
     const item=document.createElement(role==='assistant'?'button':'article');
-    if(role==='assistant'){item.type='button';item.setAttribute('aria-label','Riapri questa conversazione e rileggi Teddy');item.addEventListener('click',()=>{if(busy)return;if(conversationId){explicitSessionChoice=true;setConversationId(conversationId)}showBubble(text,conversationId);input.focus()})}
-    item.className='chat-message '+role;
+    if(role==='assistant'){item.type='button';item.setAttribute('aria-label','Riapri questa conversazione e rileggi Teddy');item.addEventListener('click',()=>{if(busy)return;if(conversationId){explicitSessionChoice=true;const selected=historySelection({conversation_id:conversationId,ended_at:meta.ended_at??null});setConversationId(selected.conversationId);if(selected.readOnly)setFeedback('Conversazione archiviata: puoi rileggerla; il prossimo messaggio inizierà una nuova chat.')}showBubble(text,conversationId);input.focus()})}
+    item.className='chat-message '+role;item.dataset.conversationId=conversationId||'';item.dataset.readOnly=String(meta.ended_at!=null);
     const who=document.createElement('small');who.textContent=role==='user'?'Tu':'Teddy';
     const message=document.createElement('p');message.textContent=text;
     item.append(who,message);log.append(item);
@@ -141,9 +142,9 @@ export function installTextChat({boot,getAvailability,getConversationId,setConve
         if(turns.length<500)break;
         before=oldest;
       }
-      for(let i=pages.length-1;i>=0;i--)for(const turn of pages[i])append(turn.role,turn.text,turn.id,turn.conversation_id);
+      for(let i=pages.length-1;i>=0;i--)for(const turn of pages[i])append(turn.role,turn.text,turn.id,turn.conversation_id,turn);
       const latest=pages[0]?.at(-1);
-      if(latest?.conversation_id&&!getConversationId()&&!explicitSessionChoice)setConversationId(latest.conversation_id);
+      if(latest?.conversation_id&&!getConversationId()&&!explicitSessionChoice&&historySelection(latest).readOnly===false)setConversationId(latest.conversation_id);
       // Do not auto-display a stored answer as if Teddy had just replied.
       historyLoadError=false;
       historyEmpty.textContent='La prima chiacchiera inizia qui.';
@@ -223,7 +224,7 @@ export function installTextChat({boot,getAvailability,getConversationId,setConve
   bubbleClose.addEventListener('click',hideBubble);
   bubbleReadAll.addEventListener('click',()=>{
     setHistory(true,{focus:true});
-    if(lastBubbleConversationId){explicitSessionChoice=true;setConversationId(lastBubbleConversationId)}
+    if(lastBubbleConversationId){explicitSessionChoice=true;const selected=Array.from(log.querySelectorAll('.chat-message.assistant')).find(el=>el.dataset.conversationId===lastBubbleConversationId);if(selected?.dataset.readOnly!=='true')setConversationId(lastBubbleConversationId);else{setConversationId(null);setFeedback('Conversazione archiviata: invia un nuovo messaggio per aprire un’altra chat.')}}
     const matches=Array.from(log.querySelectorAll('.chat-message.assistant'));
     matches.reverse().find(el=>el.querySelector('p')?.textContent===bubbleText.textContent)?.scrollIntoView({block:'nearest'});
   });
