@@ -95,6 +95,20 @@ export class StateStore{
     if(!this.conversationExists(id))return [];
     return this.db.prepare('SELECT t.id,t.role,t.text,t.created_at,t.conversation_id FROM turns t WHERE t.conversation_id=? ORDER BY t.id DESC LIMIT ?').all(id,Math.min(24,Math.max(1,Number(limit)||12))).reverse();
   }
+  // A read-only projection from this conversation's committed user turns.
+  // Explicit names are not global memories and do not require a new schema.
+  // SQL prefilter is intentionally broad; the planner validates declarations
+  // and retractions before using them as evidence. Bound to 256 candidates.
+  conversationNameEvidence(id){
+    if(!this.conversationExists(id))return [];
+    return this.db.prepare(`SELECT id,role,text,conversation_id FROM turns
+      WHERE conversation_id=? AND role='user' AND (
+        text LIKE 'mi chiamo %' OR text LIKE 'in realt% mi chiamo %' OR
+        text LIKE 'chiamami %' OR text LIKE 'preferisco che tu mi chiami %' OR
+        text LIKE 'non mi chiamo %' OR text LIKE 'non chiamarmi %' OR
+        text LIKE 'non usare pi% il nome %'
+      ) ORDER BY id DESC LIMIT 256`).all(id).reverse();
+  }
   // All-or-nothing: even if SQLite fails between the two turns, nothing is shown as committed.
   commitTextTurn({conversationId=null,text,reply,receipt,requestId=null}={}){
     if(typeof text!=='string'||!text.trim()||typeof reply!=='string'||!reply.trim()

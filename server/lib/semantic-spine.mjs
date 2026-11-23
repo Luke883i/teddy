@@ -73,7 +73,7 @@ export function classifyInteraction(text,history=[]){
   return {act:followup&&history.some(t=>t?.role==='assistant')?'followup':'open',caution};
 }
 function pick(choices,seed,history){return chooseNovelVariant(choices,hash(seed),history)}
-export function planSemanticTurn({text,history=[],memories=[],conversationId=null,requestId=null}={}){
+export function planSemanticTurn({text,history=[],memories=[],nameEvidence=null,conversationId=null,requestId=null}={}){
   if(typeof text!=='string'||!text.trim()||text.length>2000)throw Object.assign(new Error('semantic_input_invalid'),{code:'semantic_input_invalid'});
   const recent=Array.isArray(history)?history.filter(t=>['user','assistant'].includes(t?.role)&&typeof t.text==='string').slice(-12):[];
   const classification=classifyInteraction(text,recent);
@@ -91,7 +91,7 @@ export function planSemanticTurn({text,history=[],memories=[],conversationId=nul
   let reply=reasoning?.reply||null;
   if(act==='introduction')reply=`Piacere, ${classification.name}. Terrò a mente il tuo nome in questa conversazione.`;
   else if(act==='name_query'){
-    const name=mostRecentDeclaredName(recent);
+    const name=mostRecentDeclaredName(Array.isArray(nameEvidence)?nameEvidence:recent);
     reply=name?`Ti chiami ${name}.`:'Non lo ritrovo qui. Come preferisci che ti chiami?';
   }else if(adultVariants[act])reply=chooseNovelVariant(adultVariants[act],hash(seed),recent);
   else if(templates[act])reply=pick(templates[act],seed,recent);

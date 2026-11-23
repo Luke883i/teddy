@@ -12,7 +12,7 @@ import { normalizeProvider, providerCapabilities } from './lib/provider.mjs';
 import { createLocalService } from './lib/local-service.mjs';
 import {openAITextTurn,normalizeUserText} from './lib/text-service.mjs';
 import {vireonixTextTurn} from './lib/vireonix-text.mjs';
-import {planSemanticTurn,finalizeSemanticReply,semanticReceipt} from './lib/semantic-spine.mjs';
+import {planSemanticTurn,classifyInteraction,finalizeSemanticReply,semanticReceipt} from './lib/semantic-spine.mjs';
 import {semanticReadback} from './lib/cognitive-workspace-v31.mjs';
 import {scopeExplicitPremises} from './lib/goal-ledger-v33.mjs';
 import { createRuntimeManager } from './lib/runtime-manager.mjs';
@@ -131,7 +131,9 @@ async function route(req,res){
       const history=existing?state.conversationHistory(existing,12):[];
       const memories=state.listMemories(6);
       // Step 1: deterministic planning is separate from model-generated language.
-      const plan=planSemanticTurn({text,history,memories,conversationId:existing,requestId:requestedId});
+      const nameEvidence=existing&&classifyInteraction(text,history).act==='name_query'
+        ?state.conversationNameEvidence(existing):null;
+      const plan=planSemanticTurn({text,history,memories,nameEvidence,conversationId:existing,requestId:requestedId});
       const useRules=plan.path==='deterministic';
       // Social rules work before installation; open questions still require a real ready provider.
       if(!useRules&&PROVIDER==='local'&&!localService.status().textReady)return json(res,503,{error:'local_text_not_ready'});

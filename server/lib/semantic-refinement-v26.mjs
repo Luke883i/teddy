@@ -15,14 +15,18 @@ export function selfDeclaredName(text){
   return null;
 }
 export function mostRecentDeclaredName(history=[]){
-  const records=Array.isArray(history)?history.slice(-24):[];
+  const records=Array.isArray(history)?history.slice(-256):[];
+  const revoked=new Set();
+  const fold=name=>name.normalize('NFKC').toLocaleLowerCase('it-IT');
   for(let i=records.length-1;i>=0;i--){
     const t=records[i];
     if(t?.role!=='user'||typeof t.text!=='string')continue;
     const name=selfDeclaredName(t.text);
-    if(name)return name;
-    // Explicit retraction without a new name cancels earlier identity assumptions.
-    if(/^(?:non mi chiamo|non chiamarmi|non usare più il nome)\s+/iu.test(spaced(t.text)))return null;
+    // A revoked latest declaration must not revive an older, superseded one.
+    if(name)return revoked.has(fold(name))?null:name;
+    // Reject the *named* prior declaration, not unrelated names.
+    const retraction=spaced(t.text).match(/^(?:non mi chiamo|non chiamarmi|non usare più il nome)\s+([\p{L}][\p{L}'-]{1,27})[.!?]?$/iu);
+    if(retraction)revoked.add(fold(retraction[1]));
   }
   return null;
 }
