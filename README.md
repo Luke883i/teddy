@@ -1,4 +1,3 @@
-[![ROA Research Programme](https://img.shields.io/badge/ROA-Research_Programme-1f6feb)](https://github.com/Luke883i/academics)
 <!-- programme-header:v2 -->
 > **ROA Research Programme · AOSP ecosystem** — [Author & programme hub](https://github.com/Luke883i/academics) · [ROA theory](https://github.com/Luke883i/ROA) · [CORA assurance](https://github.com/Luke883i/cora). Every repository is independently readable. Membership does not imply formal derivation, shared runtime, scientific validation, certification, or production readiness. Repository-local code, evidence, and governance remain authoritative.
 
@@ -6,6 +5,8 @@
 
 > **Status:** Experimental prototype developed and refined with replaceable AI coding agents guided by [CORA-METHOD](https://github.com/Luke883i/cora). This describes the engineering approach, not independently proven authorship of every historical commit. **Not enterprise-ready:** safe enterprise use has not been demonstrated or claimed. **Not certified:** no independent production-security, regulatory or enterprise certification is claimed.
 
+
+[![ROA Research Programme](https://img.shields.io/badge/ROA-Research_Programme-1f6feb)](https://github.com/Luke883i/academics)
 
 ## Independent entrypoint
 
